@@ -1424,32 +1424,17 @@ private extension NodeAppModel {
         return json
     }
 
-    func startSignificantLocationMonitoring() {
-        let mode = self.locationMode()
-        guard mode == .always else { return }
-        let status = self.locationService.authorizationStatus()
-        guard status == .authorizedAlways else { return }
-        self.locationService.startMonitoringSignificantLocationChanges { [weak self] location in
+    @ObservationIgnored private lazy var significantLocationMonitor = SignificantLocationMonitor(
+        locationService: self.locationService,
+        locationMode: { [weak self] in self?.locationMode() ?? .off },
+        sendEvent: { [weak self] event, json in
             guard let self else { return }
-            struct Payload: Codable {
-                var lat: Double
-                var lon: Double
-                var accuracyMeters: Double
-                var source: String?
-            }
-            let payload = Payload(
-                lat: location.coordinate.latitude,
-                lon: location.coordinate.longitude,
-                accuracyMeters: location.horizontalAccuracy,
-                source: "ios-significant-location")
-            guard let data = try? JSONEncoder().encode(payload),
-                  let json = String(data: data, encoding: .utf8)
-            else { return }
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                await self.nodeGateway.sendEvent(event: "location.update", payloadJSON: json)
-            }
+            await self.nodeGateway.sendEvent(event: event, payloadJSON: json)
         }
+    )
+
+    func startSignificantLocationMonitoring() {
+        self.significantLocationMonitor.start()
     }
 
     func isCameraEnabled() -> Bool {

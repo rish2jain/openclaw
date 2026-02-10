@@ -152,7 +152,12 @@ class LocationCaptureManager(private val context: Context) {
     significantLocationListener = listener
     // minTimeMs=0 means accept updates as soon as available; minDistanceM=500 provides
     // battery-efficient displacement threshold comparable to iOS significant location changes.
-    manager.requestLocationUpdates(provider, 0L, 500f, listener, context.mainLooper)
+    try {
+      manager.requestLocationUpdates(provider, 0L, 500f, listener, context.mainLooper)
+    } catch (_: SecurityException) {
+      // Permission may be revoked between the check and the call; safe to ignore.
+      significantLocationListener = null
+    }
   }
 
   fun stopMonitoringSignificantChanges() {
