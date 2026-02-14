@@ -7,17 +7,14 @@ const {
   resolvePerplexityBaseUrl,
   isDirectPerplexityBaseUrl,
   resolvePerplexityRequestModel,
-  normalizeBraveLanguageParams,
   normalizeFreshness,
   freshnessToPerplexityRecency,
   resolveGrokApiKey,
   resolveGrokModel,
   resolveGrokInlineCitations,
   extractGrokContent,
-  resolveKimiApiKey,
-  resolveKimiModel,
-  resolveKimiBaseUrl,
-  extractKimiCitations,
+  resolveBraveConfig,
+  resolveBraveMode,
 } = __testing;
 
 describe("web_search perplexity baseUrl defaults", () => {
@@ -91,28 +88,6 @@ describe("web_search perplexity model normalization", () => {
     expect(resolvePerplexityRequestModel("not-a-url", "perplexity/sonar-pro")).toBe(
       "perplexity/sonar-pro",
     );
-  });
-});
-
-describe("web_search brave language param normalization", () => {
-  it("normalizes and auto-corrects swapped Brave language params", () => {
-    expect(normalizeBraveLanguageParams({ search_lang: "tr-TR", ui_lang: "tr" })).toEqual({
-      search_lang: "tr",
-      ui_lang: "tr-TR",
-    });
-    expect(normalizeBraveLanguageParams({ search_lang: "EN", ui_lang: "en-us" })).toEqual({
-      search_lang: "en",
-      ui_lang: "en-US",
-    });
-  });
-
-  it("flags invalid Brave language formats", () => {
-    expect(normalizeBraveLanguageParams({ search_lang: "en-US" })).toEqual({
-      invalidField: "search_lang",
-    });
-    expect(normalizeBraveLanguageParams({ ui_lang: "en" })).toEqual({
-      invalidField: "ui_lang",
-    });
   });
 });
 
@@ -246,79 +221,51 @@ describe("web_search grok response parsing", () => {
     expect(result.text).toBeUndefined();
     expect(result.annotationCitations).toEqual([]);
   });
+});
 
-  it("extracts output_text blocks directly in output array (no message wrapper)", () => {
-    const result = extractGrokContent({
-      output: [
-        { type: "web_search_call" },
-        {
-          type: "output_text",
-          text: "direct output text",
-          annotations: [
-            {
-              type: "url_citation",
-              url: "https://example.com/direct",
-              start_index: 0,
-              end_index: 5,
-            },
-          ],
-        },
-      ],
-    } as Parameters<typeof extractGrokContent>[0]);
-    expect(result.text).toBe("direct output text");
-    expect(result.annotationCitations).toEqual(["https://example.com/direct"]);
+describe("web_search brave config resolution", () => {
+  it("returns empty config when search is undefined", () => {
+    expect(resolveBraveConfig(undefined)).toEqual({});
+  });
+
+  it("returns empty config when brave block is missing", () => {
+    expect(resolveBraveConfig({ enabled: true } as never)).toEqual({});
+  });
+
+  it("returns brave config when present", () => {
+    const search = { brave: { mode: "llm-context" } } as never;
+    expect(resolveBraveConfig(search)).toEqual({ mode: "llm-context" });
+  });
+
+  it("returns full llmContext config when present", () => {
+    const search = {
+      brave: {
+        mode: "llm-context",
+        llmContext: { maxTokens: 16384, maxUrls: 10, thresholdMode: "strict" },
+      },
+    } as never;
+    const result = resolveBraveConfig(search);
+    expect(result).toEqual({
+      mode: "llm-context",
+      llmContext: { maxTokens: 16384, maxUrls: 10, thresholdMode: "strict" },
+    });
   });
 });
 
-describe("web_search kimi config resolution", () => {
-  it("uses config apiKey when provided", () => {
-    expect(resolveKimiApiKey({ apiKey: "kimi-test-key" })).toBe("kimi-test-key");
+describe("web_search brave mode resolution", () => {
+  it("defaults to web when config is undefined", () => {
+    expect(resolveBraveMode(undefined)).toBe("web");
   });
 
-  it("falls back to KIMI_API_KEY, then MOONSHOT_API_KEY", () => {
-    withEnv({ KIMI_API_KEY: "kimi-env", MOONSHOT_API_KEY: "moonshot-env" }, () => {
-      expect(resolveKimiApiKey({})).toBe("kimi-env");
-    });
-    withEnv({ KIMI_API_KEY: undefined, MOONSHOT_API_KEY: "moonshot-env" }, () => {
-      expect(resolveKimiApiKey({})).toBe("moonshot-env");
-    });
+  it("defaults to web when mode is not set", () => {
+    expect(resolveBraveMode({})).toBe("web");
   });
 
-  it("returns undefined when no Kimi key is configured", () => {
-    withEnv({ KIMI_API_KEY: undefined, MOONSHOT_API_KEY: undefined }, () => {
-      expect(resolveKimiApiKey({})).toBeUndefined();
-      expect(resolveKimiApiKey(undefined)).toBeUndefined();
-    });
+  it("returns web when explicitly set", () => {
+    expect(resolveBraveMode({ mode: "web" })).toBe("web");
   });
 
-  it("resolves default model and baseUrl", () => {
-    expect(resolveKimiModel({})).toBe("moonshot-v1-128k");
-    expect(resolveKimiBaseUrl({})).toBe("https://api.moonshot.ai/v1");
-  });
-});
-
-describe("extractKimiCitations", () => {
-  it("collects unique URLs from search_results and tool arguments", () => {
-    expect(
-      extractKimiCitations({
-        search_results: [{ url: "https://example.com/a" }, { url: "https://example.com/a" }],
-        choices: [
-          {
-            message: {
-              tool_calls: [
-                {
-                  function: {
-                    arguments: JSON.stringify({
-                      search_results: [{ url: "https://example.com/b" }],
-                      url: "https://example.com/c",
-                    }),
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      }).toSorted(),
-    ).toEqual(["https://example.com/a", "https://example.com/b", "https://example.com/c"]);
+  it("returns llm-context when explicitly set", () => {
+    expect(resolveBraveMode({ mode: "llm-context" })).toBe("llm-context");
   });
 });
