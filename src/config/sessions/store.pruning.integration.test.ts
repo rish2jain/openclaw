@@ -94,6 +94,19 @@ describe("Integration: saveSessionStore with pruning", () => {
     expect(loaded.fresh).toBeDefined();
   });
 
+  it("saveSessionStore uses default enforce mode when session.maintenance is unset", async () => {
+    mockLoadConfig.mockReturnValue({});
+    const now = Date.now();
+    const store: Record<string, SessionEntry> = {
+      stale: makeEntry(now - 31 * DAY_MS),
+      fresh: makeEntry(now),
+    };
+    await saveSessionStore(storePath, store);
+    const loaded = loadSessionStore(storePath);
+    expect(loaded.stale).toBeUndefined();
+    expect(loaded.fresh).toBeDefined();
+  });
+
   it("archives transcript files for stale sessions pruned on write", async () => {
     applyEnforcedMaintenanceConfig(mockLoadConfig);
 

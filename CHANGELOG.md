@@ -12,6 +12,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Session maintenance: default `session.maintenance.mode` is now `enforce` (was `warn`). Session transcripts are automatically pruned after 30 days and capped at 500 entries when config omits `session.maintenance`. Set `session.maintenance.mode: "warn"` to restore previous warn-only behavior. Addresses token/disk growth feedback (Discussion #1949).
 - Security/Nextcloud Talk: reject unsigned webhook traffic before full body reads, reducing unauthenticated request-body exposure, with auth-order regression coverage. (#26118) Thanks @bmendonca3.
 - Security/Nextcloud Talk: stop treating DM pairing-store entries as group allowlist senders, so group authorization remains bounded to configured group allowlists. (#26116) Thanks @bmendonca3.
 - Security/IRC: keep pairing-store approvals DM-only and out of IRC group allowlist authorization, with policy regression tests for allowlist resolution. (#26112) Thanks @bmendonca3.
