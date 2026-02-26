@@ -19,13 +19,19 @@ All planned implementations are complete and merged into `main` (fork: `rish2jai
 | [#27443](https://github.com/openclaw/openclaw/pull/27443) | `feat/rbac-multi-user-permissions`        | #8081 — Multi-user RBAC                  | ✅ Merged to main | 2026-02-26 |
 | [#17874](https://github.com/openclaw/openclaw/pull/17874) | `feature/lancedb-custom-embeddings`       | — LanceDB custom embeddings              | ✅ Merged to main | 2026-02-26 |
 
-### Skipped (existing PRs already open upstream)
+### Skipped (existing PRs already open upstream) — now integrated
 
-| Issue                                                    | Reason                  |
-| -------------------------------------------------------- | ----------------------- |
-| #6095 — Modular guardrails / prompt injection protection | Open PR already existed |
-| #19298 — Brave LLM Context API (web_search)              | Open PR already existed |
-| #21530 — Native MCP client support                       | Open PR already existed |
+| Issue                                                    | Status            | Method                         |
+| -------------------------------------------------------- | ----------------- | ------------------------------ |
+| #6095 — Modular guardrails / prompt injection protection | ✅ Merged to main | Surgical checkout of new files |
+| #19298 — Brave LLM Context API (web_search)              | ✅ Merged to main | Cherry-pick of commits         |
+| #21530 — Native MCP client support                       | ✅ Merged to main | Surgical checkout of new files |
+
+### Third-Party Forks Integrated
+
+| Fork               | What was integrated                                                    | Status            | Committed  |
+| ------------------ | ---------------------------------------------------------------------- | ----------------- | ---------- |
+| `DenchHQ/ironclaw` | AI SDK engine (Vercel AI SDK v6), engine router, DuckDB workspace seed | ✅ Merged to main | 2026-02-26 |
 
 ---
 
@@ -98,6 +104,32 @@ gateway:
 - `/config set`/`unset` — admin-only; non-admins get `⛔ requires admin access`
 - `/config show` — sensitive paths redacted for non-admins with `*(redacted — admin only)*` annotation
 - 24 unit tests, 91 passing in affected test suites
+
+### DenchHQ/ironclaw — AI SDK Engine + DuckDB CRM Workspace
+
+Surgical integration of ironclaw's differentiating modules (all new files, no modification to existing core):
+
+**`src/agents/aisdk/`** — Vercel AI SDK v6 engine:
+
+- `types.ts`: `ProviderMode`, `AiSdkConfig`, `ResolvedModel`, message/tool types
+- `provider.ts`: Resolves models by `provider/model-id` format; supports Anthropic, OpenAI, Google, Groq, Mistral, xAI, Amazon Bedrock, Azure, OpenRouter, and OpenAI-compatible endpoints (direct or via Vercel AI Gateway)
+- `run.ts`: `runAiSdkAgent()` — streams text with tool calls; converts events to openclaw's `PiAgentEvent` format
+- `event-adapter.ts`: Maps AI SDK stream parts to openclaw stream events
+- `tools.ts`: Converts openclaw tool definitions to AI SDK `CoreTool` format
+
+**`src/agents/engine-router.ts`** — Routes runs to `aisdk` (default) or `pi-agent` based on `agents.engine` config key.
+
+**`src/agents/workspace-seed.ts`** — Defines pre-built DuckDB schema for CRM tables: `people`, `company`, `deals`, `activities`.
+
+**`src/agents/tools/self-update-tool.ts`** — `self_update` tool; delegates to `update.run` gateway action — safe for non-owner senders.
+
+**`assets/seed/`** — Pre-built `workspace.duckdb` and `schema.sql` for bootstrapping CRM workspaces.
+
+**`skills/`** — Three new agent skills: `dench/` (CRM automation workflows), `food-order/`, `software-engineering/`.
+
+**Dependencies added:** `ai@^6`, all `@ai-sdk/*` providers, `@openrouter/ai-sdk-provider`.
+
+**Config key added:** `agents.engine: "aisdk" | "pi-agent"` in `src/config/types.agents.ts`.
 
 ---
 
