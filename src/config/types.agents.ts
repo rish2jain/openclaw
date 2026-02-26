@@ -34,9 +34,14 @@ export type AgentConfig = {
   tools?: AgentToolsConfig;
 };
 
+/** LLM engine to use for agent runs. */
+export type LlmEngineType = "aisdk" | "pi-agent";
+
 export type AgentsConfig = {
   defaults?: AgentDefaultsConfig;
   list?: AgentConfig[];
+  /** LLM engine to use for agent runs (default: "aisdk"). */
+  engine?: LlmEngineType;
 };
 
 export type AgentBinding = {
