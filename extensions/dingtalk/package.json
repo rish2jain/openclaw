@@ -1,0 +1,37 @@
+{
+  "name": "@openclaw/dingtalk",
+  "version": "2026.2.26",
+  "description": "OpenClaw DingTalk channel plugin",
+  "type": "module",
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.2.25"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "dingtalk",
+      "label": "DingTalk",
+      "selectionLabel": "DingTalk (钉钉)",
+      "detailLabel": "DingTalk",
+      "docsPath": "/channels/dingtalk",
+      "docsLabel": "dingtalk",
+      "blurb": "DingTalk enterprise messaging via custom robot webhooks.",
+      "aliases": [
+        "dingtalk",
+        "ding"
+      ],
+      "order": 40,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@openclaw/dingtalk",
+      "localPath": "extensions/dingtalk",
+      "defaultChoice": "local"
+    }
+  }
+}
