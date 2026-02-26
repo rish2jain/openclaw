@@ -565,3 +565,10 @@ export function applyModelFallbacksFromSelection(
     },
   };
 }
+
+export const LOCAL_MODEL_PROVIDERS = ["ollama", "lmstudio", "vllm"] as const;
+
+export function isLocalModelProvider(provider: string): boolean {
+  const normalized = normalizeProviderId(provider);
+  return LOCAL_MODEL_PROVIDERS.includes(normalized as (typeof LOCAL_MODEL_PROVIDERS)[number]);
+}

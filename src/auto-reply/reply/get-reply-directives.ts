@@ -19,6 +19,7 @@ import { CURRENT_MESSAGE_MARKER, stripMentions, stripStructuralPrefixes } from "
 import { createModelSelectionState, resolveContextTokens } from "./model-selection.js";
 import { formatElevatedUnavailableMessage, resolveElevatedPermissions } from "./reply-elevated.js";
 import { stripInlineStatus } from "./reply-inline.js";
+import { resolveOrchestratorRoute, resolveSmartRoute } from "./smart-routing.js";
 import type { TypingController } from "./typing.js";
 
 type AgentDefaults = NonNullable<OpenClawConfig["agents"]>["defaults"];
@@ -459,6 +460,36 @@ export async function resolveReplyDirectives(params: {
   model = applyResult.model;
   contextTokens = applyResult.contextTokens;
   const { directiveAck, perMessageQueueMode, perMessageQueueOptions } = applyResult;
+
+  // Smart routing: applied after all directive overrides so /model directives win.
+  if (!directives.hasModelDirective) {
+    // Fast-model routing: route simple conversational messages to a tiny local model.
+    const fastRoute = resolveSmartRoute({
+      message: cleanedBody,
+      cfg,
+      currentProvider: provider,
+      currentModel: model,
+      defaultProvider,
+    });
+    if (fastRoute.routed) {
+      provider = fastRoute.provider;
+      model = fastRoute.model;
+    } else {
+      // Orchestrator routing: route complex tasks to a powerful API model.
+      const orchRoute = resolveOrchestratorRoute({
+        message: cleanedBody,
+        cfg,
+        currentProvider: provider,
+        currentModel: model,
+        defaultProvider,
+      });
+      if (orchRoute.routed) {
+        provider = orchRoute.provider;
+        model = orchRoute.model;
+      }
+    }
+  }
+
   const execOverrides = resolveExecOverrides({ directives, sessionEntry });
 
   return {

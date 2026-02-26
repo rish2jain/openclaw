@@ -117,6 +117,35 @@ export type CliBackendConfig = {
   };
 };
 
+export type AgentRoutingConfig = {
+  /** Enable smart model routing (default: false). */
+  enabled?: boolean;
+  /** Fast model for simple queries (provider/model, e.g. "ollama/llama3.2"). */
+  fastModel?: string;
+  /** Max message length (chars) to consider for fast-model routing (default: 150). */
+  maxSimpleLength?: number;
+  /** Max context tokens when routed to the fast model (default: 4096). */
+  fastModelContextTokens?: number;
+};
+
+export type OrchestratorStrategy = "auto" | "always" | "fallback-only";
+
+export type AgentOrchestratorConfig = {
+  /** Enable orchestrator model (default: false). */
+  enabled?: boolean;
+  /** Powerful API model for complex tasks (provider/model, e.g. "anthropic/claude-sonnet-4"). */
+  model?: string;
+  /**
+   * Routing strategy:
+   * - "auto": use orchestrator for complex tasks, local for simple ones (default).
+   * - "always": always try orchestrator first; fall back to local on failure.
+   * - "fallback-only": use local by default; escalate to orchestrator only when local fails.
+   */
+  strategy?: OrchestratorStrategy;
+  /** Max message length (chars) for complexity classification in "auto" mode (default: 150). */
+  maxSimpleLength?: number;
+};
+
 export type AgentDefaultsConfig = {
   /** Primary model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   model?: AgentModelConfig;
@@ -231,6 +260,10 @@ export type AgentDefaultsConfig = {
      */
     includeReasoning?: boolean;
   };
+  /** Smart model routing — route simple queries to a fast model, complex to orchestrator. */
+  routing?: AgentRoutingConfig;
+  /** Orchestrator model — route complex tasks to a powerful API model. */
+  orchestrator?: AgentOrchestratorConfig;
   /** Max concurrent agent runs across all conversations. Default: 1 (sequential). */
   maxConcurrent?: number;
   /** Sub-agent defaults (spawned via sessions_spawn). */

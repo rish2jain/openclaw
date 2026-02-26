@@ -353,15 +353,24 @@ export async function runEmbeddedAttempt(
       workspaceDir: effectiveWorkspace,
     });
 
+    // Only inject workspace context files on the first message of a session (#9157).
+    // Subsequent turns reuse the cached context from turn 1; the agent can call
+    // read_file if it needs to re-check workspace files.
+    const isFirstMessage = await fs
+      .stat(params.sessionFile)
+      .then(() => false)
+      .catch(() => true);
+
     const sessionLabel = params.sessionKey ?? params.sessionId;
-    const { bootstrapFiles: hookAdjustedBootstrapFiles, contextFiles } =
-      await resolveBootstrapContextForRun({
-        workspaceDir: effectiveWorkspace,
-        config: params.config,
-        sessionKey: params.sessionKey,
-        sessionId: params.sessionId,
-        warn: makeBootstrapWarn({ sessionLabel, warn: (message) => log.warn(message) }),
-      });
+    const { bootstrapFiles: hookAdjustedBootstrapFiles, contextFiles } = isFirstMessage
+      ? await resolveBootstrapContextForRun({
+          workspaceDir: effectiveWorkspace,
+          config: params.config,
+          sessionKey: params.sessionKey,
+          sessionId: params.sessionId,
+          warn: makeBootstrapWarn({ sessionLabel, warn: (message) => log.warn(message) }),
+        })
+      : { bootstrapFiles: [], contextFiles: [] };
     const workspaceNotes = hookAdjustedBootstrapFiles.some(
       (file) => file.name === DEFAULT_BOOTSTRAP_FILENAME && !file.missing,
     )

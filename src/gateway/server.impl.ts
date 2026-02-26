@@ -62,6 +62,7 @@ import { createAgentEventHandler } from "./server-chat.js";
 import { createGatewayCloseHandler } from "./server-close.js";
 import { buildGatewayCronService } from "./server-cron.js";
 import { startGatewayDiscovery } from "./server-discovery-runtime.js";
+import { runStartupHealthCheck } from "./server-health-check.js";
 import { applyGatewayLaneConcurrency } from "./server-lanes.js";
 import { startGatewayMaintenanceTimers } from "./server-maintenance.js";
 import { GATEWAY_EVENTS, listGatewayMethods } from "./server-methods-list.js";
@@ -646,6 +647,11 @@ export async function startGatewayServer(
     log,
     isNixMode,
   });
+  if (!minimalTestGateway) {
+    // Fire-and-forget: check local provider reachability + model availability on startup.
+    void runStartupHealthCheck({ cfg: cfgAtStart, log }).catch(() => {});
+  }
+
   const stopGatewayUpdateCheck = minimalTestGateway
     ? () => {}
     : scheduleGatewayUpdateCheck({
