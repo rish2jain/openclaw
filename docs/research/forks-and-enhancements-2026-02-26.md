@@ -8,6 +8,8 @@ _Researched: 2026-02-26 | Updated: 2026-02-26 | Base repo: 231k ⭐, 44k forks_
 
 All planned implementations are complete and merged into `main` (fork: `rish2jain/openclaw`).
 
+### Community Issue PRs
+
 | PR                                                        | Branch                                    | Issue                                    | Status            | Merged     |
 | --------------------------------------------------------- | ----------------------------------------- | ---------------------------------------- | ----------------- | ---------- |
 | [#27425](https://github.com/openclaw/openclaw/pull/27425) | `fix/gemini-cli-model-catalog-22559`      | #22559 — Gemini 3.1 missing from catalog | ✅ Merged to main | 2026-02-26 |
@@ -19,7 +21,7 @@ All planned implementations are complete and merged into `main` (fork: `rish2jai
 | [#27443](https://github.com/openclaw/openclaw/pull/27443) | `feat/rbac-multi-user-permissions`        | #8081 — Multi-user RBAC                  | ✅ Merged to main | 2026-02-26 |
 | [#17874](https://github.com/openclaw/openclaw/pull/17874) | `feature/lancedb-custom-embeddings`       | — LanceDB custom embeddings              | ✅ Merged to main | 2026-02-26 |
 
-### Skipped (existing PRs already open upstream) — now integrated
+### Upstream PRs Pulled and Integrated
 
 | Issue                                                    | Status            | Method                         |
 | -------------------------------------------------------- | ----------------- | ------------------------------ |
@@ -46,6 +48,34 @@ All planned implementations are complete and merged into `main` (fork: `rish2jai
 - Integrated into `resolveImplicitProviders()` — catalog is written to `models.json` when a `google-gemini-cli` auth profile exists
 - Default model updated to `gemini-3.1-pro-preview` across auth extension, command defaults, and aliases
 - Added backward-compat aliases: `gemini-3`, `gemini-3-flash`
+
+### #6095 — Modular guardrails / prompt injection protection
+
+Surgical checkout of new extension directories only (avoided merge conflicts with diverged core files):
+
+- `extensions/command-safety-guard/` — blocks dangerous command patterns before execution
+- `extensions/gpt-oss-safeguard/` — OpenAI-based content policy guard
+- `extensions/grayswan-cygnal-guardrail/` — GraySwan Security's Cygnal threat model
+- `extensions/security-audit/` — post-execution audit logging
+- `src/plugins/guardrails-utils.ts` — shared utility functions for all guardrail extensions
+- `docs/gateway/guardrails.md` — usage documentation
+
+### #19298 — Brave LLM Context API (`web_search` mode)
+
+Cherry-picked commits into `src/agents/tools/web-search.ts`:
+
+- New `mode: "llm-context"` for Brave Search — returns pre-extracted, relevance-scored web content optimized for LLM context windows
+- Config fields: `brave.mode`, `brave.llmContextApiKey`
+- Updated `src/config/types.tools.ts`, `src/config/zod-schema.agent-runtime.ts`, `src/config/schema.labels.ts`
+
+### #21530 — Native MCP client support
+
+Surgical checkout of the complete `src/mcp/` module (8 source + 9 test files):
+
+- `src/mcp/client-base.ts`, `client-stdio.ts`, `client-sse.ts` — transport implementations
+- `src/mcp/manager.ts` — session lifecycle management
+- `src/mcp/tool-bridge.ts`, `resource-bridge.ts` — MCP ↔ openclaw tool/resource adapters
+- `docs/mcp.md` — configuration and usage documentation
 
 ### #26534 — DingTalk channel extension (`extensions/dingtalk/`)
 
@@ -132,8 +162,6 @@ Surgical integration of ironclaw's differentiating modules (all new files, no mo
 
 **Config key added:** `agents.engine: "aisdk" | "pi-agent"` in `src/config/types.agents.ts`.
 
----
-
 ### ComposioHQ/composio-openclaw — Composio Tool Router Plugin
 
 Surgical checkout of `extensions/composio/` from the fork, updated for OpenClaw naming conventions and current `@composio/core@0.5.5` SDK API.
@@ -189,7 +217,7 @@ OpenClaw (231k stars, 44k forks) has spawned a rich ecosystem. This document ide
 - **Cron-based automation** — follow-up sequences, weekly reports
 - Published on npm as `ironclaw`, runs on port 3100
 - Built on Vercel AI SDK v6 as orchestration layer
-- **Verdict: HIGH VALUE if you want structured data + web scraping.** The DuckDB workspace and Chrome-profile browser are genuinely novel. Could be added as a plugin.
+- **Verdict: ✅ INTEGRATED.** AI SDK engine module, engine router, DuckDB workspace seed, self-update tool, and CRM skills merged into main. Full Chrome-profile scraping and analytics dashboards remain ironclaw-specific.
 
 ---
 
@@ -231,7 +259,7 @@ Key innovations:
 - **Model strategy presets** — Balanced / Local-only / All-API (Enterprise)
 - **LCARS-inspired UI** (Star Trek computer display aesthetic)
 - **Isolated state** at `~/.localclaw/` — coexists with main openclaw install
-- **Verdict: HIGH VALUE.** The 3-tier routing classifier is directly applicable to upstream. Smart cost-saving with no UX degradation. The health check is also worth porting.
+- **Verdict: HIGH VALUE — pending integration.** The 3-tier routing classifier is directly applicable to upstream. Smart cost-saving with no UX degradation. The health check is also worth porting.
 
 ---
 
@@ -262,7 +290,7 @@ This is the most academically sophisticated fork. Key innovation:
 - **No business logic changes required** — transparent to the main agent runtime
 - Demo video: <https://youtu.be/xggfxybLVHw>
 
-- **Verdict: HIGH VALUE for privacy-sensitive users.** The GuardAgent extension is a drop-in plugin. The S1/S2/S3 framework is elegant. Upvoted issue #6095 (37 👍) has an open upstream PR — monitor for merge.
+- **Verdict: HIGH VALUE for privacy-sensitive users.** The GuardAgent extension is a drop-in plugin. The S1/S2/S3 framework is elegant. The upstream guardrails PR (#6095) has been integrated into main — EdgeClaw's deeper privacy-tier routing remains a future integration candidate.
 
 ---
 
@@ -307,10 +335,11 @@ This is the most academically sophisticated fork. Key innovation:
 
 **Composio Tool Router plugin**
 
-- `extensions/composio` — Composio-managed auth for external tools
-- Supports Gmail, GitHub, Slack, Notion, and 250+ other services
-- `openclaw composio list` and `openclaw composio connect` CLI commands
-- **Verdict:** MEDIUM VALUE if you rely on many external tool integrations. Composio handles OAuth so you don't build it yourself.
+- `extensions/composio` — Composio-managed OAuth for 1000+ external tools
+- Supports Gmail, GitHub, Slack, Notion, Linear, Jira, HubSpot, Google Drive, and more
+- Remote Python workbench + bash sandbox for bulk operations
+- `openclaw composio list|connect|disconnect` CLI commands
+- **Verdict: ✅ INTEGRATED.** Full plugin merged into main. Configure with `COMPOSIO_API_KEY`.
 
 ---
 
@@ -318,26 +347,26 @@ This is the most academically sophisticated fork. Key innovation:
 
 From the upstream GitHub issues (sorted by 👍):
 
-| 👍  | Issue  | Title                               | Status                                 |
-| --- | ------ | ----------------------------------- | -------------------------------------- |
-| 55  | #75    | Linux/Windows Desktop Apps          | Open — no PR                           |
-| 48  | #5799  | Stabilisation Mode                  | Open — no PR                           |
-| 37  | #6095  | Modular guardrails extensions       | Open PR exists upstream                |
-| 28  | #14992 | Brave Search LLM Context API        | Open — no PR                           |
-| 21  | #19298 | Brave LLM Context API mode          | Open PR exists upstream                |
-| 16  | #4686  | WhatsApp relink bug                 | Open — no PR                           |
-| 14  | #22559 | Antigravity Gemini 3 missing        | ✅ **Implemented** — PR #27425, merged |
-| 12  | #8081  | Multi-user RBAC                     | ✅ **Implemented** — PR #27443, merged |
-| 12  | #7520  | Rocket.Chat integration             | ✅ **Implemented** — PR #27436, merged |
-| 12  | #7309  | DeepSeek API first-class            | Open — no PR                           |
-| 12  | #2317  | SearXNG search provider             | Open — no PR                           |
-| 10  | #21290 | OpenTelemetry diagnostics           | `extensions/diagnostics-otel` exists   |
-| 10  | #11399 | Extensible web_search via plugins   | Open — no PR                           |
-| 9   | #9157  | Workspace token waste (93.5%)       | Open — no PR                           |
-| 9   | #6872  | xAI (Grok) native tools             | Open — no PR                           |
-| 9   | #12082 | Plugin lifecycle interception hooks | Open — no PR                           |
-| 6   | #21530 | Native MCP client support           | Open PR exists upstream                |
-| 6   | #26534 | DingTalk channel                    | ✅ **Implemented** — PR #27429, merged |
+| 👍  | Issue  | Title                               | Status                                               |
+| --- | ------ | ----------------------------------- | ---------------------------------------------------- |
+| 55  | #75    | Linux/Windows Desktop Apps          | Open — no PR                                         |
+| 48  | #5799  | Stabilisation Mode                  | Open — no PR                                         |
+| 37  | #6095  | Modular guardrails extensions       | ✅ **Integrated** — surgical checkout from PR #6095  |
+| 28  | #14992 | Brave Search LLM Context API        | Open — no PR (separate from #19298)                  |
+| 21  | #19298 | Brave LLM Context API mode          | ✅ **Integrated** — cherry-picked from PR #19298     |
+| 16  | #4686  | WhatsApp relink bug                 | Open — no PR                                         |
+| 14  | #22559 | Antigravity Gemini 3 missing        | ✅ **Implemented** — PR #27425, merged               |
+| 12  | #8081  | Multi-user RBAC                     | ✅ **Implemented** — PR #27443, merged               |
+| 12  | #7520  | Rocket.Chat integration             | ✅ **Implemented** — PR #27436, merged               |
+| 12  | #7309  | DeepSeek API first-class            | Open — no PR                                         |
+| 12  | #2317  | SearXNG search provider             | Open — no PR                                         |
+| 10  | #21290 | OpenTelemetry diagnostics           | `extensions/diagnostics-otel` exists in upstream     |
+| 10  | #11399 | Extensible web_search via plugins   | Open — no PR                                         |
+| 9   | #9157  | Workspace token waste (93.5%)       | Open — no PR                                         |
+| 9   | #6872  | xAI (Grok) native tools             | Open — no PR                                         |
+| 9   | #12082 | Plugin lifecycle interception hooks | Open — no PR                                         |
+| 6   | #21530 | Native MCP client support           | ✅ **Integrated** — surgical checkout from PR #21530 |
+| 6   | #26534 | DingTalk channel                    | ✅ **Implemented** — PR #27429, merged               |
 
 ---
 
@@ -345,38 +374,39 @@ From the upstream GitHub issues (sorted by 👍):
 
 ### Tier 1 — Integrate Now (High impact, low risk)
 
-| Enhancement                      | Source       | Effort     | Benefit                                              | Status              |
-| -------------------------------- | ------------ | ---------- | ---------------------------------------------------- | ------------------- |
-| **Gemini 3.1 model catalog**     | Issue #22559 | Low        | Gemini 3.1 Pro/Flash visible under google-gemini-cli | ✅ Done (PR #27425) |
-| **DingTalk channel**             | Issue #26534 | Medium     | Chinese enterprise messaging                         | ✅ Done (PR #27429) |
-| **Rocket.Chat channel**          | Issue #7520  | Medium     | Self-hosted team chat                                | ✅ Done (PR #27436) |
-| **Multi-user RBAC**              | Issue #8081  | Medium     | Admin/user/guest roles, config redaction             | ✅ Done (PR #27443) |
-| **3-tier smart model routing**   | LocalClaw    | Medium     | Major cost reduction, sub-second simple replies      | Pending             |
-| **Startup health check**         | LocalClaw    | Low        | Better DX, no silent failures                        | Pending             |
-| **SearXNG search provider**      | Issue #2317  | Low-Medium | Privacy-respecting search, very requested            | Pending             |
-| **Brave Search LLM Context API** | Issue #14992 | Low        | Drop-in search alternative, 28 👍                    | Pending             |
-| **Workspace token optimization** | Issue #9157  | Medium     | 93.5% waste elimination                              | Pending             |
+| Enhancement                      | Source       | Effort     | Benefit                                              | Status                      |
+| -------------------------------- | ------------ | ---------- | ---------------------------------------------------- | --------------------------- |
+| **Gemini 3.1 model catalog**     | Issue #22559 | Low        | Gemini 3.1 Pro/Flash visible under google-gemini-cli | ✅ Done (PR #27425)         |
+| **DingTalk channel**             | Issue #26534 | Medium     | Chinese enterprise messaging                         | ✅ Done (PR #27429)         |
+| **Rocket.Chat channel**          | Issue #7520  | Medium     | Self-hosted team chat                                | ✅ Done (PR #27436)         |
+| **Multi-user RBAC**              | Issue #8081  | Medium     | Admin/user/guest roles, config redaction             | ✅ Done (PR #27443)         |
+| **Modular guardrails**           | Issue #6095  | Medium     | Prompt injection protection, agentic threat guard    | ✅ Done (surgical checkout) |
+| **Brave LLM Context API**        | Issue #19298 | Low        | Pre-extracted web content for LLM context windows    | ✅ Done (cherry-pick)       |
+| **Native MCP client**            | Issue #21530 | Medium     | Model Context Protocol agent-model comms             | ✅ Done (surgical checkout) |
+| **AI SDK engine (Vercel)**       | ironclaw     | Medium     | Vercel AI SDK v6 as drop-in LLM backend              | ✅ Done (DenchHQ/ironclaw)  |
+| **Composio Tool Router**         | composio     | Medium     | 1000+ managed service OAuth in 6 tools               | ✅ Done (ComposioHQ fork)   |
+| **3-tier smart model routing**   | LocalClaw    | Medium     | Major cost reduction, sub-second simple replies      | ⏳ Pending                  |
+| **Startup health check**         | LocalClaw    | Low        | Better DX, no silent failures                        | ⏳ Pending                  |
+| **SearXNG search provider**      | Issue #2317  | Low-Medium | Privacy-respecting search, very requested            | ⏳ Pending                  |
+| **Workspace token optimization** | Issue #9157  | Medium     | 93.5% waste elimination                              | ⏳ Pending                  |
 
 ### Tier 2 — Integrate If Relevant to Your Use Case
 
-| Enhancement                          | Source               | Effort | Benefit                    | When                              |
-| ------------------------------------ | -------------------- | ------ | -------------------------- | --------------------------------- |
-| **GuardAgent privacy tiers**         | EdgeClaw             | High   | S1/S2/S3 data routing      | Privacy-critical deployments      |
-| **DuckDB workspace**                 | Ironclaw             | High   | Chat with structured data  | CRM/data-heavy workflows          |
-| **Composio tool router**             | composio-openclaw    | Medium | 250+ managed service auth  | Many external integrations        |
-| **Multi-tenant container isolation** | openclaw-multitenant | High   | Team/SaaS deployment       | Beyond RBAC — container isolation |
-| **DeepSeek first-class support**     | Issue #7309          | Low    | Cost-efficient alternative | Budget-conscious                  |
-| **xAI/Grok native tools**            | Issue #6872          | Medium | x_search, code_exec        | xAI users                         |
+| Enhancement                             | Source               | Effort | Benefit                    | When                              |
+| --------------------------------------- | -------------------- | ------ | -------------------------- | --------------------------------- |
+| **GuardAgent privacy tiers (S1/S2/S3)** | EdgeClaw             | High   | Fine-grained data routing  | Privacy-critical deployments      |
+| **Multi-tenant container isolation**    | openclaw-multitenant | High   | Team/SaaS deployment       | Beyond RBAC — container isolation |
+| **DeepSeek first-class support**        | Issue #7309          | Low    | Cost-efficient alternative | Budget-conscious                  |
+| **xAI/Grok native tools**               | Issue #6872          | Medium | x_search, code_exec        | xAI users                         |
+| **Plugin lifecycle interception**       | Issue #12082         | Medium | Pre/post-tool hook control | Plugin authors                    |
 
 ### Tier 3 — Monitor, Don't Integrate Yet
 
-| Enhancement                   | Source        | Reason to Wait                                    |
-| ----------------------------- | ------------- | ------------------------------------------------- |
-| Linux/Windows desktop app     | Issue #75     | Massive scope (Electron/Tauri), upstream tracking |
-| Crittora boot verification    | Crittora fork | Docker-only, complex ops overhead                 |
-| Native MCP client             | Issue #21530  | Open PR upstream — wait for merge                 |
-| Modular guardrails (EdgeClaw) | Issue #6095   | Open PR upstream — wait for merge                 |
-| OpenTelemetry diagnostics     | Issue #21290  | `extensions/diagnostics-otel` exists in this repo |
+| Enhancement                | Source       | Reason to Wait                                    |
+| -------------------------- | ------------ | ------------------------------------------------- |
+| Linux/Windows desktop app  | Issue #75    | Massive scope (Electron/Tauri), upstream tracking |
+| Crittora boot verification | Crittora     | Docker-only, complex ops overhead                 |
+| OpenTelemetry diagnostics  | Issue #21290 | `extensions/diagnostics-otel` exists in upstream  |
 
 ### Skip
 
@@ -389,6 +419,8 @@ From the upstream GitHub issues (sorted by 👍):
 
 ## Top Integration Recommendation
 
+**Completed so far (this session):** 11 features merged — community issue PRs (#22559, #26534, #7520, #8081), upstream PRs (#6095 guardrails, #19298 Brave search, #21530 MCP), plus two fork integrations (ironclaw AI SDK engine, Composio Tool Router).
+
 **Next highest-leverage item:** port the **LocalClaw 3-tier model routing classifier**. It is:
 
 - A clean heuristic (no LLM call overhead)
@@ -396,7 +428,9 @@ From the upstream GitHub issues (sorted by 👍):
 - Applicable immediately to any OpenClaw install
 - The single highest-leverage cost optimization available
 
-**Runner-up:** **add SearXNG + Brave as `web_search` providers** — the most multiply-requested feature (three separate issues totaling ~29 👍) and straightforwardly implementable as a plugin following the existing `extensions/` pattern.
+**Runner-up:** **SearXNG as a `web_search` provider** — one of the most multiply-requested features (~12 👍 on #2317) and straightforwardly implementable as a plugin or config extension following the existing Brave search integration pattern.
+
+**After that:** **GuardAgent S1/S2/S3 privacy tiers** from EdgeClaw — the most architecturally novel feature in the ecosystem. High integration effort but zero user-visible behavior change for public-only deployments.
 
 ---
 
