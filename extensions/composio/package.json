@@ -1,0 +1,16 @@
+{
+  "name": "@openclaw/composio",
+  "version": "2026.2.26",
+  "description": "OpenClaw Composio Tool Router integration - access 1000+ third-party tools",
+  "type": "module",
+  "dependencies": {
+    "@composio/core": "^0.5.5",
+    "@sinclair/typebox": "0.34.47",
+    "zod": "^4.3.6"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
