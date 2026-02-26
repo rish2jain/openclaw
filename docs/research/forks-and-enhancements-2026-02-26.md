@@ -29,9 +29,10 @@ All planned implementations are complete and merged into `main` (fork: `rish2jai
 
 ### Third-Party Forks Integrated
 
-| Fork               | What was integrated                                                    | Status            | Committed  |
-| ------------------ | ---------------------------------------------------------------------- | ----------------- | ---------- |
-| `DenchHQ/ironclaw` | AI SDK engine (Vercel AI SDK v6), engine router, DuckDB workspace seed | ✅ Merged to main | 2026-02-26 |
+| Fork                           | What was integrated                                                                 | Status            | Committed  |
+| ------------------------------ | ----------------------------------------------------------------------------------- | ----------------- | ---------- |
+| `DenchHQ/ironclaw`             | AI SDK engine (Vercel AI SDK v6), engine router, DuckDB workspace seed              | ✅ Merged to main | 2026-02-26 |
+| `ComposioHQ/composio-openclaw` | Composio Tool Router plugin (1000+ integrations), bird/clawdhub/local-places skills | ✅ Merged to main | 2026-02-26 |
 
 ---
 
@@ -130,6 +131,31 @@ Surgical integration of ironclaw's differentiating modules (all new files, no mo
 **Dependencies added:** `ai@^6`, all `@ai-sdk/*` providers, `@openrouter/ai-sdk-provider`.
 
 **Config key added:** `agents.engine: "aisdk" | "pi-agent"` in `src/config/types.agents.ts`.
+
+---
+
+### ComposioHQ/composio-openclaw — Composio Tool Router Plugin
+
+Surgical checkout of `extensions/composio/` from the fork, updated for OpenClaw naming conventions and current `@composio/core@0.5.5` SDK API.
+
+**`extensions/composio/`** — 6 agent tools registered as a plugin:
+
+- `composio_search_tools` — semantic search across 1000+ Composio integrations by use-case description
+- `composio_execute_tool` — execute a single tool by slug (e.g. `GMAIL_SEND_EMAIL`)
+- `composio_multi_execute` — batch-execute up to 50 tools in parallel
+- `composio_manage_connections` — check/create OAuth connections for toolkits; returns auth URL for unconnected toolkits
+- `composio_workbench` — run Python code in a remote Jupyter sandbox (for bulk operations or data processing)
+- `composio_bash` — run shell commands in the remote sandbox
+
+**CLI extension:** `openclaw composio list|connect|disconnect` commands for managing toolkit connections.
+
+**`before_agent_start` hook:** Injects Composio usage instructions into every agent session system prompt automatically.
+
+**Skills added:** `skills/bird/` (X/Twitter CLI), `skills/clawdhub/` (skill marketplace CLI), `skills/local-places/` (Google Places Python server).
+
+**Config:** `COMPOSIO_API_KEY` env var or `plugins.composio.apiKey` in gateway config.
+
+**SDK API fixes applied:** `client.client.tools.execute` → `client.tools.execute`; `connectedAccounts.list({userId})` → `list({userIds})`; `connectedAccounts.delete({...})` → `delete(id)`.
 
 ---
 
