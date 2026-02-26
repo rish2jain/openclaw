@@ -1,0 +1,37 @@
+{
+  "name": "@openclaw/rocketchat",
+  "version": "2026.2.26",
+  "description": "OpenClaw Rocket.Chat channel plugin",
+  "type": "module",
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.2.25"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "rocketchat",
+      "label": "Rocket.Chat",
+      "selectionLabel": "Rocket.Chat (self-hosted or cloud)",
+      "detailLabel": "Rocket.Chat",
+      "docsPath": "/channels/rocketchat",
+      "docsLabel": "rocketchat",
+      "blurb": "Rocket.Chat open-source team messaging via webhooks or REST API.",
+      "aliases": [
+        "rocket",
+        "rc"
+      ],
+      "order": 45,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@openclaw/rocketchat",
+      "localPath": "extensions/rocketchat",
+      "defaultChoice": "local"
+    }
+  }
+}
