@@ -961,6 +961,7 @@ async function dispatchDiscordComponentEvent(params: {
           maxLinesPerMessage: ctx.discordConfig?.maxLinesPerMessage,
           tableMode,
           chunkMode: resolveChunkMode(ctx.cfg, "discord", accountId),
+          interMessageMs: ctx.discordConfig?.outbound?.interMessageMs ?? 1100,
         });
         replyReference.markSent();
       },

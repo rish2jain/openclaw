@@ -187,6 +187,8 @@ export type SlackAccountConfig = {
    * Slack uses shortcodes (e.g., "eyes") rather than unicode emoji.
    */
   ackReaction?: string;
+  /** Outbound rate limiting (inter-message delay in ms). */
+  outbound?: { interMessageMs?: number };
 };
 
 export type SlackConfig = {

@@ -6,6 +6,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- Telegram, Discord, and Slack: outbound messages are now throttled per chat/channel with configurable inter-message delay (`channels.telegram.outbound.interMessageMs`, `channels.discord.outbound.interMessageMs`, `channels.slack.outbound.interMessageMs`) to avoid platform flood limits. Defaults: Telegram 800 ms, Discord and Slack 1100 ms. Closes #13627.
 - Android/Chat: improve streaming delivery handling and markdown rendering quality in the native Android chat UI, including better GitHub-flavored markdown behavior. (#26079) Thanks @obviyus.
 - Branding/Docs + Apple surfaces: replace remaining `bot.molt` launchd label, bundle-id, logging subsystem, and command examples with `ai.openclaw` across docs, iOS app surfaces, helper scripts, and CLI test fixtures.
 - Agents/Config: remind agents to call `config.schema` before config edits or config-field questions to avoid guessing. Thanks @thewilloftheshadow.

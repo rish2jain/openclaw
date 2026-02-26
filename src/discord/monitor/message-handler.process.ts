@@ -660,6 +660,7 @@ export async function processDiscordMessage(ctx: DiscordMessagePreflightContext)
         chunkMode,
         sessionKey: ctxPayload.SessionKey,
         threadBindings,
+        interMessageMs: discordConfig?.outbound?.interMessageMs ?? 1100,
       });
       replyReference.markSent();
     },

@@ -290,6 +290,8 @@ export type DiscordAccountConfig = {
   activityType?: 0 | 1 | 2 | 3 | 4 | 5;
   /** Streaming URL (Twitch/YouTube). Required when activityType=1. */
   activityUrl?: string;
+  /** Outbound rate limiting (inter-message delay in ms). */
+  outbound?: { interMessageMs?: number };
 };
 
 export type DiscordConfig = {

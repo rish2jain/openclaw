@@ -169,6 +169,8 @@ export type TelegramAccountConfig = {
    * Telegram expects unicode emoji (e.g., "👀") rather than shortcodes.
    */
   ackReaction?: string;
+  /** Outbound rate limiting (inter-message delay in ms). */
+  outbound?: { interMessageMs?: number };
 };
 
 export type TelegramTopicConfig = {

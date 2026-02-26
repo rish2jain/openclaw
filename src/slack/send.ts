@@ -9,6 +9,7 @@ import {
   resolveChunkMode,
   resolveTextChunkLimit,
 } from "../auto-reply/chunk.js";
+import { withOutboundThrottle } from "../channels/outbound-throttle.js";
 import { loadConfig } from "../config/config.js";
 import { resolveMarkdownTableMode } from "../config/markdown-tables.js";
 import { logVerbose } from "../globals.js";
@@ -249,19 +250,25 @@ export async function sendMessageSlack(
   const client = opts.client ?? createSlackWebClient(token);
   const recipient = parseRecipient(to);
   const { channelId } = await resolveChannelId(client, recipient);
+  const interMessageMs = account.config?.outbound?.interMessageMs ?? 1100;
+  const throttled = <T>(fn: () => Promise<T>) =>
+    withOutboundThrottle("slack", channelId, interMessageMs, fn);
+
   if (blocks) {
     if (opts.mediaUrl) {
       throw new Error("Slack send does not support blocks with mediaUrl");
     }
     const fallbackText = trimmedMessage || buildSlackBlocksFallbackText(blocks);
-    const response = await postSlackMessageBestEffort({
-      client,
-      channelId,
-      text: fallbackText,
-      threadTs: opts.threadTs,
-      identity: opts.identity,
-      blocks,
-    });
+    const response = await throttled(() =>
+      postSlackMessageBestEffort({
+        client,
+        channelId,
+        text: fallbackText,
+        threadTs: opts.threadTs,
+        identity: opts.identity,
+        blocks,
+      }),
+    );
     return {
       messageId: response.ts ?? "unknown",
       channelId,
@@ -293,34 +300,40 @@ export async function sendMessageSlack(
   let lastMessageId = "";
   if (opts.mediaUrl) {
     const [firstChunk, ...rest] = chunks;
-    lastMessageId = await uploadSlackFile({
-      client,
-      channelId,
-      mediaUrl: opts.mediaUrl,
-      mediaLocalRoots: opts.mediaLocalRoots,
-      caption: firstChunk,
-      threadTs: opts.threadTs,
-      maxBytes: mediaMaxBytes,
-    });
-    for (const chunk of rest) {
-      const response = await postSlackMessageBestEffort({
+    lastMessageId = await throttled(() =>
+      uploadSlackFile({
         client,
         channelId,
-        text: chunk,
+        mediaUrl: opts.mediaUrl!,
+        mediaLocalRoots: opts.mediaLocalRoots,
+        caption: firstChunk,
         threadTs: opts.threadTs,
-        identity: opts.identity,
-      });
+        maxBytes: mediaMaxBytes,
+      }),
+    );
+    for (const chunk of rest) {
+      const response = await throttled(() =>
+        postSlackMessageBestEffort({
+          client,
+          channelId,
+          text: chunk,
+          threadTs: opts.threadTs,
+          identity: opts.identity,
+        }),
+      );
       lastMessageId = response.ts ?? lastMessageId;
     }
   } else {
     for (const chunk of chunks.length ? chunks : [""]) {
-      const response = await postSlackMessageBestEffort({
-        client,
-        channelId,
-        text: chunk,
-        threadTs: opts.threadTs,
-        identity: opts.identity,
-      });
+      const response = await throttled(() =>
+        postSlackMessageBestEffort({
+          client,
+          channelId,
+          text: chunk,
+          threadTs: opts.threadTs,
+          identity: opts.identity,
+        }),
+      );
       lastMessageId = response.ts ?? lastMessageId;
     }
   }

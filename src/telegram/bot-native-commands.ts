@@ -434,6 +434,7 @@ export const registerTelegramNativeCommands = ({
     tableMode: params.tableMode,
     chunkMode: params.chunkMode,
     linkPreview: telegramCfg.linkPreview,
+    interMessageMs: telegramCfg.outbound?.interMessageMs ?? 800,
   });
 
   if (commandsToRegister.length > 0 || pluginCatalog.commands.length > 0) {

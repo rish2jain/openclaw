@@ -185,6 +185,12 @@ export const TelegramAccountSchemaBase = z
     linkPreview: z.boolean().optional(),
     responsePrefix: z.string().optional(),
     ackReaction: z.string().optional(),
+    outbound: z
+      .object({
+        interMessageMs: z.number().int().min(0).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -431,6 +437,12 @@ export const DiscordAccountSchema = z
       .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
       .optional(),
     activityUrl: z.string().url().optional(),
+    outbound: z
+      .object({
+        interMessageMs: z.number().int().min(0).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -667,6 +679,12 @@ export const SlackAccountSchema = z
     heartbeat: ChannelHeartbeatVisibilitySchema,
     responsePrefix: z.string().optional(),
     ackReaction: z.string().optional(),
+    outbound: z
+      .object({
+        interMessageMs: z.number().int().min(0).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
