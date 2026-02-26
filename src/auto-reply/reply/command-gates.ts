@@ -1,6 +1,7 @@
 import type { CommandFlagKey } from "../../config/commands.js";
 import { isCommandFlagEnabled } from "../../config/commands.js";
 import { logVerbose } from "../../globals.js";
+import { hasPermission } from "../../rbac/index.js";
 import type { ReplyPayload } from "../types.js";
 import type { CommandHandlerResult, HandleCommandsParams } from "./commands-types.js";
 
@@ -15,6 +16,27 @@ export function rejectUnauthorizedCommand(
     `Ignoring ${commandLabel} from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
   );
   return { shouldContinue: false };
+}
+
+/**
+ * Gate that blocks commands requiring the `commands.admin` permission.
+ * Returns a result (blocking the command) when the sender is not an admin;
+ * returns null when the sender is allowed to proceed.
+ */
+export function rejectNonAdminCommand(
+  params: HandleCommandsParams,
+  commandLabel: string,
+): CommandHandlerResult | null {
+  if (hasPermission(params.command.role, "commands.admin")) {
+    return null;
+  }
+  logVerbose(
+    `Blocking admin-only ${commandLabel} from role="${params.command.role}" sender: ${params.command.senderId || "<unknown>"}`,
+  );
+  return {
+    shouldContinue: false,
+    reply: { text: `⛔ ${commandLabel} requires admin access.` },
+  };
 }
 
 export function buildDisabledCommandReply(params: {

@@ -521,6 +521,8 @@ describe("handleCommands /config configWrites gating", () => {
     const cfg = {
       commands: { config: true, text: true },
       channels: { whatsapp: { allowFrom: ["*"], configWrites: false } },
+      // Grant admin role so the admin gate passes and the configWrites gate is exercised
+      gateway: { access: { defaultRole: "admin" } },
     } as OpenClawConfig;
     const params = buildParams('/config set messages.ackReaction=":)"', cfg);
     const result = await handleCommands(params);

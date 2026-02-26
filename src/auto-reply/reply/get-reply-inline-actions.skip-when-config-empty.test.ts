@@ -47,6 +47,7 @@ const createHandleInlineActionsInput = (params: {
     commandBodyNormalized: params.cleanedBody,
     from: "whatsapp:+999",
     to: "whatsapp:+999",
+    role: "user",
   };
   return {
     ctx: params.ctx,

@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../../config/config.js";
+import { resolveUserRoleFromConfig } from "../../rbac/index.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import { normalizeCommandBody } from "../commands-registry.js";
 import type { MsgContext } from "../templating.js";
@@ -28,6 +29,13 @@ export function buildCommandContext(params: {
     isGroup ? stripMentions(rawBodyNormalized, ctx, cfg, agentId) : rawBodyNormalized,
   );
 
+  // Resolve RBAC role; auth.providerId gives the channel prefix for qualified ID matching
+  const role = resolveUserRoleFromConfig({
+    cfg,
+    senderId: auth.senderId ?? ctx.SenderId ?? ctx.From ?? "",
+    channel: auth.providerId ?? undefined,
+  });
+
   return {
     surface,
     channel,
@@ -41,5 +49,6 @@ export function buildCommandContext(params: {
     commandBodyNormalized,
     from: auth.from,
     to: auth.to,
+    role,
   };
 }

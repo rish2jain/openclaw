@@ -2,6 +2,7 @@ import type { SkillCommandSpec } from "../../agents/skills.js";
 import type { ChannelId } from "../../channels/plugins/types.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry, SessionScope } from "../../config/sessions.js";
+import type { RbacRole } from "../../rbac/types.js";
 import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "../thinking.js";
 import type { ReplyPayload } from "../types.js";
@@ -22,6 +23,8 @@ export type CommandContext = {
   to?: string;
   /** Internal marker to prevent duplicate reset-hook emission across command pipelines. */
   resetHookTriggered?: boolean;
+  /** Resolved RBAC role for the sender. Defaults to "user" when access config is absent. */
+  role: RbacRole;
 };
 
 export type HandleCommandsParams = {

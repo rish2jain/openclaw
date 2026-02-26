@@ -17,7 +17,12 @@ import {
   setConfigOverride,
   unsetConfigOverride,
 } from "../../config/runtime-overrides.js";
-import { rejectUnauthorizedCommand, requireCommandFlagEnabled } from "./command-gates.js";
+import { filterConfigValue, redactConfigForRole } from "../../rbac/index.js";
+import {
+  rejectNonAdminCommand,
+  rejectUnauthorizedCommand,
+  requireCommandFlagEnabled,
+} from "./command-gates.js";
 import type { CommandHandler } from "./commands-types.js";
 import { parseConfigCommand } from "./config-commands.js";
 import { parseDebugCommand } from "./debug-commands.js";
@@ -49,6 +54,11 @@ export const handleConfigCommand: CommandHandler = async (params, allowTextComma
   }
 
   if (configCommand.action === "set" || configCommand.action === "unset") {
+    // Writes require admin role
+    const adminGuard = rejectNonAdminCommand(params, "/config set/unset");
+    if (adminGuard) {
+      return adminGuard;
+    }
     const channelId = params.command.channelId ?? normalizeChannelId(params.command.channel);
     const allowWrites = resolveChannelConfigWrites({
       cfg: params.cfg,
@@ -81,6 +91,7 @@ export const handleConfigCommand: CommandHandler = async (params, allowTextComma
   const parsedBase = structuredClone(snapshot.parsed as Record<string, unknown>);
 
   if (configCommand.action === "show") {
+    const role = params.command.role;
     const pathRaw = configCommand.path?.trim();
     if (pathRaw) {
       const parsedPath = parseConfigPath(pathRaw);
@@ -91,18 +102,23 @@ export const handleConfigCommand: CommandHandler = async (params, allowTextComma
         };
       }
       const value = getConfigValueAtPath(parsedBase, parsedPath.path);
-      const rendered = JSON.stringify(value ?? null, null, 2);
+      const { value: filtered, hidden } = filterConfigValue({ path: pathRaw, value, role });
+      const rendered = JSON.stringify(filtered ?? null, null, 2);
+      const redactedNote = hidden ? " *(redacted — admin only)*" : "";
       return {
         shouldContinue: false,
         reply: {
-          text: `⚙️ Config ${pathRaw}:\n\`\`\`json\n${rendered}\n\`\`\``,
+          text: `⚙️ Config ${pathRaw}${redactedNote}:\n\`\`\`json\n${rendered}\n\`\`\``,
         },
       };
     }
-    const json = JSON.stringify(parsedBase, null, 2);
+    // Full config dump: redact sensitive paths for non-admins
+    const filtered = redactConfigForRole({ config: parsedBase, role });
+    const json = JSON.stringify(filtered, null, 2);
+    const redactedNote = role !== "admin" ? " *(sensitive values redacted)*" : "";
     return {
       shouldContinue: false,
-      reply: { text: `⚙️ Config (raw):\n\`\`\`json\n${json}\n\`\`\`` },
+      reply: { text: `⚙️ Config (raw)${redactedNote}:\n\`\`\`json\n${json}\n\`\`\`` },
     };
   }
 

@@ -1,5 +1,45 @@
 export type GatewayBindMode = "auto" | "lan" | "loopback" | "custom" | "tailnet";
 
+/**
+ * User roles for multi-user deployments.
+ * - admin: full access to all config, commands, and tools
+ * - user:  standard access (AI + commands, but sensitive config is redacted)
+ * - guest: AI only, no commands, config access denied
+ */
+export type GatewayAccessRole = "admin" | "user" | "guest";
+
+/**
+ * Per-user role assignments for fine-grained access control.
+ *
+ * User identities use the `channel:id` format (e.g. `telegram:12345678`,
+ * `slack:U0123ABCDEF`, `discord:999888777`). You can also use bare IDs when
+ * only one channel is configured.
+ */
+export type GatewayAccessRolesConfig = Record<string, GatewayAccessRole>;
+
+/**
+ * Access control configuration for multi-user deployments.
+ * Controls which users can view sensitive config, run admin commands, etc.
+ */
+export type GatewayAccessConfig = {
+  /**
+   * Shorthand for granting admin role to a list of users.
+   * Equivalent to setting `roles["user-id"] = "admin"` for each entry.
+   * Takes precedence over `roles` if the same user appears in both.
+   */
+  adminUsers?: string[];
+  /**
+   * Explicit role assignments per user identity.
+   * Use `channel:id` format for disambiguation across channels.
+   */
+  roles?: GatewayAccessRolesConfig;
+  /**
+   * Default role for users not listed in adminUsers or roles.
+   * Defaults to "user" when not set.
+   */
+  defaultRole?: GatewayAccessRole;
+};
+
 export type GatewayTlsConfig = {
   /** Enable TLS for the gateway server. */
   enabled?: boolean;
@@ -362,4 +402,9 @@ export type GatewayConfig = {
    * Set to 0 to disable. Default: 5.
    */
   channelHealthCheckMinutes?: number;
+  /**
+   * Multi-user access control.
+   * Defines which users are admins, standard users, or guests.
+   */
+  access?: GatewayAccessConfig;
 };
