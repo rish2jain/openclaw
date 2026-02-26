@@ -1,6 +1,6 @@
 # OpenClaw Forks & Community Enhancements Analysis
 
-_Researched: 2026-02-26 | Updated: 2026-02-26 | Base repo: 231k ⭐, 44k forks_
+_Researched: 2026-02-26 | Last updated: 2026-02-26 (all Tier 1 complete) | Base repo: 231k ⭐, 44k forks_
 
 ---
 
@@ -485,18 +485,22 @@ From the upstream GitHub issues (sorted by 👍):
 
 ## Top Integration Recommendation
 
-**Completed (all sessions):** 15 features merged across all Tier 1 items:
+**Completed (all sessions):** All 13 Tier 1 features are merged into `main` (fork: `rish2jain/openclaw`), plus 4 bonus fixes:
 
-- Community issue PRs: #22559, #26534, #7520, #8081
-- Upstream PRs: #6095 (guardrails), #19298 (Brave LLM Context), #21530 (MCP)
-- Fork integrations: ironclaw (AI SDK engine), Composio (Tool Router), LocalClaw (routing + health)
-- Issue-driven: #2317 (SearXNG), #9157 (token optimization)
+| Category              | Items                                                                          |
+| --------------------- | ------------------------------------------------------------------------------ |
+| Community issue PRs   | #22559, #26534, #7520, #8081                                                   |
+| Bonus fixes/additions | gateway-bind tailscale auto, session-maintenance, outbound rate-limit, LanceDB |
+| Upstream PRs          | #6095 (guardrails), #19298 (Brave LLM Context), #21530 (Native MCP)            |
+| Fork integrations     | ironclaw (AI SDK engine), Composio (Tool Router), LocalClaw (routing + health) |
+| Issue-driven features | #2317 (SearXNG), #9157 (workspace token optimization)                          |
 
-**All Tier 1 items are complete.** The remaining highest-leverage work:
+**Tier 1 is fully complete. Recommended next targets (Tier 2):**
 
-1. **GuardAgent S1/S2/S3 privacy tiers** from EdgeClaw — the most architecturally novel feature in the ecosystem. Routes sensitive data only to on-prem models; zero user-visible change for public-only deployments.
-2. **DeepSeek first-class support** (#7309) — low effort, high impact for cost-sensitive deployments.
-3. **Crittora boot-time policy verification** — for security-critical / enterprise deployments.
+1. **GuardAgent S1/S2/S3 privacy tiers** (EdgeClaw) — the most architecturally novel feature in the ecosystem. Routes sensitive data only to on-prem local models; zero visible change for public-only deployments. High effort, very high value for privacy-sensitive or regulated environments.
+2. **DeepSeek first-class support** (#7309) — low effort, cost-efficient alternative for budget-conscious deployments.
+3. **Crittora boot-time policy verification** — cryptographically signed policy gate; valuable for team/enterprise production deployments.
+4. **Plugin lifecycle interception** (#12082) — pre/post-tool hooks for plugin authors, opens up a new class of audit/compliance integrations.
 
 ---
 
