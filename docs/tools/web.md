@@ -58,34 +58,90 @@ If no `provider` is set, OpenClaw picks the first provider with a working key/UR
 If no keys or URLs are found, it falls back to Brave (you'll get a missing-key error prompting
 you to configure one).
 
-### Explicit provider
+Runtime SecretRef behavior:
 
-Set the provider in config:
+- Web tool SecretRefs are resolved atomically at gateway startup/reload.
+- In auto-detect mode, OpenClaw resolves only the selected provider key. Non-selected provider SecretRefs stay inactive until selected.
+- If the selected provider SecretRef is unresolved and no provider env fallback exists, startup/reload fails fast.
+
+## Setting up web search
+
+Use `openclaw configure --section web` to set up your API key and choose a provider.
+
+### Brave Search
+
+1. Create a Brave Search API account at [brave.com/search/api](https://brave.com/search/api/)
+2. In the dashboard, choose the **Search** plan and generate an API key.
+3. Run `openclaw configure --section web` to store the key in config, or set `BRAVE_API_KEY` in your environment.
+
+Each Brave plan includes **$5/month in free credit** (renewing). The Search
+plan costs $5 per 1,000 requests, so the credit covers 1,000 queries/month. Set
+your usage limit in the Brave dashboard to avoid unexpected charges. See the
+[Brave API portal](https://brave.com/search/api/) for current plans and
+pricing.
+
+### Perplexity Search
+
+1. Create a Perplexity account at [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
+2. Generate an API key in the dashboard
+3. Run `openclaw configure --section web` to store the key in config, or set `PERPLEXITY_API_KEY` in your environment.
+
+For legacy Sonar/OpenRouter compatibility, set `OPENROUTER_API_KEY` instead, or configure `tools.web.search.perplexity.apiKey` with an `sk-or-...` key. Setting `tools.web.search.perplexity.baseUrl` or `model` also opts Perplexity back into the chat-completions compatibility path.
+
+See [Perplexity Search API Docs](https://docs.perplexity.ai/guides/search-quickstart) for more details.
+
+### Where to store the key
+
+**Via config:** run `openclaw configure --section web`. It stores the key under the provider-specific config path:
+
+- Brave: `tools.web.search.apiKey`
+- Gemini: `tools.web.search.gemini.apiKey`
+- Grok: `tools.web.search.grok.apiKey`
+- Kimi: `tools.web.search.kimi.apiKey`
+- Perplexity: `tools.web.search.perplexity.apiKey`
+
+All of these fields also support SecretRef objects.
+
+**Via environment:** set provider env vars in the Gateway process environment:
+
+- Brave: `BRAVE_API_KEY`
+- Gemini: `GEMINI_API_KEY`
+- Grok: `XAI_API_KEY`
+- Kimi: `KIMI_API_KEY` or `MOONSHOT_API_KEY`
+- Perplexity: `PERPLEXITY_API_KEY` or `OPENROUTER_API_KEY`
+
+For a gateway install, put these in `~/.openclaw/.env` (or your service environment). See [Env vars](/help/faq#how-does-openclaw-load-environment-variables).
+
+### Config examples
+
+**Brave Search:**
 
 ```json5
 {
   tools: {
     web: {
       search: {
+        enabled: true,
         provider: "brave", // "brave" | "perplexity" | "grok" | "searxng"
+        apiKey: "YOUR_BRAVE_API_KEY", // optional if BRAVE_API_KEY is set // pragma: allowlist secret
       },
     },
   },
 }
 ```
 
-Example: switch to Perplexity Sonar (direct API):
+**Brave LLM Context mode:**
 
 ```json5
 {
   tools: {
     web: {
       search: {
-        provider: "perplexity",
-        perplexity: {
-          apiKey: "pplx-...",
-          baseUrl: "https://api.perplexity.ai",
-          model: "perplexity/sonar-pro",
+        enabled: true,
+        provider: "brave",
+        apiKey: "YOUR_BRAVE_API_KEY", // optional if BRAVE_API_KEY is set // pragma: allowlist secret
+        brave: {
+          mode: "llm-context",
         },
       },
     },
@@ -97,6 +153,91 @@ Example: switch to Perplexity Sonar (direct API):
 
 - `tools.web.search.enabled` must not be `false` (default: enabled)
 - API key for your chosen provider (see table above)
+
+`llm-context` (Brave) returns extracted page chunks for grounding instead of standard Brave snippets.
+In this mode, `country` and `language` / `search_lang` still work, but `ui_lang`,
+`freshness`, `date_after`, and `date_before` are rejected.
+
+**Perplexity Search:**
+
+```json5
+{
+  tools: {
+    web: {
+      search: {
+        enabled: true,
+        provider: "perplexity",
+        perplexity: {
+          apiKey: "pplx-...", // optional if PERPLEXITY_API_KEY is set
+        },
+      },
+    },
+  },
+}
+```
+
+**Perplexity via OpenRouter / Sonar compatibility:**
+
+```json5
+{
+  tools: {
+    web: {
+      search: {
+        enabled: true,
+        provider: "perplexity",
+        perplexity: {
+          apiKey: "<openrouter-api-key>", // optional if OPENROUTER_API_KEY is set
+          baseUrl: "https://openrouter.ai/api/v1",
+          model: "perplexity/sonar-pro",
+        },
+      },
+    },
+  },
+}
+```
+
+## Using Gemini (Google Search grounding)
+
+Gemini models support built-in [Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding),
+which returns AI-synthesized answers backed by live Google Search results with citations.
+
+### Getting a Gemini API key
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Create an API key
+3. Set `GEMINI_API_KEY` in the Gateway environment, or configure `tools.web.search.gemini.apiKey`
+
+### Setting up Gemini search
+
+```json5
+{
+  tools: {
+    web: {
+      search: {
+        provider: "gemini",
+        gemini: {
+          // API key (optional if GEMINI_API_KEY is set)
+          apiKey: "AIza...",
+          // Model (defaults to "gemini-2.5-flash")
+          model: "gemini-2.5-flash",
+        },
+      },
+    },
+  },
+}
+```
+
+**Environment alternative:** set `GEMINI_API_KEY` in the Gateway environment.
+For a gateway install, put it in `~/.openclaw/.env`.
+
+### Notes
+
+- Citation URLs from Gemini grounding are automatically resolved from Google's
+  redirect URLs to direct URLs.
+- Redirect resolution uses the SSRF guard path (HEAD + redirect checks + http/https validation) before returning the final citation URL.
+- Redirect resolution uses strict SSRF defaults, so redirects to private/internal targets are blocked.
+- The default model (`gemini-2.5-flash`) is fast and cost-effective.
+  Any Gemini model that supports grounding can be used.
 
 ### web_search config
 
@@ -121,11 +262,14 @@ Example: switch to Perplexity Sonar (direct API):
 - `query` (required)
 - `count` (1–10; default from config)
 - `country` (optional): 2-letter country code for region-specific results (e.g., `"DE"`, `"US"`, `"ALL"`)
-- `search_lang` (optional): ISO language code for search results (e.g., `"de"`, `"en"`, `"fr"`)
-- `ui_lang` (optional): ISO language code for UI elements
-- `freshness` (optional): filter by discovery time
-  - Brave: `pd`, `pw`, `pm`, `py`, or `YYYY-MM-DDtoYYYY-MM-DD`
-  - Perplexity: `pd`, `pw`, `pm`, `py`
+- `search_lang` / `language` (optional): ISO language code for search results (e.g., `"de"`, `"en"`, `"fr"`)
+- `ui_lang` (optional): ISO language code for UI elements (Brave only)
+- `freshness` (optional): filter by discovery time (`day`, `week`, `month`, `year`; Brave also supports `pd`, `pw`, `pm`, `py`, or date range)
+- `date_after` / `date_before` (optional): filter results by date (YYYY-MM-DD)
+- `domain_filter` (Perplexity only): domain allowlist/denylist array
+- `max_tokens` / `max_tokens_per_page` (Perplexity only): content budget
+
+Perplexity's OpenRouter / Sonar compatibility path supports only `query` and `freshness`.
 
 **Examples:**
 
@@ -135,126 +279,43 @@ await web_search({ query: "TV online schauen", count: 10, country: "DE", search_
 
 // Recent results (past week)
 await web_search({ query: "TMBG interview", freshness: "pw" });
+
+// Alternative (language param)
+await web_search({
+  query: "TV online schauen",
+  country: "DE",
+  language: "de",
+});
+
+// Date range search
+await web_search({
+  query: "AI developments",
+  date_after: "2024-01-01",
+  date_before: "2024-06-30",
+});
+
+// Domain filtering (Perplexity only)
+await web_search({
+  query: "climate research",
+  domain_filter: ["nature.com", "science.org", ".edu"],
+});
+
+// Exclude domains (Perplexity only)
+await web_search({
+  query: "product reviews",
+  domain_filter: ["-reddit.com", "-pinterest.com"],
+});
+
+// More content extraction (Perplexity only)
+await web_search({
+  query: "detailed AI research",
+  max_tokens: 50000,
+  max_tokens_per_page: 4096,
+});
 ```
 
----
-
-## Brave Search setup
-
-1. Create an account at [https://brave.com/search/api/](https://brave.com/search/api/)
-2. Choose the **Data for Search** plan and generate an API key (not "Data for AI").
-3. Store it with `openclaw configure --section web`, or set `BRAVE_API_KEY` in the Gateway environment.
-
-```json5
-{
-  tools: {
-    web: {
-      search: {
-        provider: "brave",
-        apiKey: "BRAVE_API_KEY_HERE",
-        maxResults: 5,
-        timeoutSeconds: 30,
-      },
-    },
-  },
-}
-```
-
-See [Brave Search](/brave-search) for details.
-
----
-
-## Perplexity setup
-
-Perplexity Sonar models have built-in web search with AI-synthesized answers and citations.
-Use via OpenRouter (prepaid/crypto) or Perplexity's direct API.
-
-```json5
-{
-  tools: {
-    web: {
-      search: {
-        provider: "perplexity",
-        perplexity: {
-          apiKey: "sk-or-v1-...", // OPENROUTER_API_KEY or PERPLEXITY_API_KEY
-          baseUrl: "https://openrouter.ai/api/v1",
-          model: "perplexity/sonar-pro", // default
-        },
-      },
-    },
-  },
-}
-```
-
-If no `baseUrl` is set, OpenClaw picks a default based on key prefix:
-
-- `PERPLEXITY_API_KEY` / `pplx-...` → `https://api.perplexity.ai`
-- `OPENROUTER_API_KEY` / `sk-or-...` → `https://openrouter.ai/api/v1`
-
-| Model                            | Description                       | Best for          |
-| -------------------------------- | --------------------------------- | ----------------- |
-| `perplexity/sonar`               | Fast Q&A with web search          | Quick lookups     |
-| `perplexity/sonar-pro` (default) | Multi-step reasoning + web search | Complex questions |
-| `perplexity/sonar-reasoning-pro` | Chain-of-thought analysis         | Deep research     |
-
-See [Perplexity Sonar](/perplexity) for details.
-
----
-
-## Grok search setup
-
-[xAI Grok](https://x.ai/) models can search the web and surface results with inline citations.
-Requires an xAI API key.
-
-```json5
-{
-  tools: {
-    web: {
-      search: {
-        provider: "grok",
-        grok: {
-          apiKey: "xai-...", // optional if XAI_API_KEY is set
-          model: "grok-4", // default
-          inlineCitations: false, // include citation URLs inline
-        },
-      },
-    },
-  },
-}
-```
-
-**Environment alternative:** set `XAI_API_KEY` in the Gateway environment (`~/.openclaw/.env`).
-
-> **Note:** This is the `web_search` Grok provider, which searches the web. For searching
-> X/Twitter posts or running Python in xAI's sandbox, see [xai_search](#xai_search) and
-> [xai_code_exec](#xai_code_exec) below.
-
----
-
-## SearXNG setup
-
-[SearXNG](https://docs.searxng.org/) is a self-hosted, privacy-preserving meta-search engine.
-No API key is required — just point OpenClaw at your SearXNG instance's base URL.
-
-```json5
-{
-  tools: {
-    web: {
-      search: {
-        provider: "searxng",
-        searxng: {
-          baseUrl: "https://search.example.com", // required
-          timeoutSeconds: 30,
-        },
-      },
-    },
-  },
-}
-```
-
-**Environment alternative:** set `SEARXNG_BASE_URL` in the Gateway environment.
-
----
+When Brave `llm-context` mode is enabled, `ui_lang`, `freshness`, `date_after`, and
+`date_before` are not supported. Use Brave `web` mode for those filters.
 
 ## web_fetch
 
@@ -264,6 +325,7 @@ Fetch a URL and extract readable content.
 
 - `tools.web.fetch.enabled` must not be `false` (default: enabled)
 - Optional Firecrawl fallback: set `tools.web.fetch.firecrawl.apiKey` or `FIRECRAWL_API_KEY`.
+- `tools.web.fetch.firecrawl.apiKey` supports SecretRef objects.
 
 ### web_fetch config
 
@@ -304,13 +366,16 @@ Notes:
 
 - `web_fetch` uses Readability (main-content extraction) first, then Firecrawl (if configured).
 - Firecrawl requests use bot-circumvention mode and cache results by default.
-- Sends a Chrome-like User-Agent by default; override `userAgent` if needed.
-- Blocks private/internal hostnames and re-checks redirects.
+- Firecrawl SecretRefs are resolved only when Firecrawl is active (`tools.web.fetch.enabled !== false` and `tools.web.fetch.firecrawl.enabled !== false`).
+- If Firecrawl is active and its SecretRef is unresolved with no `FIRECRAWL_API_KEY` fallback, startup/reload fails fast.
+- Sends a Chrome-like User-Agent and `Accept-Language` by default; override `userAgent` if needed.
+- Blocks private/internal hostnames and re-checks redirects (limit with `maxRedirects`).
 - `maxChars` is clamped to `tools.web.fetch.maxCharsCap`.
 - Response body is capped to `maxResponseBytes` before parsing; oversized responses are truncated.
 - See [Firecrawl](/tools/firecrawl) for key setup and service details.
 - Responses are cached (default 15 minutes).
 - If you use tool profiles/allowlists, add `web_search`/`web_fetch` or `group:web`.
+- If the API key is missing, `web_search` returns a short setup hint with a docs link.
 
 ---
 

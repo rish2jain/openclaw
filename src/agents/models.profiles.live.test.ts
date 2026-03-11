@@ -87,17 +87,29 @@ function isModelNotFoundErrorMessage(raw: string): boolean {
   if (!msg) {
     return false;
   }
-  if (/\b404\b/.test(msg) && /not[_-]?found/i.test(msg)) {
+  if (/\b404\b/.test(msg) && /not(?:[\s_-]+)?found/i.test(msg)) {
     return true;
   }
   if (/not_found_error/i.test(msg)) {
     return true;
   }
-  if (/model:\s*[a-z0-9._-]+/i.test(msg) && /not[_-]?found/i.test(msg)) {
+  if (/model:\s*[a-z0-9._-]+/i.test(msg) && /not(?:[\s_-]+)?found/i.test(msg)) {
     return true;
   }
   return false;
 }
+
+describe("isModelNotFoundErrorMessage", () => {
+  it("matches whitespace-separated not found errors", () => {
+    expect(isModelNotFoundErrorMessage("404 model not found")).toBe(true);
+    expect(isModelNotFoundErrorMessage("model: minimax-text-01 not found")).toBe(true);
+  });
+
+  it("still matches underscore and hyphen variants", () => {
+    expect(isModelNotFoundErrorMessage("404 model not_found")).toBe(true);
+    expect(isModelNotFoundErrorMessage("404 model not-found")).toBe(true);
+  });
+});
 
 function isChatGPTUsageLimitErrorMessage(raw: string): boolean {
   const msg = raw.toLowerCase();
@@ -496,7 +508,10 @@ describeLive("live models (profile keys)", () => {
               throw new Error(msg || "model returned error with no message");
             }
 
-            if (ok.text.length === 0 && model.provider === "google") {
+            if (
+              ok.text.length === 0 &&
+              (model.provider === "google" || model.provider === "google-gemini-cli")
+            ) {
               skipped.push({
                 model: id,
                 reason: "no text returned (likely unavailable model id)",
@@ -506,7 +521,9 @@ describeLive("live models (profile keys)", () => {
             }
             if (
               ok.text.length === 0 &&
-              (model.provider === "openrouter" || model.provider === "opencode")
+              (model.provider === "openrouter" ||
+                model.provider === "opencode" ||
+                model.provider === "opencode-go")
             ) {
               skipped.push({
                 model: id,
@@ -589,7 +606,7 @@ describeLive("live models (profile keys)", () => {
             }
             if (
               allowNotFoundSkip &&
-              model.provider === "opencode" &&
+              (model.provider === "opencode" || model.provider === "opencode-go") &&
               isRateLimitErrorMessage(message)
             ) {
               skipped.push({ model: id, reason: message });

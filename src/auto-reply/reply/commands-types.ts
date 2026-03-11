@@ -29,6 +29,7 @@ export type CommandContext = {
 
 export type HandleCommandsParams = {
   ctx: MsgContext;
+  rootCtx?: MsgContext;
   cfg: OpenClawConfig;
   command: CommandContext;
   agentId?: string;

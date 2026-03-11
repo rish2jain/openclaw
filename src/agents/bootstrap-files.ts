@@ -13,6 +13,9 @@ import {
   type WorkspaceBootstrapFile,
 } from "./workspace.js";
 
+export type BootstrapContextMode = "full" | "lightweight";
+export type BootstrapContextRunKind = "default" | "heartbeat" | "cron";
+
 export function makeBootstrapWarn(params: {
   sessionLabel: string;
   warn?: (message: string) => void;
@@ -44,6 +47,23 @@ function sanitizeBootstrapFiles(
 /** Bootstrap file names included in "minimal" inject mode (identity + user only). */
 const MINIMAL_INJECT_ALLOWLIST = new Set(["IDENTITY.md", "USER.md"]);
 
+function applyContextModeFilter(params: {
+  files: WorkspaceBootstrapFile[];
+  contextMode?: BootstrapContextMode;
+  runKind?: BootstrapContextRunKind;
+}): WorkspaceBootstrapFile[] {
+  const contextMode = params.contextMode ?? "full";
+  const runKind = params.runKind ?? "default";
+  if (contextMode !== "lightweight") {
+    return params.files;
+  }
+  if (runKind === "heartbeat") {
+    return params.files.filter((file) => file.name === "HEARTBEAT.md");
+  }
+  // cron/default lightweight mode keeps bootstrap context empty on purpose.
+  return [];
+}
+
 export async function resolveBootstrapFilesForRun(params: {
   workspaceDir: string;
   config?: OpenClawConfig;
@@ -54,6 +74,8 @@ export async function resolveBootstrapFilesForRun(params: {
   /** When "once" and bootstrapInjected true, skip loading. When "minimal" and bootstrapInjected true, filter to minimal set. */
   injectMode?: "every-turn" | "once" | "minimal";
   bootstrapInjected?: boolean;
+  contextMode?: BootstrapContextMode;
+  runKind?: BootstrapContextRunKind;
 }): Promise<WorkspaceBootstrapFile[]> {
   if (params.injectMode === "once" && params.bootstrapInjected === true) {
     return [];
@@ -65,7 +87,11 @@ export async function resolveBootstrapFilesForRun(params: {
         sessionKey: params.sessionKey,
       })
     : await loadWorkspaceBootstrapFiles(params.workspaceDir);
-  let bootstrapFiles = filterBootstrapFilesForSession(rawFiles, sessionKey);
+  let bootstrapFiles = applyContextModeFilter({
+    files: filterBootstrapFilesForSession(rawFiles, sessionKey),
+    contextMode: params.contextMode,
+    runKind: params.runKind,
+  });
   if (params.injectMode === "minimal" && params.bootstrapInjected === true) {
     bootstrapFiles = bootstrapFiles.filter((f) => MINIMAL_INJECT_ALLOWLIST.has(f.name));
   }
@@ -90,6 +116,8 @@ export async function resolveBootstrapContextForRun(params: {
   warn?: (message: string) => void;
   injectMode?: "every-turn" | "once" | "minimal";
   bootstrapInjected?: boolean;
+  contextMode?: BootstrapContextMode;
+  runKind?: BootstrapContextRunKind;
 }): Promise<{
   bootstrapFiles: WorkspaceBootstrapFile[];
   contextFiles: EmbeddedContextFile[];
