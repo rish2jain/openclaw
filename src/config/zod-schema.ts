@@ -618,6 +618,46 @@ export const OpenClawSchema = z
       .strict()
       .optional(),
     talk: TalkSchema.optional(),
+    a2a: z
+      .object({
+        enabled: z.boolean().optional(),
+        agentCard: z
+          .object({
+            name: z.string().optional(),
+            description: z.string().optional(),
+            documentationUrl: z.string().optional(),
+            iconUrl: z.string().optional(),
+            inputModes: z.array(z.string()).optional(),
+            outputModes: z.array(z.string()).optional(),
+            provider: z
+              .object({
+                name: z.string(),
+                url: z.string().optional(),
+                contact: z.string().optional(),
+              })
+              .strict()
+              .optional(),
+            skills: z
+              .array(
+                z
+                  .object({
+                    id: z.string(),
+                    name: z.string(),
+                    description: z.string(),
+                    tags: z.array(z.string()).optional(),
+                    examples: z.array(z.string()).optional(),
+                    inputModes: z.array(z.string()).optional(),
+                    outputModes: z.array(z.string()).optional(),
+                  })
+                  .strict(),
+              )
+              .optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
     gateway: z
       .object({
         port: z.number().int().positive().optional(),

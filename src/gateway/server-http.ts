@@ -577,6 +577,8 @@ export function createGatewayHttpServer(opts: {
   handleHooksRequest: HooksRequestHandler;
   handlePluginRequest?: PluginHttpRequestHandler;
   shouldEnforcePluginGatewayAuth?: (pathContext: PluginRoutePathContext) => boolean;
+  /** Optional A2A protocol request handler (/.well-known/agent.json + /a2a). */
+  handleA2ARequest?: (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
   resolvedAuth: ResolvedGatewayAuth;
   /** Optional rate limiter for auth brute-force protection. */
   rateLimiter?: AuthRateLimiter;
@@ -597,6 +599,7 @@ export function createGatewayHttpServer(opts: {
     handleHooksRequest,
     handlePluginRequest,
     shouldEnforcePluginGatewayAuth,
+    handleA2ARequest,
     resolvedAuth,
     rateLimiter,
     getReadiness,
@@ -713,6 +716,13 @@ export function createGatewayHttpServer(opts: {
         requestStages.push({
           name: "canvas-http",
           run: () => canvasHost.handleHttpRequest(req, res),
+        });
+      }
+      // A2A protocol endpoints (/.well-known/agent.json + /a2a)
+      if (handleA2ARequest) {
+        requestStages.push({
+          name: "a2a",
+          run: () => handleA2ARequest(req, res),
         });
       }
       // Plugin routes run before the Control UI SPA catch-all so explicitly
