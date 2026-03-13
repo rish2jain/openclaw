@@ -32,6 +32,7 @@ import { noteBootstrapFileSize } from "./doctor-bootstrap-size.js";
 import { doctorShellCompletion } from "./doctor-completion.js";
 import { loadAndMaybeMigrateDoctorConfig } from "./doctor-config-flow.js";
 import { maybeRepairLegacyCronStore } from "./doctor-cron.js";
+import { noteFts5Availability } from "./doctor-fts5.js";
 import { maybeRepairGatewayDaemon } from "./doctor-gateway-daemon-flow.js";
 import { checkGatewayHealth, probeGatewayMemoryStatus } from "./doctor-gateway-health.js";
 import {
@@ -324,6 +325,7 @@ export async function doctorCommand(
         timeoutMs: options.nonInteractive === true ? 3000 : 10_000,
       })
     : { checked: false, ready: false };
+  noteFts5Availability();
   await noteMemorySearchHealth(cfg, { gatewayMemoryProbe });
   await maybeRepairGatewayDaemon({
     cfg,
