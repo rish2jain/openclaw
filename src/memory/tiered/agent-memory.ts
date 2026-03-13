@@ -42,12 +42,16 @@ export class AgentMemory {
     return this.backend.retrieve(this.tier, this.scopedKey(key));
   }
 
-  /** Search agent-tier entries. */
+  /** Search agent-tier entries (scoped to this agent). */
   search(
     query: string,
-    opts?: Omit<TieredMemorySearchOptions, "tiers">,
+    opts?: Omit<TieredMemorySearchOptions, "tiers" | "agentId">,
   ): TieredMemorySearchResult[] {
-    return this.backend.search(query, { ...opts, tiers: [this.tier] });
+    return this.backend.search(query, {
+      ...opts,
+      tiers: [this.tier],
+      agentId: this.agentId,
+    });
   }
 
   /** Prune expired agent entries (most agent entries have no expiry). */
@@ -79,7 +83,7 @@ export class AgentMemory {
       metadata: {
         type: "learned_behavior",
         source: context?.source ?? "interaction",
-        confidence: context?.confidence ?? 1.0,
+        confidence: context?.confidence ?? 0.7,
         learnedAt: Date.now(),
       },
     });

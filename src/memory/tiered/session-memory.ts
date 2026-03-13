@@ -6,6 +6,7 @@
  * and short-lived tool state.
  */
 
+import { createSubsystemLogger } from "../../logging/subsystem.js";
 import type {
   MemoryTier,
   TieredMemoryEntry,
@@ -15,6 +16,7 @@ import type {
   TieredMemoryStoreOptions,
 } from "./types.js";
 
+const log = createSubsystemLogger("memory:session");
 const DEFAULT_SESSION_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export class SessionMemory {
@@ -48,12 +50,16 @@ export class SessionMemory {
     return this.backend.retrieve(this.tier, this.scopedKey(key));
   }
 
-  /** Search session-tier entries only. */
+  /** Search session-tier entries only (scoped to this session). */
   search(
     query: string,
-    opts?: Omit<TieredMemorySearchOptions, "tiers">,
+    opts?: Omit<TieredMemorySearchOptions, "tiers" | "sessionId">,
   ): TieredMemorySearchResult[] {
-    return this.backend.search(query, { ...opts, tiers: [this.tier] });
+    return this.backend.search(query, {
+      ...opts,
+      tiers: [this.tier],
+      sessionId: this.sessionId,
+    });
   }
 
   /** Remove all expired session entries. */
@@ -66,14 +72,25 @@ export class SessionMemory {
     return this.backend.delete(this.tier, this.scopedKey(key));
   }
 
-  /** Clear all entries for this session. */
+  /** Clear all entries for this session (pages until no matching entries). */
   clearSession(): number {
-    const entries = this.backend.list(this.tier, { limit: 10_000 });
+    const pageSize = 1000;
     let count = 0;
-    for (const entry of entries) {
-      if (entry.key.startsWith(`${this.sessionId}:`)) {
-        this.backend.delete(this.tier, entry.key);
+    for (;;) {
+      const entries = this.backend.list(this.tier, { limit: pageSize });
+      const sessionEntries = entries.filter((e) => e.key.startsWith(`${this.sessionId}:`));
+      for (const entry of sessionEntries) {
+        const ok = this.backend.delete(this.tier, entry.key);
+        if (!ok) {
+          log.warn(
+            `session clear: delete failed (tier=${this.tier} sessionId=${this.sessionId} key=${entry.key}), stopping to avoid infinite retry`,
+          );
+          return count;
+        }
         count += 1;
+      }
+      if (sessionEntries.length === 0) {
+        break;
       }
     }
     return count;

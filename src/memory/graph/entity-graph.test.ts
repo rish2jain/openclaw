@@ -5,17 +5,21 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { EntityGraph } from "./entity-graph.js";
 
 describe("EntityGraph", () => {
+  let tmpDir: string;
   let dbPath: string;
   let graph: EntityGraph;
 
   beforeEach(() => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "entity-graph-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "entity-graph-test-"));
     dbPath = path.join(tmpDir, "test.sqlite");
     graph = new EntityGraph({ dbPath });
   });
 
   afterEach(() => {
     graph.close();
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it("upsertEntity creates new entities", () => {

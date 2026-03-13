@@ -50,6 +50,9 @@ const CREATE_INDEXES = `
 
 const FTS_TABLE = "tiered_memory_fts";
 
+/** SQLite default SQLITE_MAX_VARIABLE_NUMBER; chunk IN lists to stay under limit. */
+const MAX_IN_PARAMS = 999;
+
 const CREATE_FTS = `
   CREATE VIRTUAL TABLE IF NOT EXISTS ${FTS_TABLE} USING fts5(
     value,
@@ -84,8 +87,16 @@ function rowToEntry(row: RowShape): TieredMemoryEntry {
   if (row.metadata) {
     try {
       entry.metadata = JSON.parse(row.metadata) as Record<string, unknown>;
-    } catch {
-      // Silently ignore malformed metadata
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const metaPreview =
+        row.metadata.length > 200 ? `${row.metadata.slice(0, 200)}...` : row.metadata;
+      log.warn("malformed tiered_memory metadata", {
+        id: row.id,
+        key: row.key,
+        metadata: metaPreview,
+        error: msg,
+      });
     }
   }
   if (row.expires_at !== null) {
@@ -100,14 +111,23 @@ function rowToEntry(row: RowShape): TieredMemoryEntry {
   return entry;
 }
 
+/** Escape SQL LIKE special characters (%, _, \) so the pattern matches literally. */
+function escapeLike(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
 export class SqliteTieredMemoryStore implements TieredMemoryStore {
   private readonly db: DatabaseSync;
   private readonly ftsAvailable: boolean;
+  private readonly agentId: string | undefined;
+  private readonly sessionId: string | undefined;
   private closed = false;
 
   constructor(params: { dbPath: string; agentId?: string; sessionId?: string }) {
     const { DatabaseSync: SqliteDb } = requireNodeSqlite();
     this.db = new SqliteDb(params.dbPath);
+    this.agentId = params.agentId;
+    this.sessionId = params.sessionId;
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA busy_timeout = 3000;");
     this.db.exec(CREATE_TABLE);
@@ -140,53 +160,66 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
     const now = Date.now();
     const id = randomUUID();
     const metaJson = opts?.metadata ? JSON.stringify(opts.metadata) : null;
+    const agentId = opts?.agentId ?? this.agentId ?? null;
+    const sessionId = opts?.sessionId ?? this.sessionId ?? null;
 
-    // Upsert: insert or replace on (tier, key) unique constraint
-    const existing = this.retrieve(tier, key);
-    if (existing) {
+    const runUpsert = (): RowShape => {
       this.db
         .prepare(
-          `UPDATE tiered_memory
-           SET value = ?, metadata = ?, updated_at = ?, expires_at = ?
-           WHERE tier = ? AND key = ?`,
+          `INSERT INTO tiered_memory (id, tier, key, value, metadata, created_at, updated_at, expires_at, agent_id, session_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(tier, key) DO UPDATE SET
+             value = excluded.value,
+             metadata = excluded.metadata,
+             updated_at = excluded.updated_at,
+             expires_at = excluded.expires_at,
+             agent_id = excluded.agent_id,
+             session_id = excluded.session_id`,
         )
-        .run(value, metaJson, now, opts?.expiresAt ?? null, tier, key);
+        .run(id, tier, key, value, metaJson, now, now, opts?.expiresAt ?? null, agentId, sessionId);
+      return this.db
+        .prepare("SELECT * FROM tiered_memory WHERE tier = ? AND key = ?")
+        .get(tier, key) as RowShape;
+    };
 
-      if (this.ftsAvailable) {
-        this.db.prepare(`UPDATE ${FTS_TABLE} SET value = ? WHERE id = ?`).run(value, existing.id);
-      }
-
-      return {
-        ...existing,
-        value,
-        metadata: opts?.metadata,
-        updatedAt: now,
-        expiresAt: opts?.expiresAt,
-      };
-    }
-
-    this.db
-      .prepare(
-        `INSERT INTO tiered_memory (id, tier, key, value, metadata, created_at, updated_at, expires_at, agent_id, session_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(id, tier, key, value, metaJson, now, now, opts?.expiresAt ?? null, null, null);
-
+    let row: RowShape;
     if (this.ftsAvailable) {
-      this.db
-        .prepare(`INSERT INTO ${FTS_TABLE} (value, id, tier, key) VALUES (?, ?, ?, ?)`)
-        .run(value, id, tier, key);
+      try {
+        this.db.exec("BEGIN");
+        row = runUpsert();
+        const entryId = row.id;
+        if (row.id === id) {
+          this.db
+            .prepare(`INSERT INTO ${FTS_TABLE} (value, id, tier, key) VALUES (?, ?, ?, ?)`)
+            .run(value, entryId, tier, key);
+        } else {
+          this.db.prepare(`UPDATE ${FTS_TABLE} SET value = ? WHERE id = ?`).run(value, entryId);
+        }
+        this.db.exec("COMMIT");
+      } catch (err) {
+        try {
+          this.db.exec("ROLLBACK");
+        } catch (rollbackErr) {
+          log.debug("ROLLBACK failed", { error: rollbackErr });
+        }
+        throw err;
+      }
+    } else {
+      row = runUpsert();
     }
 
+    const entryId = row.id;
     return {
-      id,
+      id: entryId,
       tier,
       key,
       value,
       metadata: opts?.metadata,
-      createdAt: now,
+      createdAt: row.created_at,
       updatedAt: now,
-      expiresAt: opts?.expiresAt,
+      expiresAt: opts?.expiresAt ?? row.expires_at ?? undefined,
+      ...(row.agent_id != null && { agentId: row.agent_id }),
+      ...(row.session_id != null && { sessionId: row.session_id }),
     };
   }
 
@@ -210,11 +243,13 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
     const maxResults = opts?.maxResults ?? 10;
     const minScore = opts?.minScore ?? 0;
     const tiers = opts?.tiers ?? (["session", "agent", "shared"] as MemoryTier[]);
+    const agentId = opts?.agentId;
+    const sessionId = opts?.sessionId;
 
     if (this.ftsAvailable) {
-      return this.searchFts(cleaned, tiers, maxResults, minScore);
+      return this.searchFts(cleaned, tiers, maxResults, minScore, agentId, sessionId);
     }
-    return this.searchLike(cleaned, tiers, maxResults, minScore);
+    return this.searchLike(cleaned, tiers, maxResults, minScore, agentId, sessionId);
   }
 
   private searchFts(
@@ -222,6 +257,8 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
     tiers: MemoryTier[],
     maxResults: number,
     minScore: number,
+    agentId?: string,
+    sessionId?: string,
   ): TieredMemorySearchResult[] {
     // Build FTS query from tokens
     const tokens = query
@@ -229,21 +266,33 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
       ?.map((t) => t.trim())
       .filter(Boolean);
     if (!tokens || tokens.length === 0) {
-      return this.searchLike(query, tiers, maxResults, minScore);
+      return this.searchLike(query, tiers, maxResults, minScore, agentId, sessionId);
     }
     const ftsQuery = tokens.map((t) => `"${t.replaceAll('"', "")}"`).join(" OR ");
 
     const tierPlaceholders = tiers.map(() => "?").join(", ");
+    const conditions: string[] = [`${FTS_TABLE} MATCH ?`, `f.tier IN (${tierPlaceholders})`];
+    const params: unknown[] = [ftsQuery, ...tiers];
+    if (agentId != null) {
+      conditions.push("m.agent_id = ?");
+      params.push(agentId);
+    }
+    if (sessionId != null) {
+      conditions.push("m.session_id = ?");
+      params.push(sessionId);
+    }
+    params.push(maxResults);
+    const joinClause =
+      agentId != null || sessionId != null ? `JOIN tiered_memory m ON m.id = f.id` : "";
     const rows = this.db
       .prepare(
         `SELECT f.id, f.tier, f.key, f.value, rank
-         FROM ${FTS_TABLE} f
-         WHERE ${FTS_TABLE} MATCH ?
-           AND f.tier IN (${tierPlaceholders})
+         FROM ${FTS_TABLE} f ${joinClause}
+         WHERE ${conditions.join(" AND ")}
          ORDER BY rank
          LIMIT ?`,
       )
-      .all(ftsQuery, ...tiers, maxResults) as Array<{
+      .all(...params) as Array<{
       id: string;
       tier: string;
       key: string;
@@ -251,16 +300,34 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
       rank: number;
     }>;
 
-    const results: TieredMemorySearchResult[] = [];
+    // Collect (id, score) for rows that pass minScore; then batch-fetch full rows to avoid N+1.
+    const qualifying: Array<{ id: string; score: number }> = [];
     for (const row of rows) {
-      // BM25 rank is negative; more negative = more relevant
       const score = row.rank < 0 ? -row.rank / (1 + -row.rank) : 1 / (1 + row.rank);
-      if (score < minScore) {
-        continue;
+      if (score >= minScore) {
+        qualifying.push({ id: row.id, score });
       }
-      const full = this.db.prepare("SELECT * FROM tiered_memory WHERE id = ?").get(row.id) as
-        | RowShape
-        | undefined;
+    }
+    if (qualifying.length === 0) {
+      return [];
+    }
+
+    const idToFull = new Map<string, RowShape>();
+    for (let i = 0; i < qualifying.length; i += MAX_IN_PARAMS) {
+      const chunk = qualifying.slice(i, i + MAX_IN_PARAMS);
+      const placeholders = chunk.map(() => "?").join(", ");
+      const ids = chunk.map((q) => q.id);
+      const fullRows = this.db
+        .prepare(`SELECT * FROM tiered_memory WHERE id IN (${placeholders})`)
+        .all(...ids) as RowShape[];
+      for (const full of fullRows) {
+        idToFull.set(full.id, full);
+      }
+    }
+
+    const results: TieredMemorySearchResult[] = [];
+    for (const { id, score } of qualifying) {
+      const full = idToFull.get(id);
       if (full) {
         results.push({ entry: rowToEntry(full), score });
       }
@@ -273,19 +340,35 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
     tiers: MemoryTier[],
     maxResults: number,
     _minScore: number,
+    agentId?: string,
+    sessionId?: string,
   ): TieredMemorySearchResult[] {
     const tierPlaceholders = tiers.map(() => "?").join(", ");
-    const pattern = `%${query}%`;
+    const escaped = escapeLike(query);
+    const pattern = `%${escaped}%`;
+    const conditions: string[] = [
+      `tier IN (${tierPlaceholders})`,
+      `(value LIKE ? ESCAPE '\\' OR key LIKE ? ESCAPE '\\')`,
+      "(expires_at IS NULL OR expires_at > ?)",
+    ];
+    const params: unknown[] = [...tiers, pattern, pattern, Date.now()];
+    if (agentId != null) {
+      conditions.push("agent_id = ?");
+      params.push(agentId);
+    }
+    if (sessionId != null) {
+      conditions.push("session_id = ?");
+      params.push(sessionId);
+    }
+    params.push(maxResults);
     const rows = this.db
       .prepare(
         `SELECT * FROM tiered_memory
-         WHERE tier IN (${tierPlaceholders})
-           AND (value LIKE ? OR key LIKE ?)
-           AND (expires_at IS NULL OR expires_at > ?)
+         WHERE ${conditions.join(" AND ")}
          ORDER BY updated_at DESC
          LIMIT ?`,
       )
-      .all(...tiers, pattern, pattern, Date.now(), maxResults) as RowShape[];
+      .all(...params) as RowShape[];
 
     return rows.map((row) => ({
       entry: rowToEntry(row),
@@ -309,22 +392,36 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
       return 0;
     }
 
-    if (this.ftsAvailable) {
-      const idPlaceholders = rows.map(() => "?").join(", ");
-      const ids = rows.map((r) => r.id);
-      this.db.prepare(`DELETE FROM ${FTS_TABLE} WHERE id IN (${idPlaceholders})`).run(...ids);
+    try {
+      this.db.exec("BEGIN");
+      if (this.ftsAvailable) {
+        const ids = rows.map((r) => r.id);
+        for (let i = 0; i < ids.length; i += MAX_IN_PARAMS) {
+          const chunkIds = ids.slice(i, i + MAX_IN_PARAMS);
+          const idPlaceholders = chunkIds.map(() => "?").join(", ");
+          this.db
+            .prepare(`DELETE FROM ${FTS_TABLE} WHERE id IN (${idPlaceholders})`)
+            .run(...chunkIds);
+        }
+      }
+      const result = this.db
+        .prepare(
+          `DELETE FROM tiered_memory
+           WHERE tier = ? AND expires_at IS NOT NULL AND expires_at <= ?`,
+        )
+        .run(tier, now);
+      this.db.exec("COMMIT");
+      const pruned = (result as { changes?: number }).changes ?? rows.length;
+      log.debug(`pruned ${pruned} expired entries from tier=${tier}`);
+      return pruned;
+    } catch (err) {
+      try {
+        this.db.exec("ROLLBACK");
+      } catch (rollbackErr) {
+        log.debug("ROLLBACK failed", { error: rollbackErr });
+      }
+      throw err;
     }
-
-    const result = this.db
-      .prepare(
-        `DELETE FROM tiered_memory
-         WHERE tier = ? AND expires_at IS NOT NULL AND expires_at <= ?`,
-      )
-      .run(tier, now);
-
-    const pruned = (result as { changes?: number }).changes ?? rows.length;
-    log.debug(`pruned ${pruned} expired entries from tier=${tier}`);
-    return pruned;
   }
 
   delete(tier: MemoryTier, key: string): boolean {

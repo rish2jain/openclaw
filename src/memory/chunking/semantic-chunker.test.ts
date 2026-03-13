@@ -31,7 +31,7 @@ describe("semantic-chunker", () => {
 
     const chunks = await chunkSemantically(content, null, { maxChunkChars: 500 });
     for (const chunk of chunks) {
-      expect(chunk.text.length).toBeLessThan(1000);
+      expect(chunk.text.length).toBeLessThanOrEqual(500);
     }
   });
 

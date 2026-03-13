@@ -303,10 +303,11 @@ export class GraphStore {
     type: EntityType | undefined,
     limit: number,
   ): Array<{ entity: EntityNode; score: number }> {
-    const pattern = `%${query}%`;
+    const escapedQuery = query.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const pattern = `%${escapedQuery}%`;
     const sql = type
-      ? `SELECT * FROM graph_nodes WHERE name LIKE ? AND type = ? ORDER BY updated_at DESC LIMIT ?`
-      : `SELECT * FROM graph_nodes WHERE name LIKE ? ORDER BY updated_at DESC LIMIT ?`;
+      ? `SELECT * FROM graph_nodes WHERE name LIKE ? ESCAPE '\\' AND type = ? ORDER BY updated_at DESC LIMIT ?`
+      : `SELECT * FROM graph_nodes WHERE name LIKE ? ESCAPE '\\' ORDER BY updated_at DESC LIMIT ?`;
     const rows = (
       type
         ? this.db.prepare(sql).all(pattern, type, limit)

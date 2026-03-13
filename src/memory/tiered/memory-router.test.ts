@@ -7,9 +7,10 @@ import { MemoryRouter } from "./memory-router.js";
 describe("MemoryRouter", () => {
   let dbPath: string;
   let router: MemoryRouter;
+  let tmpDir: string;
 
   beforeEach(() => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "memory-router-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "memory-router-test-"));
     dbPath = path.join(tmpDir, "test.sqlite");
     router = new MemoryRouter({
       dbPath,
@@ -20,6 +21,7 @@ describe("MemoryRouter", () => {
 
   afterEach(() => {
     router.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it("session memory stores and retrieves", () => {
@@ -73,7 +75,10 @@ describe("MemoryRouter", () => {
     router.shared.store("policy:lang", "TypeScript strict mode required");
 
     const results = router.search("TypeScript");
-    expect(results.length).toBeGreaterThanOrEqual(1);
+    const tiers = new Set(results.map((r) => r.entry.tier));
+    expect(tiers).toContain("session");
+    expect(tiers).toContain("agent");
+    expect(tiers).toContain("shared");
   });
 
   it("pruneAll removes expired entries across tiers", () => {

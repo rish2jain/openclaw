@@ -124,7 +124,10 @@ export async function chunkSemantically(
 
   // Single segment: return as-is
   if (segments.length === 1) {
-    const seg = segments[0];
+    const [seg] = segments;
+    if (seg === undefined) {
+      return [];
+    }
     const contextual = headingContext ? `${headingContext}\n\n${seg.text}` : seg.text;
     return [
       {

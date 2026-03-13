@@ -7,15 +7,17 @@ import { GraphStore } from "./graph-store.js";
 describe("GraphStore", () => {
   let dbPath: string;
   let store: GraphStore;
+  let tmpDir: string;
 
   beforeEach(() => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "graph-store-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "graph-store-test-"));
     dbPath = path.join(tmpDir, "test.sqlite");
     store = new GraphStore({ dbPath });
   });
 
   afterEach(() => {
     store.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   describe("node operations", () => {

@@ -78,6 +78,8 @@ function inferTier(key: string, _value: string, hints?: MemoryRouterHints): Memo
 
 export class MemoryRouter {
   private readonly backend: TieredMemoryStore;
+  private readonly agentId: string;
+  private readonly sessionId: string;
   readonly session: SessionMemory;
   readonly agent: AgentMemory;
   readonly shared: SharedMemory;
@@ -88,6 +90,8 @@ export class MemoryRouter {
     sessionId: string;
     sessionTtlMs?: number;
   }) {
+    this.agentId = params.agentId;
+    this.sessionId = params.sessionId;
     this.backend = new SqliteTieredMemoryStore({ dbPath: params.dbPath });
     this.session = new SessionMemory({
       store: this.backend,
@@ -116,7 +120,13 @@ export class MemoryRouter {
     opts?: TieredMemoryStoreOptions & { hints?: MemoryRouterHints },
   ): TieredMemoryEntry {
     const tier = inferTier(key, value, opts?.hints);
-    return this.backend.store(tier, key, value, opts);
+    const storeOpts = { ...opts };
+    if (tier === "agent") {
+      storeOpts.agentId = opts?.agentId ?? this.agentId;
+    } else if (tier === "session") {
+      storeOpts.sessionId = opts?.sessionId ?? this.sessionId;
+    }
+    return this.backend.store(tier, key, value, storeOpts);
   }
 
   /**

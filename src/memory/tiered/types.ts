@@ -32,6 +32,10 @@ export type TieredMemorySearchResult = {
 export type TieredMemoryStoreOptions = {
   expiresAt?: number;
   metadata?: Record<string, unknown>;
+  /** Agent that owns the entry (for agent-tier scoping). */
+  agentId?: string;
+  /** Session that owns the entry (for session-tier scoping). */
+  sessionId?: string;
 };
 
 export type TieredMemorySearchOptions = {
@@ -39,6 +43,10 @@ export type TieredMemorySearchOptions = {
   minScore?: number;
   /** Restrict search to specific tiers. Defaults to all tiers. */
   tiers?: MemoryTier[];
+  /** Restrict results to this agent (agent-tier isolation). */
+  agentId?: string;
+  /** Restrict results to this session (session-tier isolation). */
+  sessionId?: string;
 };
 
 export interface TieredMemoryStore {

@@ -7,15 +7,21 @@ import { SqliteTieredMemoryStore } from "./tiered-store.js";
 describe("SqliteTieredMemoryStore", () => {
   let dbPath: string;
   let store: SqliteTieredMemoryStore;
+  let tmpDir: string;
 
   beforeEach(() => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tiered-store-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tiered-store-test-"));
     dbPath = path.join(tmpDir, "test.sqlite");
     store = new SqliteTieredMemoryStore({ dbPath });
   });
 
   afterEach(() => {
     store.close();
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors (e.g. already removed)
+    }
   });
 
   it("store and retrieve an entry", () => {
