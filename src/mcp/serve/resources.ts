@@ -7,12 +7,11 @@
  *   - openclaw://sessions/{sessionKey}   -- session conversation log
  */
 import type {
+  GatewayRpc,
   McpReadResourceResult,
   McpResourceDefinition,
   McpResourceTemplateDefinition,
 } from "./types.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
 
 /**
  * Return resource templates that describe the dynamic resources available.

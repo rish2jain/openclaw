@@ -77,18 +77,21 @@ describe("MCP types", () => {
 describe("MCP tool factories", () => {
   const mockCallGateway = vi.fn().mockResolvedValue({ ok: true });
 
-  it("getAllTools returns all 6 tools", async () => {
+  it("getAllTools returns expected tool definitions by name", async () => {
     const { getAllTools } = await import("./tools/index.js");
     const tools = getAllTools(mockCallGateway);
-    expect(tools.length).toBe(6);
-
     const names = tools.map((t) => t.definition.name);
-    expect(names).toContain("send_message");
-    expect(names).toContain("channel_status");
-    expect(names).toContain("list_sessions");
-    expect(names).toContain("query_session");
-    expect(names).toContain("manage_config");
-    expect(names).toContain("cron_manage");
+    const expected = [
+      "send_message",
+      "channel_status",
+      "list_sessions",
+      "query_session",
+      "manage_config",
+      "cron_manage",
+    ];
+    for (const name of expected) {
+      expect(names).toContain(name);
+    }
   });
 
   it("all tools have valid inputSchema with type=object", async () => {

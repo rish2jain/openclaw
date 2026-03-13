@@ -85,6 +85,8 @@ export type SseTransportOptions = {
   onMessage: (msg: JsonRpcMessage) => void;
   port: number;
   host?: string;
+  /** CORS origin for Access-Control-Allow-Origin. Defaults to "*" when not set. */
+  corsOrigin?: string;
 };
 
 export type SseTransport = {
@@ -117,7 +119,7 @@ export function createSseTransport(opts: SseTransportOptions): SseTransport {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": opts.corsOrigin ?? "*",
     });
     // Send the endpoint URI so the client knows where to POST messages
     res.write(`event: endpoint\ndata: /message?sessionId=${clientId}\n\n`);

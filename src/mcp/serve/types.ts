@@ -149,6 +149,13 @@ export type McpReadResourceResult = {
   }>;
 };
 
+// -- Gateway RPC (shared by tools and resources) --
+
+export type GatewayRpc = <T = Record<string, unknown>>(
+  method: string,
+  params?: unknown,
+) => Promise<T>;
+
 // -- Tool handler contract --
 
 export type McpToolHandler = {

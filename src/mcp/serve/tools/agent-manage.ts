@@ -3,10 +3,8 @@
  *
  * List, inspect, and manage OpenClaw agents.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 import { parseStringArg, parseEnumArg, ArgError, argErrorResult } from "./arg-utils.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
 
 export function createAgentManageTool(callGateway: GatewayRpc): McpToolHandler {
   return {

@@ -3,7 +3,7 @@
  *
  * Search tiered memory, query entity graph, and view memory statistics.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 import {
   parseStringArg,
   parseNumberArg,
@@ -11,8 +11,6 @@ import {
   ArgError,
   argErrorResult,
 } from "./arg-utils.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
 
 export function createMemoryQueryTool(callGateway: GatewayRpc): McpToolHandler {
   return {
@@ -100,6 +98,10 @@ export function createMemoryQueryTool(callGateway: GatewayRpc): McpToolHandler {
             return {
               content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
             };
+          }
+
+          default: {
+            throw new Error(`Unhandled memory action: ${String(action)}`);
           }
         }
       } catch (e) {

@@ -170,6 +170,16 @@ export async function serveMcp(opts: McpServerOptions): Promise<void> {
         }
 
         case "tools/list": {
+          if (!initialized) {
+            send(
+              createJsonRpcErrorResponse(
+                id,
+                McpErrorCode.INVALID_REQUEST,
+                "Server not initialized. Send initialize first.",
+              ),
+            );
+            break;
+          }
           await ensureContext();
           const definitions = toolHandlers.map((h) => h.definition);
           send(createJsonRpcResponse(id, { tools: definitions }));
