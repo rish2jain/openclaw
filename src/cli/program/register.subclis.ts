@@ -43,6 +43,15 @@ export const loadValidatedConfigForPluginRegistration =
 // and set the flag accordingly.
 const entries: SubCliEntry[] = [
   {
+    name: "a2a",
+    description: "Agent2Agent (A2A) protocol tools for agent interoperability",
+    hasSubcommands: true,
+    register: async (program) => {
+      const mod = await import("../a2a-cli.js");
+      mod.registerA2aCli(program);
+    },
+  },
+  {
     name: "acp",
     description: "Agent Control Protocol tools",
     hasSubcommands: true,
@@ -76,6 +85,15 @@ const entries: SubCliEntry[] = [
     register: async (program) => {
       const mod = await import("../logs-cli.js");
       mod.registerLogsCli(program);
+    },
+  },
+  {
+    name: "mcp",
+    description: "Expose OpenClaw as an MCP (Model Context Protocol) server",
+    hasSubcommands: true,
+    register: async (program) => {
+      const mod = await import("../mcp-cli.js");
+      mod.registerMcpCli(program);
     },
   },
   {
