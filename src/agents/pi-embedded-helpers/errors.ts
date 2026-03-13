@@ -903,6 +903,14 @@ export function isModelNotFoundErrorMessage(raw: string): boolean {
     return true;
   }
 
+  // AWS Bedrock: "ResourceNotFoundException" or "is not available in region" (#44435)
+  if (lower.includes("resourcenotfoundexception")) {
+    return true;
+  }
+  if (lower.includes("is not available in") && lower.includes("region")) {
+    return true;
+  }
+
   return false;
 }
 

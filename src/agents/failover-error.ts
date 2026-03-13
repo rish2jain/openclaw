@@ -179,6 +179,16 @@ export function resolveFailoverReasonFromError(err: unknown): FailoverReason | n
   if (isTimeoutError(err)) {
     return "timeout";
   }
+  // AWS Bedrock (and other AWS SDK) errors surface the exception type as
+  // the error `name` property (e.g. "ThrottlingException"). Check the name
+  // through the message classifier so Bedrock errors trigger fallback (#44435).
+  const errorName = err && typeof err === "object" && "name" in err ? String(err.name) : "";
+  if (errorName && errorName !== "Error") {
+    const reasonFromName = classifyFailoverReason(errorName);
+    if (reasonFromName) {
+      return reasonFromName;
+    }
+  }
   if (!message) {
     return null;
   }

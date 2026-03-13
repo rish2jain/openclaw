@@ -15,6 +15,9 @@ const ERROR_PATTERNS = {
     /\btpm\b/i,
     "tokens per minute",
     "tokens per day",
+    // AWS Bedrock throttling errors (#44435)
+    "throttlingexception",
+    "servicequotaexceededexception",
   ],
   overloaded: [
     /overloaded_error|"type"\s*:\s*"overloaded_error"/i,
@@ -24,6 +27,8 @@ const ERROR_PATTERNS = {
     // provider-overload (#32828).
     /service[_ ]unavailable.*(?:overload|capacity|high[_ ]demand)|(?:overload|capacity|high[_ ]demand).*service[_ ]unavailable/i,
     "high demand",
+    // AWS Bedrock model availability errors (#44435)
+    "modelnotreadyexception",
   ],
   timeout: [
     "timeout",
@@ -43,6 +48,11 @@ const ERROR_PATTERNS = {
     /\bstop reason:\s*(?:abort|error|malformed_response)\b/i,
     /\breason:\s*(?:abort|error|malformed_response)\b/i,
     /\bunhandled stop reason:\s*(?:abort|error|malformed_response)\b/i,
+    // AWS Bedrock transient errors (#44435)
+    "internalservererror",
+    "modelstreamerror",
+    "modelerror",
+    "modeltimeoutexception",
   ],
   billing: [
     /["']?(?:status|code)["']?\s*[:=]\s*402\b|\bhttp\s*402\b|\berror(?:\s+code)?\s*[:=]?\s*402\b|\b(?:got|returned|received)\s+(?:a\s+)?402\b|^\s*402\s+payment/i,
@@ -82,6 +92,9 @@ const ERROR_PATTERNS = {
     /\b403\b/,
     "no credentials found",
     "no api key found",
+    // AWS Bedrock auth errors (#44435)
+    "accessdeniedexception",
+    "unrecognizedclientexception",
   ],
   format: [
     "string should match pattern",
