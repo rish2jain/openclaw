@@ -27,6 +27,7 @@ export type BridgeReason = "user-initiated" | "failover" | "channel-offline" | "
 
 export type ContextBridgeDeps = {
   threadRegistry: ThreadRegistry;
+  /** Reserved for future use (e.g. resolving linked identities in bridge context). */
   identityLinker: IdentityLinker;
 };
 
@@ -69,6 +70,18 @@ export function createContextBridge(
   const maxMessageAgeMs = options?.maxMessageAgeMs ?? DEFAULT_MAX_MESSAGE_AGE_MS;
   const messageBuffers = new Map<string, BridgedMessage[]>();
 
+  function pruneStaleMessageBuffers(): void {
+    const threadIds = new Set<string>();
+    for (const [canonicalId] of deps.threadRegistry.snapshot().byCanonicalId) {
+      threadIds.add(canonicalId);
+    }
+    for (const [threadCanonicalId] of messageBuffers) {
+      if (!threadIds.has(threadCanonicalId)) {
+        messageBuffers.delete(threadCanonicalId);
+      }
+    }
+  }
+
   function recordMessage(params: RecordMessageParams): void {
     const { threadCanonicalId, channel, role, content } = params;
     const timestamp = params.timestamp ?? Date.now();
@@ -107,8 +120,11 @@ export function createContextBridge(
   function buildBridgeContext(params: BuildBridgeContextParams): BridgedContext | undefined {
     const { threadCanonicalId, sourceChannel, targetChannel, reason } = params;
 
+    pruneStaleMessageBuffers();
+
     const thread = deps.threadRegistry.getThread(threadCanonicalId);
     if (!thread) {
+      messageBuffers.delete(threadCanonicalId);
       log.debug("no thread found for bridge", { threadCanonicalId });
       return undefined;
     }

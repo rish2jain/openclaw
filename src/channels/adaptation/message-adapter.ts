@@ -188,7 +188,8 @@ export function stripMarkdown(text: string): string {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
     .replace(/^#{1,6}\s+(.+)$/gm, "$1")
     .replace(/^>\s+/gm, "")
-    .replace(/^[-*_]{3,}$/gm, "---");
+    .replace(/^[-*_]{3,}$/gm, "")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 export function chunkText(text: string, maxLength: number): string[] {
@@ -269,6 +270,7 @@ export function createMessageAdapter(deps?: MessageAdapterDeps): MessageAdapter 
           });
           continue;
         }
+        // Empty supportedMediaTypes means allow all media types; only validate mimeType when the list is non-empty.
         if (
           capabilities.supportedMediaTypes.length > 0 &&
           !capabilities.supportedMediaTypes.includes(item.mimeType)

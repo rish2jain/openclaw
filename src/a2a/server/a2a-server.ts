@@ -274,6 +274,11 @@ export class A2AServer {
       });
       return;
     }
+    const can = this.streamingHandler.canSubscribe(params.id);
+    if (!can.ok) {
+      sendJsonRpcError(res, null, { code: can.code, message: can.message });
+      return;
+    }
     const result = this.streamingHandler.handleTaskSubscription(params.id, res);
     if (!result.ok) {
       sendJsonRpcError(res, null, { code: result.code, message: result.message });

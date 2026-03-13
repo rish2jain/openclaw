@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import type { ChannelId } from "../plugins/types.js";
 
@@ -49,11 +50,8 @@ function buildIdentityKey(channel: ChannelId, userId: string): string {
   return `${channel}:${userId}`.toLowerCase();
 }
 
-let groupIdCounter = 0;
-
 function generateGroupId(): string {
-  groupIdCounter += 1;
-  return `ig-${Date.now()}-${groupIdCounter}`;
+  return `ig-${randomUUID()}`;
 }
 
 function parseConfigIdentity(raw: string): { channel: ChannelId; userId: string } | undefined {
@@ -78,12 +76,12 @@ export function createIdentityLinker(): IdentityLinker {
     channel: ChannelId,
     userId: string,
   ): void {
-    const existing = group.identities.find((i) => i.channel === channel && i.userId === userId);
+    const key = buildIdentityKey(channel, userId);
+    const existing = group.identities.find((i) => buildIdentityKey(i.channel, i.userId) === key);
     if (!existing) {
       const now = Date.now();
       group.identities.push({ channel, userId, lastSeenAt: now });
     }
-    const key = buildIdentityKey(channel, userId);
     identityToGroup.set(key, group.groupId);
   }
 

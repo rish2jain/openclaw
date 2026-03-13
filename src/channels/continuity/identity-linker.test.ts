@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createIdentityLinker, type IdentityLinker } from "./identity-linker.js";
 
 describe("IdentityLinker", () => {
@@ -128,14 +128,21 @@ describe("IdentityLinker", () => {
 
   describe("pruneStale", () => {
     it("removes stale groups", () => {
-      const group = linker.linkIdentities({
-        identityA: { channel: "telegram", userId: "tg-1" },
-        identityB: { channel: "discord", userId: "dc-1" },
-        method: "manual",
-      });
-      group.lastActiveAt = Date.now() - 2 * 60 * 60_000;
-      expect(linker.pruneStale(60 * 60_000)).toBe(1);
-      expect(linker.findGroup("telegram", "tg-1")).toBeUndefined();
+      vi.useFakeTimers();
+      const baseTime = Date.now();
+      vi.setSystemTime(baseTime);
+      try {
+        linker.linkIdentities({
+          identityA: { channel: "telegram", userId: "tg-1" },
+          identityB: { channel: "discord", userId: "dc-1" },
+          method: "manual",
+        });
+        vi.setSystemTime(baseTime + 2 * 60 * 60_000);
+        expect(linker.pruneStale(60 * 60_000)).toBe(1);
+        expect(linker.findGroup("telegram", "tg-1")).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

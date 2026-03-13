@@ -3,9 +3,7 @@
  *
  * Send a message to the OpenClaw agent via the gateway.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 
 export function createSendMessageTool(callGateway: GatewayRpc): McpToolHandler {
   return {

@@ -34,10 +34,9 @@ export async function discoverAgent(
 ): Promise<DiscoveryResult> {
   const cardUrl = resolveCardUrl(baseUrl);
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-
     const res = await fetch(cardUrl, {
       method: "GET",
       headers: {
@@ -46,8 +45,6 @@ export async function discoverAgent(
       },
       signal: controller.signal,
     });
-
-    clearTimeout(timeout);
 
     if (!res.ok) {
       return { ok: false, error: `HTTP ${res.status}: ${res.statusText}` };
@@ -70,6 +67,8 @@ export async function discoverAgent(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `Failed to fetch Agent Card: ${message}` };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

@@ -3,9 +3,7 @@
  *
  * List, create, and delete cron jobs via the gateway scheduler.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 
 export function createCronManageTool(callGateway: GatewayRpc): McpToolHandler {
   return {

@@ -3,9 +3,7 @@
  *
  * List active agent sessions via the gateway.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 
 export function createListSessionsTool(callGateway: GatewayRpc): McpToolHandler {
   return {

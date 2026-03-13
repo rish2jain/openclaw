@@ -6,6 +6,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   JSONRPC_VERSION,
   JSON_RPC_ERRORS,
@@ -14,6 +15,8 @@ import {
   type JsonRpcResponse,
   type StreamEvent,
 } from "./protocol.js";
+
+const log = createSubsystemLogger("a2a:transport");
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -30,12 +33,21 @@ export async function readJsonBody<T = unknown>(
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;
+    let resolved = false;
+
+    const finish = (result: { ok: true; body: T } | { ok: false; error: JsonRpcError }) => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      resolve(result);
+    };
 
     req.on("data", (chunk: Buffer) => {
       totalBytes += chunk.length;
       if (totalBytes > maxBytes) {
         req.destroy();
-        resolve({
+        finish({
           ok: false,
           error: {
             code: JSON_RPC_ERRORS.INVALID_REQUEST,
@@ -51,16 +63,16 @@ export async function readJsonBody<T = unknown>(
       try {
         const raw = Buffer.concat(chunks).toString("utf-8");
         if (!raw.trim()) {
-          resolve({
+          finish({
             ok: false,
             error: { code: JSON_RPC_ERRORS.PARSE_ERROR, message: "Empty request body" },
           });
           return;
         }
         const parsed = JSON.parse(raw) as T;
-        resolve({ ok: true, body: parsed });
+        finish({ ok: true, body: parsed });
       } catch {
-        resolve({
+        finish({
           ok: false,
           error: { code: JSON_RPC_ERRORS.PARSE_ERROR, message: "Invalid JSON in request body" },
         });
@@ -68,7 +80,7 @@ export async function readJsonBody<T = unknown>(
     });
 
     req.on("error", () => {
-      resolve({
+      finish({
         ok: false,
         error: { code: JSON_RPC_ERRORS.INTERNAL_ERROR, message: "Error reading request body" },
       });
@@ -163,6 +175,18 @@ export function validateJsonRpcRequest(
 
 // ── SSE Streaming ────────────────────────────────────────────────────
 
+/** SSE event names for known StreamEvent types; unexpected types are passed through and logged. */
+const KNOWN_STREAM_EVENT_TYPES = ["status", "artifact"] as const;
+
+function eventNameForStreamEvent(event: StreamEvent): string {
+  const t = event.type;
+  if (KNOWN_STREAM_EVENT_TYPES.includes(t)) {
+    return t;
+  }
+  log.warn("sendEvent: unexpected stream event type, using as-is", { type: t });
+  return typeof t === "string" ? t : "unknown";
+}
+
 export type SseWriter = {
   /** Write a named SSE event with JSON data. */
   sendEvent: (event: StreamEvent) => void;
@@ -195,7 +219,7 @@ export function initSseStream(res: ServerResponse): SseWriter {
       if (closed) {
         return;
       }
-      const eventName = event.type === "status" ? "status" : "artifact";
+      const eventName = eventNameForStreamEvent(event);
       res.write(`event: ${eventName}\n`);
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     },
@@ -246,6 +270,42 @@ export async function fetchJsonRpc<T = unknown>(
     throw new Error(`A2A request failed: HTTP ${res.status} ${res.statusText}`);
   }
 
-  const body = (await res.json()) as JsonRpcResponse<T>;
-  return body;
+  const raw = await res.json();
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("A2A response is not a JSON object");
+  }
+  const body = raw as Record<string, unknown>;
+  if (body.jsonrpc !== JSONRPC_VERSION) {
+    throw new Error(
+      `A2A response invalid: jsonrpc must be "${JSONRPC_VERSION}" (got ${JSON.stringify(body.jsonrpc)})`,
+    );
+  }
+  if (body.id !== requestId) {
+    throw new Error(
+      `A2A response invalid: id must match request (expected ${JSON.stringify(requestId)}, got ${JSON.stringify(body.id)})`,
+    );
+  }
+  const hasResult = "result" in body;
+  const hasError = "error" in body && body.error !== undefined;
+  if (hasResult && hasError) {
+    throw new Error("A2A response invalid: must not contain both result and error");
+  }
+  if (!hasResult && !hasError) {
+    throw new Error("A2A response invalid: must contain result or error");
+  }
+  if (hasError) {
+    const err = body.error as Record<string, unknown>;
+    if (err === null || typeof err !== "object" || Array.isArray(err)) {
+      throw new Error("A2A response invalid: error must be an object");
+    }
+    if (typeof err.code !== "number") {
+      throw new Error(`A2A response invalid: error.code must be a number (got ${typeof err.code})`);
+    }
+    if (typeof err.message !== "string") {
+      throw new Error(
+        `A2A response invalid: error.message must be a string (got ${typeof err.message})`,
+      );
+    }
+  }
+  return body as JsonRpcResponse<T>;
 }

@@ -42,6 +42,44 @@ export function resolveFailoverPreference(
   };
 }
 
+type RawUserPreferences = Record<
+  string,
+  Partial<{
+    primaryChannel: string;
+    fallbackChannels: string[];
+    enabled: boolean;
+    notifyOnFailover: boolean;
+    autoFailback: boolean;
+  }>
+>;
+
+function parseUserPreferences(
+  raw: RawUserPreferences | undefined,
+): Map<string, FailoverPreference> {
+  const map = new Map<string, FailoverPreference>();
+  if (!raw || typeof raw !== "object") {
+    return map;
+  }
+  const defaultOrder = DEFAULT_FAILOVER_CONFIG.defaultFallbackOrder;
+  for (const [userKey, pref] of Object.entries(raw)) {
+    if (!pref || typeof userKey !== "string") {
+      continue;
+    }
+    const primaryChannel = pref.primaryChannel ?? defaultOrder[0];
+    const fallbackChannels = Array.isArray(pref.fallbackChannels)
+      ? pref.fallbackChannels.filter((ch): ch is string => typeof ch === "string")
+      : defaultOrder.filter((ch) => ch !== primaryChannel);
+    map.set(userKey, {
+      primaryChannel,
+      fallbackChannels,
+      enabled: pref.enabled ?? DEFAULT_FAILOVER_CONFIG.enabled,
+      notifyOnFailover: pref.notifyOnFailover ?? true,
+      autoFailback: pref.autoFailback ?? false,
+    });
+  }
+  return map;
+}
+
 export function parseFailoverConfig(
   raw:
     | Partial<{
@@ -49,6 +87,7 @@ export function parseFailoverConfig(
         defaultFallbackOrder: string[];
         failoverGracePeriodMs: number;
         failbackGracePeriodMs: number;
+        userPreferences: RawUserPreferences;
       }>
     | undefined,
 ): FailoverConfig {
@@ -61,7 +100,7 @@ export function parseFailoverConfig(
       Array.isArray(raw.defaultFallbackOrder) && raw.defaultFallbackOrder.length > 0
         ? raw.defaultFallbackOrder
         : DEFAULT_FAILOVER_CONFIG.defaultFallbackOrder,
-    userPreferences: new Map(),
+    userPreferences: parseUserPreferences(raw.userPreferences),
     failoverGracePeriodMs:
       raw.failoverGracePeriodMs ?? DEFAULT_FAILOVER_CONFIG.failoverGracePeriodMs,
     failbackGracePeriodMs:

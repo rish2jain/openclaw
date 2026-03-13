@@ -5,7 +5,7 @@
  * Used by `openclaw a2a serve`.
  */
 
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { loadConfig } from "../../config/config.js";
 import { buildGatewayConnectionDetails } from "../../gateway/call.js";
 import { GatewayClient } from "../../gateway/client.js";
@@ -23,6 +23,8 @@ export type StandaloneA2AServerOptions = {
   gatewayUrl?: string;
   gatewayToken?: string;
   streaming?: boolean;
+  /** Called for server errors (e.g. after listen). Use this or attach to the returned server. */
+  onError?: (err: Error) => void;
 };
 
 type TaskEventListener = {
@@ -31,7 +33,15 @@ type TaskEventListener = {
   onError: (err: Error) => void;
 };
 
-export async function startA2AServer(opts: StandaloneA2AServerOptions): Promise<void> {
+/**
+ * Starts the A2A HTTP server and connects to the gateway.
+ *
+ * The returned Promise resolves with the HTTP server when listening. Attach to
+ * `server.on("error", ...)` or pass `onError` to observe post-listen errors
+ * (the listen Promise is already settled by then). Shutdown: SIGINT/SIGTERM
+ * calls httpServer.close() and gateway.stop().
+ */
+export async function startA2AServer(opts: StandaloneA2AServerOptions): Promise<Server> {
   const cfg = loadConfig();
   const connection = buildGatewayConnectionDetails({
     config: cfg,
@@ -159,17 +169,23 @@ export async function startA2AServer(opts: StandaloneA2AServerOptions): Promise<
     });
   });
 
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<Server>((resolve, reject) => {
+    let listenSettled = false;
+
     httpServer.on("error", (err) => {
       console.error(`[a2a] Server error: ${err.message}`);
-      reject(err);
+      opts.onError?.(err);
+      if (!listenSettled) {
+        reject(err);
+      }
     });
 
     httpServer.listen(opts.port, opts.host, () => {
+      listenSettled = true;
       console.error(`[a2a] A2A server listening on ${opts.host}:${opts.port}`);
       console.error(`[a2a] Agent Card:   ${baseUrl}/.well-known/agent.json`);
       console.error(`[a2a] JSON-RPC:     ${baseUrl}/a2a`);
-      resolve();
+      resolve(httpServer);
     });
 
     const shutdown = () => {

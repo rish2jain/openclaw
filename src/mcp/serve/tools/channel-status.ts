@@ -3,9 +3,7 @@
  *
  * Query the status of connected chat channels via the gateway.
  */
-import type { McpToolCallResult, McpToolHandler } from "../types.js";
-
-type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+import type { GatewayRpc, McpToolCallResult, McpToolHandler } from "../types.js";
 
 export function createChannelStatusTool(callGateway: GatewayRpc): McpToolHandler {
   return {
@@ -27,23 +25,13 @@ export function createChannelStatusTool(callGateway: GatewayRpc): McpToolHandler
     },
 
     async execute(args: Record<string, unknown>): Promise<McpToolCallResult> {
-      const result = await callGateway("channels.status", {});
-      const channelFilter = typeof args.channel === "string" ? args.channel.toLowerCase() : null;
-
-      if (channelFilter && typeof result === "object" && result !== null) {
-        const filtered: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(result)) {
-          if (key.toLowerCase() === channelFilter || key.toLowerCase().includes(channelFilter)) {
-            filtered[key] = value;
-          }
-        }
-        if (Object.keys(filtered).length > 0) {
-          return {
-            content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
-          };
-        }
-      }
-
+      const channelRaw = args.channel;
+      const channel =
+        typeof channelRaw === "string" && channelRaw.trim().length > 0
+          ? channelRaw.trim().toLowerCase()
+          : undefined;
+      const params = channel ? { channel } : {};
+      const result = await callGateway("channels.status", params);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

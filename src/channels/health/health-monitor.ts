@@ -110,14 +110,15 @@ export function createHealthMonitor(
         channel,
         accountId,
         attempts: [],
-        level: "healthy",
+        level: "offline",
         levelChangedAt: now,
-        connected: true,
+        connected: false,
         consecutiveFailures: 0,
         uptimeSamples: 0,
         uptimeSuccesses: 0,
       };
       trackers.set(key, tracker);
+      evaluateTracker(tracker);
     }
     return tracker;
   }

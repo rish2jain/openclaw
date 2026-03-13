@@ -116,4 +116,7 @@ describe("chunkText", () => {
       expect(chunk.length).toBeLessThanOrEqual(30);
     }
   });
+  it("returns single empty chunk for empty string", () => {
+    expect(chunkText("", 100)).toEqual([""]);
+  });
 });

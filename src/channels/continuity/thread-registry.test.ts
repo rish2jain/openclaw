@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   createThreadRegistry,
   buildCanonicalThreadId,
@@ -168,18 +168,25 @@ describe("ThreadRegistry", () => {
 
   describe("pruneStaleThreads", () => {
     it("removes threads older than the threshold", () => {
-      const thread = registry.registerThread({
-        canonicalId: "old-thread",
-        sessionKey: "agent:main:main",
-        channel: "telegram",
-        accountId: "default",
-        threadId: "tg-1",
-        peerId: "tg-user",
-        peerKind: "direct",
-      });
-      thread.updatedAt = Date.now() - 2 * 60 * 60_000;
-      expect(registry.pruneStaleThreads(60 * 60_000)).toBe(1);
-      expect(registry.getThread("old-thread")).toBeUndefined();
+      vi.useFakeTimers();
+      const baseTime = Date.now();
+      vi.setSystemTime(baseTime);
+      try {
+        registry.registerThread({
+          canonicalId: "old-thread",
+          sessionKey: "agent:main:main",
+          channel: "telegram",
+          accountId: "default",
+          threadId: "tg-1",
+          peerId: "tg-user",
+          peerKind: "direct",
+        });
+        vi.setSystemTime(baseTime + 2 * 60 * 60_000);
+        expect(registry.pruneStaleThreads(60 * 60_000)).toBe(1);
+        expect(registry.getThread("old-thread")).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -219,38 +226,46 @@ describe("ThreadRegistry", () => {
 
   describe("eviction", () => {
     it("evicts oldest thread when maxThreads exceeded", () => {
-      const small = createThreadRegistry({ maxThreads: 2 });
-      const t1 = small.registerThread({
-        canonicalId: "t1",
-        sessionKey: "s1",
-        channel: "telegram",
-        accountId: "default",
-        threadId: "tg-1",
-        peerId: "u1",
-        peerKind: "direct",
-      });
-      t1.updatedAt = Date.now() - 10_000;
-      small.registerThread({
-        canonicalId: "t2",
-        sessionKey: "s1",
-        channel: "discord",
-        accountId: "default",
-        threadId: "dc-1",
-        peerId: "u2",
-        peerKind: "direct",
-      });
-      small.registerThread({
-        canonicalId: "t3",
-        sessionKey: "s1",
-        channel: "slack",
-        accountId: "default",
-        threadId: "sl-1",
-        peerId: "u3",
-        peerKind: "direct",
-      });
-      expect(small.getThread("t1")).toBeUndefined();
-      expect(small.getThread("t2")).toBeDefined();
-      expect(small.getThread("t3")).toBeDefined();
+      vi.useFakeTimers();
+      const baseTime = Date.now();
+      vi.setSystemTime(baseTime);
+      try {
+        const small = createThreadRegistry({ maxThreads: 2 });
+        small.registerThread({
+          canonicalId: "t1",
+          sessionKey: "s1",
+          channel: "telegram",
+          accountId: "default",
+          threadId: "tg-1",
+          peerId: "u1",
+          peerKind: "direct",
+        });
+        vi.setSystemTime(baseTime + 10_000);
+        small.registerThread({
+          canonicalId: "t2",
+          sessionKey: "s1",
+          channel: "discord",
+          accountId: "default",
+          threadId: "dc-1",
+          peerId: "u2",
+          peerKind: "direct",
+        });
+        vi.setSystemTime(baseTime + 20_000);
+        small.registerThread({
+          canonicalId: "t3",
+          sessionKey: "s1",
+          channel: "slack",
+          accountId: "default",
+          threadId: "sl-1",
+          peerId: "u3",
+          peerKind: "direct",
+        });
+        expect(small.getThread("t1")).toBeUndefined();
+        expect(small.getThread("t2")).toBeDefined();
+        expect(small.getThread("t3")).toBeDefined();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

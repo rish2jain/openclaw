@@ -261,6 +261,19 @@ export class TaskHandler {
 
   // ── Subscribe to Task (SSE) ────────────────────────────────────────
 
+  /** Check if a task exists and is subscribable (without touching the response). */
+  canSubscribeToTask(taskId: string): { ok: true } | { ok: false; code: number; message: string } {
+    const stored = this.tasks.get(taskId);
+    if (!stored) {
+      return {
+        ok: false,
+        code: A2A_ERRORS.TASK_NOT_FOUND,
+        message: `Task not found: ${taskId}`,
+      };
+    }
+    return { ok: true };
+  }
+
   subscribeToTask(
     params: { id: string },
     sse: SseWriter,
@@ -286,17 +299,16 @@ export class TaskHandler {
       return { ok: true };
     }
 
-    stored.subscribers.add(sse);
-
-    // Clean up on client disconnect
+    // Clean up on client disconnect; store wrapper so its close removes itself from subscribers
     const origClose = sse.close.bind(sse);
     const wrappedSse = Object.create(sse) as SseWriter;
     Object.defineProperty(wrappedSse, "close", {
       value: () => {
-        stored.subscribers.delete(sse);
+        stored.subscribers.delete(wrappedSse);
         origClose();
       },
     });
+    stored.subscribers.add(wrappedSse);
 
     return { ok: true };
   }

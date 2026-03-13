@@ -310,6 +310,7 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     }
 
     for (const ref of threadB.references) {
+      removeIndex(ref, canonicalIdB);
       const existingIdx = threadA.references.findIndex(
         (r) => r.channel === ref.channel && r.peerId === ref.peerId,
       );
