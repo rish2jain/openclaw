@@ -110,11 +110,10 @@ function getOrCreateChannel(channel: string): ChannelState {
 
 function addDurationSample(ch: ChannelState, durationMs: number): void {
   const now = Date.now();
-  ch.durationSamples.push({ value: durationMs, at: now });
-  // Prune old samples
-  if (ch.durationSamples.length > MAX_SAMPLES) {
-    ch.durationSamples = ch.durationSamples.slice(-MAX_SAMPLES);
+  if (ch.durationSamples.length >= MAX_SAMPLES) {
+    ch.durationSamples.shift();
   }
+  ch.durationSamples.push({ value: durationMs, at: now });
 }
 
 function getRecentSamples(ch: ChannelState): number[] {

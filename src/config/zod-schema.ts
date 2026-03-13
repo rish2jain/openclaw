@@ -625,14 +625,14 @@ export const OpenClawSchema = z
           .object({
             name: z.string().optional(),
             description: z.string().optional(),
-            documentationUrl: z.string().optional(),
-            iconUrl: z.string().optional(),
+            documentationUrl: HttpUrlSchema.optional(),
+            iconUrl: HttpUrlSchema.optional(),
             inputModes: z.array(z.string()).optional(),
             outputModes: z.array(z.string()).optional(),
             provider: z
               .object({
                 name: z.string(),
-                url: z.string().optional(),
+                url: HttpUrlSchema.optional(),
                 contact: z.string().optional(),
               })
               .strict()

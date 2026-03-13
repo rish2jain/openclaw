@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -30,7 +31,10 @@ export const ComposioSearchToolSchema = Type.Object({
 /**
  * Create the composio_search_tools tool
  */
-export function createComposioSearchTool(client: ComposioClient, _config: ComposioConfig) {
+export function createComposioSearchTool(
+  client: ComposioClient,
+  _config: ComposioConfig,
+): AnyAgentTool {
   return {
     name: "composio_search_tools",
     label: "Composio Search Tools",

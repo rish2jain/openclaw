@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -39,7 +40,10 @@ export const ComposioWorkbenchSchema = Type.Object({
 /**
  * Create the composio_workbench tool
  */
-export function createComposioWorkbenchTool(client: ComposioClient, _config: ComposioConfig) {
+export function createComposioWorkbenchTool(
+  client: ComposioClient,
+  _config: ComposioConfig,
+): AnyAgentTool {
   return {
     name: "composio_workbench",
     label: "Composio Remote Workbench",

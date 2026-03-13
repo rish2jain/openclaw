@@ -102,6 +102,9 @@ package-lock.json
 .agent/
 skills-lock.json
 
+# Cursor IDE hooks state (machine-specific, do not commit)
+.cursor/hooks/state/
+
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig
 

@@ -12,6 +12,7 @@
 
 import { formatCliCommand } from "../cli/command-format.js";
 import { note } from "../terminal/note.js";
+import { loadNodeSqlite } from "./doctor-fts5-sqlite.js";
 
 /**
  * Probe whether the current Node runtime's built-in SQLite supports FTS5.
@@ -19,7 +20,7 @@ import { note } from "../terminal/note.js";
  */
 export function probeFts5Availability(): { available: boolean; error?: string } {
   try {
-    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    const { DatabaseSync } = loadNodeSqlite();
     const db = new DatabaseSync(":memory:");
     try {
       db.exec(`CREATE VIRTUAL TABLE _fts5_probe USING fts5(content)`);

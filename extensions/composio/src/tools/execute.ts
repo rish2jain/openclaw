@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -22,7 +23,10 @@ export const ComposioExecuteToolSchema = Type.Object({
 /**
  * Create the composio_execute_tool tool
  */
-export function createComposioExecuteTool(client: ComposioClient, _config: ComposioConfig) {
+export function createComposioExecuteTool(
+  client: ComposioClient,
+  _config: ComposioConfig,
+): AnyAgentTool {
   return {
     name: "composio_execute_tool",
     label: "Composio Execute Tool",

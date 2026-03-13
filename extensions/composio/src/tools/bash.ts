@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -23,7 +24,10 @@ export const ComposioBashSchema = Type.Object({
 /**
  * Create the composio_bash tool
  */
-export function createComposioBashTool(client: ComposioClient, _config: ComposioConfig) {
+export function createComposioBashTool(
+  client: ComposioClient,
+  _config: ComposioConfig,
+): AnyAgentTool {
   return {
     name: "composio_bash",
     label: "Composio Remote Bash",

@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -30,7 +31,10 @@ export const ComposioManageConnectionsToolSchema = Type.Object({
 /**
  * Create the composio_manage_connections tool
  */
-export function createComposioConnectionsTool(client: ComposioClient, _config: ComposioConfig) {
+export function createComposioConnectionsTool(
+  client: ComposioClient,
+  _config: ComposioConfig,
+): AnyAgentTool {
   return {
     name: "composio_manage_connections",
     label: "Composio Manage Connections",

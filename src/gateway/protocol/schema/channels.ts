@@ -94,6 +94,7 @@ export const TalkConfigResultSchema = Type.Object(
 
 export const ChannelsStatusParamsSchema = Type.Object(
   {
+    channel: Type.Optional(Type.String()),
     probe: Type.Optional(Type.Boolean()),
     timeoutMs: Type.Optional(Type.Integer({ minimum: 0 })),
   },

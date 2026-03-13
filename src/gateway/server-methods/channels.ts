@@ -82,9 +82,15 @@ export const channelsHandlers: GatewayRequestHandlers = {
     const probe = (params as { probe?: boolean }).probe === true;
     const timeoutMsRaw = (params as { timeoutMs?: unknown }).timeoutMs;
     const timeoutMs = typeof timeoutMsRaw === "number" ? Math.max(1000, timeoutMsRaw) : 10_000;
+    const channelFilterRaw = (params as { channel?: unknown }).channel;
+    const channelFilter =
+      typeof channelFilterRaw === "string" && channelFilterRaw.trim().length > 0
+        ? normalizeChannelId(channelFilterRaw.trim().toLowerCase())
+        : undefined;
     const cfg = loadConfig();
     const runtime = context.getRuntimeSnapshot();
-    const plugins = listChannelPlugins();
+    const allPlugins = listChannelPlugins();
+    const plugins = channelFilter ? allPlugins.filter((p) => p.id === channelFilter) : allPlugins;
     const pluginMap = new Map<ChannelId, ChannelPlugin>(
       plugins.map((plugin) => [plugin.id, plugin]),
     );

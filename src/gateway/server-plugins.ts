@@ -41,7 +41,9 @@ const fallbackGatewayContextState = (() => {
 })();
 
 export function setFallbackGatewayContext(ctx: GatewayRequestContext): void {
-  // TODO: This startup snapshot can become stale if runtime config/context changes.
+  // Snapshot taken at startup; can become stale if runtime config/context changes later.
+  // Prefer request-scoped context (getPluginRuntimeGatewayRequestScope) when available;
+  // fallback is used only for non-WS paths (e.g. Telegram polling) that do not set scope.
   fallbackGatewayContextState.context = ctx;
 }
 
