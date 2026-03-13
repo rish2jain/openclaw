@@ -15,9 +15,16 @@ import type { ConvertedAiSdkTool } from "./tools.js";
  * Pi-agent compatible event types.
  * Matches the AgentEvent type from @mariozechner/pi-agent-core.
  */
+/** Token usage from the model (for agent_end). */
+export type PiAgentEventUsage = {
+  input?: number;
+  output?: number;
+  total?: number;
+};
+
 export type PiAgentEvent =
   | { type: "agent_start" }
-  | { type: "agent_end"; messages: PiAgentMessage[] }
+  | { type: "agent_end"; messages: PiAgentMessage[]; usage?: PiAgentEventUsage }
   | { type: "turn_start" }
   | { type: "turn_end"; message: PiAgentMessage; toolResults: PiToolResultMessage[] }
   | { type: "message_start"; message: PiAgentMessage }
@@ -145,6 +152,7 @@ export async function* streamWithPiAgentEvents(
   let accumulatedReasoning = "";
   // Track tool call inputs as they stream in
   const toolCallInputs = new Map<string, { toolName: string; input: string }>();
+  let stream: ReturnType<typeof streamText> | undefined;
 
   try {
     // Start streaming from AI SDK
@@ -166,7 +174,7 @@ export async function* streamWithPiAgentEvents(
       streamOptions.providerOptions = input.providerOptions;
     }
 
-    const stream = streamText(streamOptions);
+    stream = streamText(streamOptions);
 
     // Emit turn start
     yield { type: "turn_start" };
@@ -386,8 +394,40 @@ export async function* streamWithPiAgentEvents(
     console.error("[AI SDK Event Adapter] Stream error:", error);
   }
 
-  // Emit agent end
-  yield { type: "agent_end", messages: allMessages };
+  // Usage: AI SDK stream exposes .usage / .totalUsage (Promise) after consumption (v6: inputTokens/outputTokens)
+  let usage: PiAgentEventUsage | undefined;
+  try {
+    const s = stream as {
+      usage?: Promise<{
+        inputTokens?: number;
+        outputTokens?: number;
+        totalTokens?: number;
+      }>;
+      totalUsage?: Promise<{
+        inputTokens?: number;
+        outputTokens?: number;
+        totalTokens?: number;
+      }>;
+    };
+    const usagePromise = s?.totalUsage ?? s?.usage;
+    if (usagePromise) {
+      const u = await usagePromise;
+      if (
+        u &&
+        (u.inputTokens !== undefined || u.outputTokens !== undefined || u.totalTokens !== undefined)
+      ) {
+        usage = {
+          input: u.inputTokens,
+          output: u.outputTokens,
+          total: u.totalTokens ?? (u.inputTokens ?? 0) + (u.outputTokens ?? 0),
+        };
+      }
+    }
+  } catch {
+    // usage optional; leave undefined on failure
+  }
+
+  yield { type: "agent_end", messages: allMessages, ...(usage && { usage }) };
 }
 
 /**

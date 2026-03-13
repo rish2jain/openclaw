@@ -70,7 +70,7 @@ export class TaskManager {
   // ── Get Task ───────────────────────────────────────────────────────
 
   async getTask(id: string, historyLength?: number, signal?: AbortSignal): Promise<Task> {
-    const params: GetTaskParams = { id, historyLength };
+    const params: GetTaskParams = { id, ...(historyLength !== undefined && { historyLength }) };
     return this.rpc<Task>(A2A_METHODS.GET_TASK, params, signal);
   }
 
@@ -117,11 +117,81 @@ export class TaskManager {
       throw new Error(`A2A streaming request failed: HTTP ${res.status} ${res.statusText}`);
     }
 
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/event-stream")) {
+      throw new Error(
+        `A2A streaming response must be text/event-stream; got Content-Type: ${contentType}`,
+      );
+    }
+
     if (!res.body) {
       throw new Error("No response body for streaming request");
     }
 
-    return res.body.pipeThrough(new TextDecoderStream());
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    const maxPeek = 8192;
+    let peeked = "";
+    let totalPeeked = 0;
+    while (totalPeeked < maxPeek) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      const chunk = decoder.decode(value, { stream: true });
+      peeked += chunk;
+      totalPeeked += chunk.length;
+      if (peeked.includes("\n\n")) {
+        break;
+      }
+    }
+
+    const firstEventEnd = peeked.indexOf("\n\n");
+    if (firstEventEnd !== -1) {
+      const firstEvent = peeked.slice(0, firstEventEnd + 2);
+      const dataLine = firstEvent.split("\n").find((line) => line.startsWith("data:"));
+      if (dataLine) {
+        const jsonStr = dataLine.slice(5).trim();
+        try {
+          const data = JSON.parse(jsonStr) as {
+            error?: { code?: number; message?: string; data?: unknown };
+          };
+          if (data?.error && typeof data.error === "object") {
+            const { code, message, data: errData } = data.error;
+            throw new A2ARemoteError(
+              typeof code === "number" ? code : -32603,
+              typeof message === "string" ? message : "JSON-RPC error in SSE stream",
+              errData,
+            );
+          }
+        } catch (err) {
+          if (err instanceof A2ARemoteError) {
+            throw err;
+          }
+          // Not JSON or not an error payload; pass through
+        }
+      }
+    }
+
+    const restReader = reader;
+    // Use a fresh decoder for the rest of the stream so the peek decoder's
+    // buffered state (from stream: true) does not corrupt multi-byte decoding.
+    const streamDecoder = new TextDecoder();
+    return new ReadableStream<string>({
+      async pull(controller) {
+        if (peeked.length > 0) {
+          controller.enqueue(peeked);
+          peeked = "";
+          return;
+        }
+        const { done, value } = await restReader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(streamDecoder.decode(value, { stream: true }));
+      },
+    });
   }
 
   // ── Internal RPC Helper ────────────────────────────────────────────
@@ -137,6 +207,9 @@ export class TaskManager {
     const response = await fetchJsonRpc<T>(fetchParams);
     if (response.error) {
       throw new A2ARemoteError(response.error.code, response.error.message, response.error.data);
+    }
+    if (response.result === null || response.result === undefined) {
+      throw new A2ARemoteError(-32603, "Malformed JSON-RPC response: missing result", undefined);
     }
     return response.result as T;
   }

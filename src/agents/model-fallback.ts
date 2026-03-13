@@ -532,7 +532,7 @@ export async function runWithModelFallback<T>(params: {
       params.provider === candidate.provider && params.model === candidate.model;
     let runOptions: ModelFallbackRunOptions | undefined;
     let attemptedDuringCooldown = false;
-    let transientProbeProviderForAttempt: string | null = null;
+    let transientProbeModelKeyForAttempt: string | null = null;
     if (authStore) {
       const profileIds = resolveAuthProfileOrder({
         cfg: params.cfg,
@@ -624,7 +624,7 @@ export async function runWithModelFallback<T>(params: {
           }
           runOptions = { allowTransientCooldownProbe: true };
           if (isTransientCooldownReason) {
-            transientProbeProviderForAttempt = modelKey(candidate.provider, candidate.model);
+            transientProbeModelKeyForAttempt = modelKey(candidate.provider, candidate.model);
           }
         }
         attemptedDuringCooldown = true;
@@ -680,7 +680,7 @@ export async function runWithModelFallback<T>(params: {
     }
     const err = attemptRun.error;
     {
-      if (transientProbeProviderForAttempt) {
+      if (transientProbeModelKeyForAttempt) {
         const probeFailureReason = describeFailoverError(err).reason;
         const shouldPreserveTransientProbeSlot =
           probeFailureReason === "model_not_found" ||
@@ -689,7 +689,7 @@ export async function runWithModelFallback<T>(params: {
           probeFailureReason === "auth_permanent" ||
           probeFailureReason === "session_expired";
         if (!shouldPreserveTransientProbeSlot) {
-          cooldownProbeUsedModels.add(transientProbeProviderForAttempt);
+          cooldownProbeUsedModels.add(transientProbeModelKeyForAttempt);
         }
       }
       // Context overflow errors should be handled by the inner runner's

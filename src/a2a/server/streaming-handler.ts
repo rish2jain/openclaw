@@ -32,10 +32,16 @@ export class StreamingHandler {
     this.taskHandler.sendStreamingMessage(params, sse);
   }
 
+  /** Check if a task exists and is subscribable (call before initSseStream). */
+  canSubscribe(taskId: string): { ok: true } | { ok: false; code: number; message: string } {
+    return this.taskHandler.canSubscribeToTask(taskId);
+  }
+
   /**
    * Handle a tasks/subscribe request. Opens an SSE stream for an
    * existing task and streams updates until the task completes or
-   * the client disconnects.
+   * the client disconnects. Call canSubscribe(taskId) first and only
+   * call this when it returns ok.
    */
   handleTaskSubscription(
     taskId: string,

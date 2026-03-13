@@ -218,8 +218,8 @@ export async function runAiSdkAgent(
   // For now, we just pass through what we receive
   const systemPrompt = systemParts.length > 0 ? systemParts.join("\n\n") : undefined;
 
-  // Build messages - for now, just the user prompt
-  // TODO: Load session history from sessionFile when implementing full session support
+  // Build messages: single user prompt for now. For full session continuity, load history
+  // from params.sessionFile (see pi-embedded-runner/run/attempt.ts and SessionManager for format).
   const messages: EventAdapterInput["messages"] = [{ role: "user", content: params.prompt }];
 
   // === Thinking/Reasoning Options (Anthropic-specific) ===
@@ -306,16 +306,23 @@ export async function runAiSdkAgent(
           }
           break;
 
-        case "agent_end":
-          // Build agent meta
+        case "agent_end": {
+          // Build agent meta; use usage from stream when available
+          const usage = "usage" in event && event.usage ? event.usage : undefined;
           agentMeta = {
             sessionId: params.sessionId,
             provider: resolvedModel.providerId,
             model: resolvedModel.modelId,
-            // TODO: Get actual usage from AI SDK response
-            usage: { input: 0, output: 0, total: 0 },
+            ...(usage && {
+              usage: {
+                input: usage.input,
+                output: usage.output,
+                total: usage.total,
+              },
+            }),
           };
           break;
+        }
       }
     }
   } catch (error) {
