@@ -160,14 +160,18 @@ export function startChannelHealthMonitor(deps: ChannelHealthMonitorDeps): Chann
             }
             channelManager.resetRestartAttempts(channelId as ChannelId, accountId);
             await channelManager.startChannel(channelId as ChannelId, accountId);
-            record.lastRestartAt = now;
-            record.restartsThisHour.push({ at: now });
-            restartRecords.set(key, record);
           } catch (err) {
             log.error?.(
               `[${channelId}:${accountId}] health-monitor: restart failed: ${String(err)}`,
             );
           }
+          // Always record the restart attempt (success or failure) so the
+          // cooldown timer applies. Without this, a permanently-failing channel
+          // (e.g. unconfigured) would retry every check cycle in an infinite
+          // loop instead of respecting the cooldown backoff (#44398).
+          record.lastRestartAt = now;
+          record.restartsThisHour.push({ at: now });
+          restartRecords.set(key, record);
         }
       }
     } finally {

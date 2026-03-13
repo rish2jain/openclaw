@@ -348,11 +348,27 @@ describe("channel-health-monitor", () => {
     monitor.stop();
   });
 
-  it("treats missing enabled/configured flags as managed accounts", async () => {
+  it("skips channels with missing configured flag to prevent restart loops (#44398)", async () => {
     const manager = createSnapshotManager({
       telegram: {
         default: {
           running: false,
+          lastError: "polling stopped unexpectedly",
+          // configured is undefined — treat as unmanaged
+        },
+      },
+    });
+    const monitor = await startAndRunCheck(manager);
+    expect(manager.startChannel).not.toHaveBeenCalled();
+    monitor.stop();
+  });
+
+  it("restarts channels with configured: true and running: false", async () => {
+    const manager = createSnapshotManager({
+      telegram: {
+        default: {
+          running: false,
+          configured: true,
           lastError: "polling stopped unexpectedly",
         },
       },

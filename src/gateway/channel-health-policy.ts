@@ -45,7 +45,10 @@ export type ChannelRestartReason =
   | "disconnected";
 
 function isManagedAccount(snapshot: ChannelHealthSnapshot): boolean {
-  return snapshot.enabled !== false && snapshot.configured !== false;
+  // Require an explicit `true` for `configured` — treat undefined as
+  // unconfigured to prevent the health monitor from restart-looping
+  // channels that have no configuration (#44398).
+  return snapshot.enabled !== false && snapshot.configured === true;
 }
 
 const BUSY_ACTIVITY_STALE_THRESHOLD_MS = 25 * 60_000;
