@@ -6,12 +6,35 @@
  *   - openclaw://channels/{channelName}  -- channel config/status
  *   - openclaw://sessions/{sessionKey}   -- session conversation log
  */
+import { logDebug } from "../../logger.js";
 import type {
   GatewayRpc,
   McpReadResourceResult,
   McpResourceDefinition,
   McpResourceTemplateDefinition,
 } from "./types.js";
+
+/** True if the error is likely gateway/network/timeout (we return empty list instead of failing). */
+function isExpectedGatewayError(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  const msg = err.message.toLowerCase();
+  const code = (err as NodeJS.ErrnoException).code?.toLowerCase() ?? "";
+  return (
+    code === "econnrefused" ||
+    code === "econnreset" ||
+    code === "etimedout" ||
+    code === "enotfound" ||
+    err.name === "FetchError" ||
+    err.name === "AbortError" ||
+    msg.includes("timeout") ||
+    msg.includes("fetch failed") ||
+    msg.includes("fetcherror") ||
+    msg.includes("network") ||
+    msg.includes("abort")
+  );
+}
 
 /**
  * Return resource templates that describe the dynamic resources available.
@@ -58,13 +81,22 @@ export async function getAllResources(callGateway: GatewayRpc): Promise<McpResou
         });
       }
     }
-  } catch {
-    // Gateway may not be running; return empty channel list
+  } catch (err) {
+    if (isExpectedGatewayError(err)) {
+      logDebug(
+        `gateway unavailable while fetching channels: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } else {
+      throw err;
+    }
   }
 
   try {
     const sessionsResult = await callGateway("sessions.list", {});
-    const sessions = sessionsResult.sessions;
+    const sessions =
+      sessionsResult != null && typeof sessionsResult === "object" && "sessions" in sessionsResult
+        ? (sessionsResult as { sessions: unknown }).sessions
+        : undefined;
     if (Array.isArray(sessions)) {
       for (const session of sessions) {
         const sessionObj = session as Record<string, unknown>;
@@ -90,8 +122,14 @@ export async function getAllResources(callGateway: GatewayRpc): Promise<McpResou
         }
       }
     }
-  } catch {
-    // Gateway may not be running; return empty session list
+  } catch (err) {
+    if (isExpectedGatewayError(err)) {
+      logDebug(
+        `gateway unavailable while fetching sessions: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } else {
+      throw err;
+    }
   }
 
   return resources;

@@ -18,6 +18,9 @@ const MIN_EDITS_THRESHOLD = 3;
 /** Smoothing factor for running averages (higher = slower adaptation). */
 const SMOOTHING = 0.3;
 
+/** Max length samples to keep; sliding window to avoid unbounded memory growth. */
+const MAX_LENGTH_SAMPLES = 200;
+
 // ── Vocabulary lists for formality detection ────────────────────────────────
 
 const FORMAL_MARKERS = new Set([
@@ -106,6 +109,9 @@ export function createStyleLearner(): StyleLearner {
       const ratio = edited.length / original.length;
       avgLengthRatio = smooth(avgLengthRatio, ratio);
       lengthSamples.push(edited.length);
+      if (lengthSamples.length > MAX_LENGTH_SAMPLES) {
+        lengthSamples.splice(0, lengthSamples.length - MAX_LENGTH_SAMPLES);
+      }
 
       // ── Formality shift ─────────────────────────────────────────
       const origFormality = measureFormality(original);
@@ -189,6 +195,9 @@ export function createStyleLearner(): StyleLearner {
       signaturesSeen.push(...state.signaturesSeen);
       lengthSamples.length = 0;
       lengthSamples.push(...state.lengthSamples);
+      if (lengthSamples.length > MAX_LENGTH_SAMPLES) {
+        lengthSamples.splice(0, lengthSamples.length - MAX_LENGTH_SAMPLES);
+      }
     },
   };
 }

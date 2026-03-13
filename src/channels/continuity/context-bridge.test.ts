@@ -1,18 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createContextBridge, type ContextBridge } from "./context-bridge.js";
-import { createIdentityLinker, type IdentityLinker } from "./identity-linker.js";
 import { createThreadRegistry, type ThreadRegistry } from "./thread-registry.js";
 
 describe("ContextBridge", () => {
   let threadRegistry: ThreadRegistry;
-  let identityLinker: IdentityLinker;
   let bridge: ContextBridge;
 
   beforeEach(() => {
     threadRegistry = createThreadRegistry();
-    identityLinker = createIdentityLinker();
     bridge = createContextBridge(
-      { threadRegistry, identityLinker },
+      { threadRegistry },
       { maxMessages: 5, maxMessageAgeMs: 60 * 60_000 },
     );
   });

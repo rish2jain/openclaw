@@ -163,17 +163,24 @@ export class GraphStore {
     const id = randomUUID();
     const propsJson = JSON.stringify(params.properties ?? {});
 
-    this.db
-      .prepare(
-        `INSERT INTO graph_nodes (id, name, type, properties, created_at, updated_at, agent_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(id, params.name, params.type, propsJson, now, now, params.agentId ?? null);
-
-    if (this.ftsAvailable) {
+    try {
+      this.db.exec("BEGIN TRANSACTION");
       this.db
-        .prepare(`INSERT INTO ${FTS_TABLE} (name, id, type) VALUES (?, ?, ?)`)
-        .run(params.name, id, params.type);
+        .prepare(
+          `INSERT INTO graph_nodes (id, name, type, properties, created_at, updated_at, agent_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(id, params.name, params.type, propsJson, now, now, params.agentId ?? null);
+
+      if (this.ftsAvailable) {
+        this.db
+          .prepare(`INSERT INTO ${FTS_TABLE} (name, id, type) VALUES (?, ?, ?)`)
+          .run(params.name, id, params.type);
+      }
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
     }
 
     return {
@@ -222,12 +229,19 @@ export class GraphStore {
       : existing.properties;
     const now = Date.now();
 
-    this.db
-      .prepare(`UPDATE graph_nodes SET name = ?, properties = ?, updated_at = ? WHERE id = ?`)
-      .run(newName, JSON.stringify(newProps), now, id);
+    try {
+      this.db.exec("BEGIN TRANSACTION");
+      this.db
+        .prepare(`UPDATE graph_nodes SET name = ?, properties = ?, updated_at = ? WHERE id = ?`)
+        .run(newName, JSON.stringify(newProps), now, id);
 
-    if (this.ftsAvailable && updates.name) {
-      this.db.prepare(`UPDATE ${FTS_TABLE} SET name = ? WHERE id = ?`).run(newName, id);
+      if (this.ftsAvailable && updates.name) {
+        this.db.prepare(`UPDATE ${FTS_TABLE} SET name = ? WHERE id = ?`).run(newName, id);
+      }
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
     }
 
     return { ...existing, name: newName, properties: newProps, updatedAt: now };
@@ -235,12 +249,19 @@ export class GraphStore {
 
   deleteNode(id: string): boolean {
     this.ensureOpen();
-    if (this.ftsAvailable) {
-      this.db.prepare(`DELETE FROM ${FTS_TABLE} WHERE id = ?`).run(id);
+    try {
+      this.db.exec("BEGIN TRANSACTION");
+      if (this.ftsAvailable) {
+        this.db.prepare(`DELETE FROM ${FTS_TABLE} WHERE id = ?`).run(id);
+      }
+      // CASCADE will handle edges
+      const result = this.db.prepare("DELETE FROM graph_nodes WHERE id = ?").run(id);
+      this.db.exec("COMMIT");
+      return ((result as { changes?: number }).changes ?? 0) > 0;
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
     }
-    // CASCADE will handle edges
-    const result = this.db.prepare("DELETE FROM graph_nodes WHERE id = ?").run(id);
-    return ((result as { changes?: number }).changes ?? 0) > 0;
   }
 
   searchNodes(
@@ -268,7 +289,8 @@ export class GraphStore {
     if (!tokens || tokens.length === 0) {
       return this.searchNodesLike(query, type, limit);
     }
-    const ftsQuery = tokens.map((t) => `"${t.replaceAll('"', "")}"`).join(" OR ");
+    // FTS5: escape " in phrase by doubling so quoted phrase remains valid
+    const ftsQuery = tokens.map((t) => `"${t.replaceAll('"', '""')}"`).join(" OR ");
 
     const sql = type
       ? `SELECT f.id, f.name, f.type, rank

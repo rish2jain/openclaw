@@ -96,10 +96,13 @@ export class SessionMemory {
     return count;
   }
 
-  /** List entries in this session. */
+  /** List entries in this session. Honors limit/offset after filtering by this session. */
   list(opts?: { limit?: number; offset?: number }): TieredMemoryEntry[] {
-    const all = this.backend.list(this.tier, { limit: opts?.limit ?? 100, offset: opts?.offset });
-    return all.filter((entry) => entry.key.startsWith(`${this.sessionId}:`));
+    return this.backend.list(this.tier, {
+      limit: opts?.limit ?? 100,
+      offset: opts?.offset ?? 0,
+      prefix: `${this.sessionId}:`,
+    });
   }
 
   /** Prefix key with session ID for namespace isolation. */

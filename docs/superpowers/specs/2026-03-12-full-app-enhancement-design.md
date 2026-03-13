@@ -253,7 +253,7 @@ Replace inline validation in `mcp-cli.ts` and other CLI files.
 
 ## Files Created/Modified Summary
 
-**New files (14):**
+**New files (15):**
 
 - `src/channels/orchestrator.ts`
 - `src/channels/persistence/channel-state-store.ts`
@@ -269,6 +269,7 @@ Replace inline validation in `mcp-cli.ts` and other CLI files.
 - `src/utils/ring-buffer.ts`
 - `src/utils/time-window.ts`
 - `src/utils/key-builder.ts`
+- `src/utils/multi-index.ts`
 
 **Modified files (12):**
 

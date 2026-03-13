@@ -3,22 +3,8 @@
  * Best-effort extraction of job listings from arbitrary company career pages.
  */
 
-import type { JobListing, RemotePolicy } from "../types.js";
-
-/** Strip HTML tags and decode common entities. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+import type { JobListing } from "../types.js";
+import { detectRemotePolicy, stripHtml } from "./utils.js";
 
 /** Resolve a potentially relative URL against a base URL. */
 function resolveUrl(href: string, baseUrl: string): string {
@@ -33,24 +19,6 @@ function resolveUrl(href: string, baseUrl: string): string {
     return `${origin}${href}`;
   }
   return `${baseUrl.replace(/\/?$/, "/")}${href}`;
-}
-
-/** Detect remote policy from text. */
-function detectRemotePolicy(text: string): RemotePolicy {
-  const lower = text.toLowerCase();
-  if (/\bfully\s+remote\b/.test(lower) || /\bremote\s+only\b/.test(lower)) {
-    return "remote";
-  }
-  if (/\bremote\b/.test(lower)) {
-    return "remote";
-  }
-  if (/\bhybrid\b/.test(lower)) {
-    return "hybrid";
-  }
-  if (/\bon[\s-]?site\b/.test(lower) || /\bin[\s-]?office\b/.test(lower)) {
-    return "onsite";
-  }
-  return "unknown";
 }
 
 /** Generate a stable ID for a career page listing. */

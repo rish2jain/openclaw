@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { probeFts5Availability } from "./doctor-fts5.js";
+import { noteFts5Availability, probeFts5Availability } from "./doctor-fts5.js";
 
 type SqliteMockScenario = "success" | "fts5_error" | "module_not_found";
 const mockState = vi.hoisted(() => ({
   scenario: "success" as SqliteMockScenario,
+}));
+const noteMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../terminal/note.js", () => ({
+  note: noteMock,
 }));
 
 vi.mock("./doctor-fts5-sqlite.js", () => {
@@ -28,6 +33,7 @@ vi.mock("./doctor-fts5-sqlite.js", () => {
 describe("doctor-fts5", () => {
   afterEach(() => {
     mockState.scenario = "success";
+    noteMock.mockClear();
   });
 
   it("probeFts5Availability returns a result object", () => {
@@ -59,5 +65,35 @@ describe("doctor-fts5", () => {
     expect(typeof result.error).toBe("string");
     expect(result.error).toContain("node:sqlite unavailable");
     expect(result.error).toContain("Cannot find module 'node:sqlite'");
+  });
+
+  describe("noteFts5Availability", () => {
+    it("does not call note when FTS5 is available (success scenario)", () => {
+      mockState.scenario = "success";
+      noteFts5Availability();
+      expect(noteMock).not.toHaveBeenCalled();
+    });
+
+    it("calls note once when FTS5 probe fails (fts5_error scenario)", () => {
+      mockState.scenario = "fts5_error";
+      noteFts5Availability();
+      expect(noteMock).toHaveBeenCalledTimes(1);
+      expect(noteMock).toHaveBeenCalledWith(
+        expect.stringMatching(/SQLite FTS5 extension is not available[\s\S]*no such module: fts5/),
+        "Memory FTS5",
+      );
+    });
+
+    it("calls note once when node:sqlite is unavailable (module_not_found scenario)", () => {
+      mockState.scenario = "module_not_found";
+      noteFts5Availability();
+      expect(noteMock).toHaveBeenCalledTimes(1);
+      expect(noteMock).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /SQLite FTS5 extension is not available[\s\S]*node:sqlite unavailable/,
+        ),
+        "Memory FTS5",
+      );
+    });
   });
 });

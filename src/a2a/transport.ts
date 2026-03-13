@@ -35,15 +35,22 @@ export async function readJsonBody<T = unknown>(
     let totalBytes = 0;
     let resolved = false;
 
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+    };
+
     const finish = (result: { ok: true; body: T } | { ok: false; error: JsonRpcError }) => {
       if (resolved) {
         return;
       }
       resolved = true;
+      cleanup();
       resolve(result);
     };
 
-    req.on("data", (chunk: Buffer) => {
+    const onData = (chunk: Buffer) => {
       totalBytes += chunk.length;
       if (totalBytes > maxBytes) {
         req.destroy();
@@ -57,9 +64,9 @@ export async function readJsonBody<T = unknown>(
         return;
       }
       chunks.push(chunk);
-    });
+    };
 
-    req.on("end", () => {
+    const onEnd = () => {
       try {
         const raw = Buffer.concat(chunks).toString("utf-8");
         if (!raw.trim()) {
@@ -77,14 +84,18 @@ export async function readJsonBody<T = unknown>(
           error: { code: JSON_RPC_ERRORS.PARSE_ERROR, message: "Invalid JSON in request body" },
         });
       }
-    });
+    };
 
-    req.on("error", () => {
+    const onError = () => {
       finish({
         ok: false,
         error: { code: JSON_RPC_ERRORS.INTERNAL_ERROR, message: "Error reading request body" },
       });
-    });
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
   });
 }
 
@@ -192,6 +203,8 @@ export type SseWriter = {
   sendEvent: (event: StreamEvent) => void;
   /** Send the final event and close the stream. */
   close: () => void;
+  /** Register a callback to run once when the stream closes (explicit close or client disconnect). */
+  addCloseListener: (cb: () => void) => void;
   /** Whether the client has disconnected. */
   closed: boolean;
 };
@@ -206,9 +219,25 @@ export function initSseStream(res: ServerResponse): SseWriter {
   res.flushHeaders();
 
   let closed = false;
+  const closeListeners: Array<() => void> = [];
+
+  function runCloseListeners(): void {
+    for (const cb of closeListeners) {
+      try {
+        cb();
+      } catch {
+        // Don't let one listener break others
+      }
+    }
+    closeListeners.length = 0;
+  }
 
   res.on("close", () => {
+    if (closed) {
+      return;
+    }
     closed = true;
+    runCloseListeners();
   });
 
   return {
@@ -230,6 +259,14 @@ export function initSseStream(res: ServerResponse): SseWriter {
       closed = true;
       res.write("event: done\ndata: {}\n\n");
       res.end();
+      runCloseListeners();
+    },
+    addCloseListener(cb: () => void) {
+      if (closed) {
+        cb();
+        return;
+      }
+      closeListeners.push(cb);
     },
   };
 }

@@ -60,6 +60,7 @@ export function isRetryable(error: DeliveryError): boolean {
   if (RETRYABLE_CODES.has(error.code)) {
     return true;
   }
+  // Unknown codes default to non-retryable (safe default).
   return false;
 }
 

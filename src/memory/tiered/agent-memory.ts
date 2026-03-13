@@ -21,8 +21,12 @@ export class AgentMemory {
   private readonly tier: MemoryTier = "agent";
 
   constructor(params: { store: TieredMemoryStore; agentId: string }) {
+    const agentId = typeof params.agentId === "string" ? params.agentId.trim() : "";
+    if (agentId === "" || agentId.includes(":")) {
+      throw new Error("AgentMemory: agentId must be a non-empty string and must not contain ':'");
+    }
     this.backend = params.store;
-    this.agentId = params.agentId;
+    this.agentId = agentId;
   }
 
   /** Store a persistent agent-scoped fact or preference. */
@@ -66,8 +70,7 @@ export class AgentMemory {
 
   /** List all agent memory entries. */
   list(opts?: { limit?: number; offset?: number }): TieredMemoryEntry[] {
-    const all = this.backend.list(this.tier, opts);
-    return all.filter((entry) => entry.key.startsWith(`${this.agentId}:`));
+    return this.backend.list(this.tier, { ...opts, prefix: `${this.agentId}:` });
   }
 
   /**

@@ -82,20 +82,34 @@ describe("metrics", () => {
   });
 
   it("calculates response time percentiles", () => {
-    for (let i = 1; i <= 10; i++) {
+    const durations = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    for (const durationMs of durations) {
       emitDiagnosticEvent({
         type: "message.processed",
         channel: "telegram",
         outcome: "completed",
-        durationMs: i * 10,
+        durationMs,
       });
     }
 
+    // Same percentile formula as metrics.ts: idx = ceil(p/100 * n) - 1, then sorted[idx]
+    const percentile = (sorted: number[], p: number): number => {
+      if (sorted.length === 0) {
+        return 0;
+      }
+      const idx = Math.ceil((p / 100) * sorted.length) - 1;
+      return sorted[Math.max(0, Math.min(idx, sorted.length - 1))] ?? 0;
+    };
+    const sorted = [...durations].toSorted((a, b) => a - b);
+    const expectedP50 = percentile(sorted, 50);
+    const expectedP95 = percentile(sorted, 95);
+    const expectedP99 = percentile(sorted, 99);
+
     const m = getChannelMetrics("telegram");
     expect(m?.responseTime.count).toBe(10);
-    expect(m?.responseTime.p50).toBeGreaterThan(0);
-    expect(m?.responseTime.p95).toBeGreaterThanOrEqual(m?.responseTime.p50 ?? 0);
-    expect(m?.responseTime.p99).toBeGreaterThanOrEqual(m?.responseTime.p95 ?? 0);
+    expect(m?.responseTime.p50).toBe(expectedP50);
+    expect(m?.responseTime.p95).toBe(expectedP95);
+    expect(m?.responseTime.p99).toBe(expectedP99);
   });
 
   it("calculates error rate", () => {

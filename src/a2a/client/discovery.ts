@@ -85,7 +85,7 @@ function validateAgentCard(card: unknown): ValidationResult {
   if (typeof obj.name !== "string" || !obj.name.trim()) {
     return { ok: false, reason: "name is required" };
   }
-  if (typeof obj.description !== "string") {
+  if (typeof obj.description !== "string" || !obj.description.trim()) {
     return { ok: false, reason: "description is required" };
   }
   if (typeof obj.version !== "string") {

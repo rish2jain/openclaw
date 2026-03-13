@@ -57,31 +57,25 @@ export function evaluateHealthLevel(params: {
 }): ChannelHealthLevel {
   const { connected, consecutiveFailures, errorRate, avgLatencyMs, thresholds } = params;
 
-  if (!connected) {
-    if (consecutiveFailures >= thresholds.offlineConsecutiveFailures) {
-      return "offline";
-    }
-    return "unhealthy";
-  }
-
-  if (consecutiveFailures >= thresholds.offlineConsecutiveFailures) {
+  // 1. Offline: not connected or failure count exceeds offline threshold
+  if (!connected || consecutiveFailures >= thresholds.offlineConsecutiveFailures) {
     return "offline";
   }
-  if (consecutiveFailures >= thresholds.unhealthyConsecutiveFailures) {
-    return "unhealthy";
-  }
-  if (errorRate >= thresholds.unhealthyErrorRate) {
-    return "unhealthy";
-  }
 
+  // 2. Unhealthy: failures, error rate, or latency exceed unhealthy thresholds
   if (
-    errorRate >= thresholds.degradedErrorRate ||
+    consecutiveFailures >= thresholds.unhealthyConsecutiveFailures ||
+    errorRate >= thresholds.unhealthyErrorRate ||
     (avgLatencyMs != null && avgLatencyMs >= thresholds.unhealthyLatencyMs)
   ) {
-    return "degraded";
+    return "unhealthy";
   }
 
-  if (avgLatencyMs != null && avgLatencyMs >= thresholds.degradedLatencyMs) {
+  // 3. Degraded: error rate or latency exceed degraded thresholds
+  if (
+    errorRate >= thresholds.degradedErrorRate ||
+    (avgLatencyMs != null && avgLatencyMs >= thresholds.degradedLatencyMs)
+  ) {
     return "degraded";
   }
 

@@ -77,6 +77,11 @@ export type RegisterThreadParams = {
 
 const DEFAULT_MAX_THREADS = 10_000;
 
+/** Rebuild heap when length exceeds this multiple of byCanonicalId.size. */
+const HEAP_SLOP_RATIO = 2;
+/** Rebuild heap after this many pushes since last rebuild. */
+const PUSHES_BEFORE_REBUILD = 1000;
+
 export type ThreadRegistryOptions = {
   maxThreads?: number;
 };
@@ -96,6 +101,75 @@ function buildChannelPeerKey(channel: ChannelId, peerId: string): string {
   return `${channel}:${peerId}`.toLowerCase();
 }
 
+/** Min-heap entry for eviction: smallest updatedAt first. */
+type ThreadHeapEntry = { updatedAt: number; canonicalId: string };
+
+function createThreadHeap(): {
+  heap: ThreadHeapEntry[];
+  push: (entry: ThreadHeapEntry) => void;
+  pop: () => ThreadHeapEntry | undefined;
+} {
+  const heap: ThreadHeapEntry[] = [];
+
+  function parent(i: number): number {
+    return (i - 1) >> 1;
+  }
+  function left(i: number): number {
+    return 2 * i + 1;
+  }
+  function right(i: number): number {
+    return 2 * i + 2;
+  }
+  function bubbleUp(i: number): void {
+    while (i > 0) {
+      const p = parent(i);
+      if (heap[i].updatedAt >= heap[p].updatedAt) {
+        break;
+      }
+      [heap[i], heap[p]] = [heap[p], heap[i]];
+      i = p;
+    }
+  }
+  function bubbleDown(i: number): void {
+    const n = heap.length;
+    while (true) {
+      let min = i;
+      const l = left(i);
+      const r = right(i);
+      if (l < n && heap[l].updatedAt < heap[min].updatedAt) {
+        min = l;
+      }
+      if (r < n && heap[r].updatedAt < heap[min].updatedAt) {
+        min = r;
+      }
+      if (min === i) {
+        break;
+      }
+      [heap[i], heap[min]] = [heap[min], heap[i]];
+      i = min;
+    }
+  }
+  return {
+    heap,
+    push(entry: ThreadHeapEntry) {
+      heap.push(entry);
+      bubbleUp(heap.length - 1);
+    },
+    pop() {
+      if (heap.length === 0) {
+        return undefined;
+      }
+      const min = heap[0];
+      heap[0] = heap[heap.length - 1];
+      heap.pop();
+      if (heap.length > 0) {
+        bubbleDown(0);
+      }
+      return min;
+    },
+  };
+}
+
 export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadRegistry {
   const maxThreads = options?.maxThreads ?? DEFAULT_MAX_THREADS;
 
@@ -103,6 +177,30 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
   const byChannelThread = new Map<string, string>();
   const byChannelPeer = new Map<string, Set<string>>();
   const bySessionKey = new Map<string, Set<string>>();
+  let threadHeap = createThreadHeap();
+  let pushesSinceRebuild = 0;
+
+  function rebuildThreadHeap(): void {
+    const next = createThreadHeap();
+    for (const [canonicalId, thread] of byCanonicalId) {
+      next.push({ updatedAt: thread.updatedAt, canonicalId });
+    }
+    threadHeap = next;
+    pushesSinceRebuild = 0;
+  }
+
+  function maybeRebuildHeap(): void {
+    const size = byCanonicalId.size;
+    if (size === 0) {
+      return;
+    }
+    if (
+      threadHeap.heap.length / size > HEAP_SLOP_RATIO ||
+      pushesSinceRebuild >= PUSHES_BEFORE_REBUILD
+    ) {
+      rebuildThreadHeap();
+    }
+  }
 
   function indexReference(ref: ThreadReference, canonicalId: string): void {
     const threadKey = buildChannelThreadKey(ref.channel, ref.threadId);
@@ -142,8 +240,38 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     sessionSet.add(canonicalId);
   }
 
+  function evictOneThread(oldestId: string, thread: ConversationThread): void {
+    for (const ref of thread.references) {
+      removeIndex(ref, oldestId);
+    }
+    const sessionSet = bySessionKey.get(thread.sessionKey);
+    if (sessionSet) {
+      sessionSet.delete(oldestId);
+      if (sessionSet.size === 0) {
+        bySessionKey.delete(thread.sessionKey);
+      }
+    }
+    byCanonicalId.delete(oldestId);
+    log.debug("evicted oldest thread", { canonicalId: oldestId });
+  }
+
   function evictOldest(): void {
     if (byCanonicalId.size <= maxThreads) {
+      return;
+    }
+    while (threadHeap.heap.length > 0) {
+      const entry = threadHeap.pop();
+      if (!entry) {
+        break;
+      }
+      const thread = byCanonicalId.get(entry.canonicalId);
+      if (!thread) {
+        continue;
+      }
+      if (thread.updatedAt !== entry.updatedAt) {
+        continue;
+      }
+      evictOneThread(entry.canonicalId, thread);
       return;
     }
     let oldestId: string | undefined;
@@ -157,18 +285,7 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     if (oldestId) {
       const thread = byCanonicalId.get(oldestId);
       if (thread) {
-        for (const ref of thread.references) {
-          removeIndex(ref, oldestId);
-        }
-        const sessionSet = bySessionKey.get(thread.sessionKey);
-        if (sessionSet) {
-          sessionSet.delete(oldestId);
-          if (sessionSet.size === 0) {
-            bySessionKey.delete(thread.sessionKey);
-          }
-        }
-        byCanonicalId.delete(oldestId);
-        log.debug("evicted oldest thread", { canonicalId: oldestId });
+        evictOneThread(oldestId, thread);
       }
     }
   }
@@ -204,6 +321,9 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
 
       indexReference(ref, canonicalId);
       existing.updatedAt = now;
+      threadHeap.push({ updatedAt: now, canonicalId });
+      pushesSinceRebuild += 1;
+      maybeRebuildHeap();
       if (params.label) {
         existing.label = params.label;
       }
@@ -236,6 +356,9 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     byCanonicalId.set(canonicalId, thread);
     indexReference(ref, canonicalId);
     indexSession(params.sessionKey, canonicalId);
+    threadHeap.push({ updatedAt: now, canonicalId });
+    pushesSinceRebuild += 1;
+    maybeRebuildHeap();
     evictOldest();
 
     log.debug("registered new thread", {
@@ -326,6 +449,9 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     }
 
     threadA.updatedAt = Math.max(threadA.updatedAt, threadB.updatedAt);
+    threadHeap.push({ updatedAt: threadA.updatedAt, canonicalId: canonicalIdA });
+    pushesSinceRebuild += 1;
+    maybeRebuildHeap();
 
     const sessionSetB = bySessionKey.get(threadB.sessionKey);
     if (sessionSetB) {
@@ -368,6 +494,7 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
 
     if (pruned > 0) {
       log.info("pruned stale threads", { pruned, cutoffMs: maxAgeMs });
+      rebuildThreadHeap();
     }
     return pruned;
   }

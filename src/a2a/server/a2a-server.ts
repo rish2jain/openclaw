@@ -32,6 +32,57 @@ import {
 import { StreamingHandler } from "./streaming-handler.js";
 import { TaskHandler, type TaskHandlerDeps } from "./task-handler.js";
 
+// ── Params validation (before casting in router) ───────────────────────
+
+/**
+ * Lightweight structural validation for JSON-RPC params by method.
+ * Returns an error message when invalid, null when valid or when method has no required params.
+ */
+function validateRpcParams(method: string, params: unknown): string | null {
+  if (method === A2A_METHODS.SEND_MESSAGE || method === A2A_METHODS.SEND_STREAMING_MESSAGE) {
+    if (params == null || typeof params !== "object" || Array.isArray(params)) {
+      return "params must be an object";
+    }
+    const p = params as Record<string, unknown>;
+    if (p.message == null || typeof p.message !== "object" || Array.isArray(p.message)) {
+      return "message is required";
+    }
+    const msg = p.message as Record<string, unknown>;
+    if (!Array.isArray(msg.parts) || msg.parts.length === 0) {
+      return "message.parts is required and must be non-empty";
+    }
+    return null;
+  }
+
+  if (
+    method === A2A_METHODS.GET_TASK ||
+    method === A2A_METHODS.CANCEL_TASK ||
+    method === A2A_METHODS.SUBSCRIBE_TO_TASK
+  ) {
+    if (params == null || typeof params !== "object" || Array.isArray(params)) {
+      return "params must be an object";
+    }
+    const p = params as Record<string, unknown>;
+    if (typeof p.id !== "string" || !p.id.trim()) {
+      return "Task id is required";
+    }
+    return null;
+  }
+
+  if (method === A2A_METHODS.LIST_TASKS) {
+    if (
+      params !== undefined &&
+      params !== null &&
+      (typeof params !== "object" || Array.isArray(params))
+    ) {
+      return "params must be an object when provided";
+    }
+    return null;
+  }
+
+  return null;
+}
+
 // ── Server Options ───────────────────────────────────────────────────
 
 export type A2AServerOptions = {
@@ -158,6 +209,14 @@ export class A2AServer {
     }
 
     const rpcReq = validation.request;
+    const paramsError = validateRpcParams(rpcReq.method, rpcReq.params);
+    if (paramsError !== null) {
+      sendJsonRpcError(res, rpcReq.id, {
+        code: JSON_RPC_ERRORS.INVALID_PARAMS,
+        message: paramsError,
+      });
+      return;
+    }
 
     switch (rpcReq.method) {
       case A2A_METHODS.SEND_MESSAGE:
@@ -173,7 +232,7 @@ export class A2AServer {
         break;
 
       case A2A_METHODS.LIST_TASKS:
-        this.handleListTasks(rpcReq.id, rpcReq.params as ListTasksParams, res);
+        this.handleListTasks(rpcReq.id, (rpcReq.params as ListTasksParams) ?? {}, res);
         break;
 
       case A2A_METHODS.CANCEL_TASK:

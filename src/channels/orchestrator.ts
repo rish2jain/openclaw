@@ -1,3 +1,10 @@
+/**
+ * Channel orchestrator — coordinates subsystems for message send/receive.
+ *
+ * Wires together: health monitor, failover router, message adapter,
+ * context bridge, identity linker, and thread registry into a unified
+ * inbound/outbound message flow.
+ */
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type {
   MessageAdapter,
@@ -10,13 +17,6 @@ import type { IdentityLinker } from "./continuity/identity-linker.js";
 import type { ThreadRegistry } from "./continuity/thread-registry.js";
 import type { FailoverRouter, FailoverDecision } from "./failover/failover-router.js";
 import type { HealthMonitor } from "./health/health-monitor.js";
-/**
- * Channel orchestrator — coordinates subsystems for message send/receive.
- *
- * Wires together: health monitor, failover router, message adapter,
- * context bridge, identity linker, and thread registry into a unified
- * inbound/outbound message flow.
- */
 import type { ChannelId } from "./plugins/types.js";
 
 const log = createSubsystemLogger("channels/orchestrator");

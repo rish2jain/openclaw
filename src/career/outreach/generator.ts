@@ -125,7 +125,7 @@ const SECTION_BUILDERS: Record<string, SectionBuilder> = {
       parts.push(`${nc.mutualConnections.join(" and ")} suggested I reach out to you`);
     }
     if (rc.sharedHistory?.length) {
-      parts.push(`I see we both have a connection to ${rc.sharedHistory[0]}`);
+      parts.push(`I see we both have a connection to ${rc.sharedHistory?.[0]}`);
     }
     if (nc?.howConnected) {
       parts.push(nc.howConnected);
@@ -276,9 +276,12 @@ function applyStyleAdjustments(content: string, style: StyleProfile): string {
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 
-let counter = 0;
+let fallbackCounter = 0;
 
 function generateId(): string {
-  counter++;
-  return `outreach_${Date.now()}_${counter}`;
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `outreach_${crypto.randomUUID()}`;
+  }
+  fallbackCounter++;
+  return `outreach_${Date.now()}_${fallbackCounter}`;
 }

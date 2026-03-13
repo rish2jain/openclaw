@@ -173,18 +173,19 @@ function buildNewAngle(original: OutreachRecord, recipient: RecipientInfo): stri
 
 function buildCallToAction(original: OutreachRecord): string {
   if (original.relatedJobId) {
-    return (
-      `Would a 15-minute call work sometime this week? Happy to work around ` + `your schedule.`
-    );
+    return `Would a 15-minute call work sometime this week? Happy to work around your schedule.`;
   }
   return `If a quick chat would work, I am flexible on timing. If not, no pressure at all.`;
 }
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 
-let counter = 0;
+let fallbackCounter = 0;
 
 function generateId(): string {
-  counter++;
-  return `followup_${Date.now()}_${counter}`;
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `followup_${crypto.randomUUID()}`;
+  }
+  fallbackCounter++;
+  return `followup_${Date.now()}_${fallbackCounter}`;
 }

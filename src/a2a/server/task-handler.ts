@@ -80,6 +80,8 @@ export class TaskHandler {
 
       const collectedParts: Part[] = [];
 
+      this.updateTaskStatus(task, "working");
+
       this.deps.dispatchToGateway({
         taskId: task.id,
         text,
@@ -117,9 +119,6 @@ export class TaskHandler {
           resolve({ task: this.toExternalTask(task, params.configuration?.historyLength) });
         },
       });
-
-      // Mark as working after dispatch begins
-      this.updateTaskStatus(task, "working");
     });
   }
 
@@ -299,16 +298,9 @@ export class TaskHandler {
       return { ok: true };
     }
 
-    // Clean up on client disconnect; store wrapper so its close removes itself from subscribers
-    const origClose = sse.close.bind(sse);
-    const wrappedSse = Object.create(sse) as SseWriter;
-    Object.defineProperty(wrappedSse, "close", {
-      value: () => {
-        stored.subscribers.delete(wrappedSse);
-        origClose();
-      },
-    });
-    stored.subscribers.add(wrappedSse);
+    // Remove this writer from subscribers when the stream closes (explicit close or client disconnect).
+    sse.addCloseListener(() => stored.subscribers.delete(sse));
+    stored.subscribers.add(sse);
 
     return { ok: true };
   }
@@ -382,13 +374,31 @@ export class TaskHandler {
     if (this.tasks.size < this.maxTasks) {
       return;
     }
-    // Evict oldest terminal tasks first
     const entries = [...this.tasks.entries()].toSorted((a, b) => a[1].createdAt - b[1].createdAt);
     for (const [id, task] of entries) {
       if (this.tasks.size < this.maxTasks) {
         break;
       }
       if (isTerminalState(task.status.state)) {
+        this.tasks.delete(id);
+      }
+    }
+    if (this.tasks.size < this.maxTasks) {
+      return;
+    }
+    for (const [id, task] of entries) {
+      if (this.tasks.size < this.maxTasks) {
+        break;
+      }
+      if (!isTerminalState(task.status.state)) {
+        task.abortController?.abort();
+        this.updateTaskStatus(task, "failed", {
+          role: "agent",
+          parts: [{ type: "text", text: "Task evicted due to resource limits." }],
+        });
+        for (const s of task.subscribers) {
+          s.close();
+        }
         this.tasks.delete(id);
       }
     }

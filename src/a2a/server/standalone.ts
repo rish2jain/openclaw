@@ -188,15 +188,51 @@ export async function startA2AServer(opts: StandaloneA2AServerOptions): Promise<
       resolve(httpServer);
     });
 
-    const shutdown = () => {
+    const SHUTDOWN_TIMEOUT_MS = 10_000;
+    let shutdownStarted = false;
+
+    const shutdown = async () => {
+      if (shutdownStarted) {
+        return;
+      }
+      shutdownStarted = true;
       console.error("[a2a] Shutting down...");
-      httpServer.close();
-      gateway.stop();
+
+      const timeout = setTimeout(() => {
+        console.error("[a2a] Shutdown timeout; forcing exit");
+        process.exit(1);
+      }, SHUTDOWN_TIMEOUT_MS);
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          httpServer.close((err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      } catch (err) {
+        console.error("[a2a] Error closing HTTP server:", err instanceof Error ? err.message : err);
+      }
+
+      try {
+        gateway.stop();
+      } catch (err) {
+        console.error("[a2a] Error stopping gateway:", err instanceof Error ? err.message : err);
+      }
+
+      clearTimeout(timeout);
       process.exit(0);
     };
 
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", () => {
+      void shutdown();
+    });
+    process.on("SIGTERM", () => {
+      void shutdown();
+    });
   });
 }
 

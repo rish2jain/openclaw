@@ -32,10 +32,26 @@ export type AgentCapabilities = {
   extendedAgentCard?: boolean;
 };
 
+/** Single OAuth2 flow (authorizationCode, clientCredentials, implicit, or password). */
+export type OAuthFlowObject = {
+  authorizationUrl?: string;
+  tokenUrl?: string;
+  refreshUrl?: string;
+  scopes?: Record<string, string>;
+};
+
+/** OAuth2 flows container (OpenAPI-style). */
+export type OAuthFlows = {
+  authorizationCode?: OAuthFlowObject;
+  clientCredentials?: OAuthFlowObject;
+  implicit?: OAuthFlowObject;
+  password?: OAuthFlowObject;
+};
+
 export type SecurityScheme =
   | { type: "apiKey"; in: "header" | "query"; parameterName: string; description?: string }
   | { type: "http"; scheme: string; bearerFormat?: string; description?: string }
-  | { type: "oauth2"; flows: Record<string, unknown>; description?: string }
+  | { type: "oauth2"; flows: OAuthFlows; description?: string }
   | { type: "openIdConnect"; openIdConnectUrl: string; description?: string };
 
 export type AgentInterface = {

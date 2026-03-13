@@ -79,8 +79,8 @@ export function extractEntitiesWithRegex(text: string): ExtractionResult {
   const entities: ExtractedEntity[] = [];
   const seen = new Set<string>();
 
-  // @mentions -> person entities
-  const mentionPattern = /@([\w.-]+)/g;
+  // @mentions -> person entities (must start/end with word char; dots/hyphens only in middle)
+  const mentionPattern = /@(\w(?:[\w.-]*\w)?)/g;
   let match: RegExpExecArray | null;
   while ((match = mentionPattern.exec(text)) !== null) {
     const name = match[1];
@@ -115,7 +115,7 @@ export function extractEntitiesWithRegex(text: string): ExtractionResult {
 
 /**
  * Parse the LLM response into a typed ExtractionResult.
- * Tolerant of minor formatting issues.
+ * Throws on malformed JSON or missing/invalid structure so callers can fall back to extractEntitiesWithRegex.
  */
 function parseExtractionResponse(response: string): ExtractionResult {
   const cleaned = response.trim();
@@ -129,14 +129,18 @@ function parseExtractionResponse(response: string): ExtractionResult {
     parsed = JSON.parse(jsonStr);
   } catch {
     log.debug("failed to parse LLM extraction response as JSON");
-    return { entities: [], relationships: [] };
+    throw new Error("LLM extraction response is not valid JSON");
   }
 
   if (!parsed || typeof parsed !== "object") {
-    return { entities: [], relationships: [] };
+    throw new Error("LLM extraction response is not an object");
   }
 
   const result = parsed as Record<string, unknown>;
+  if (!Array.isArray(result.entities)) {
+    throw new Error("LLM extraction response missing or invalid entities array");
+  }
+
   const entities = validateEntities(result.entities);
   const relationships = validateRelationships(result.relationships);
 

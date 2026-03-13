@@ -1,6 +1,5 @@
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import type { ChannelId } from "../plugins/types.js";
-import type { IdentityLinker } from "./identity-linker.js";
 import type { ThreadRegistry } from "./thread-registry.js";
 
 const log = createSubsystemLogger("channels/continuity/context-bridge");
@@ -27,8 +26,6 @@ export type BridgeReason = "user-initiated" | "failover" | "channel-offline" | "
 
 export type ContextBridgeDeps = {
   threadRegistry: ThreadRegistry;
-  /** Reserved for future use (e.g. resolving linked identities in bridge context). */
-  identityLinker: IdentityLinker;
 };
 
 export type ContextBridgeOptions = {
@@ -61,6 +58,8 @@ export type RecordMessageParams = {
 const DEFAULT_MAX_MESSAGES = 10;
 const DEFAULT_MAX_MESSAGE_AGE_MS = 60 * 60_000;
 const MAX_STORED_MESSAGES_PER_THREAD = 50;
+/** Minimum interval between full prune scans to avoid per-call cost in buildBridgeContext. */
+const PRUNE_INTERVAL_MS = 60_000;
 
 export function createContextBridge(
   deps: ContextBridgeDeps,
@@ -69,6 +68,7 @@ export function createContextBridge(
   const maxMessages = options?.maxMessages ?? DEFAULT_MAX_MESSAGES;
   const maxMessageAgeMs = options?.maxMessageAgeMs ?? DEFAULT_MAX_MESSAGE_AGE_MS;
   const messageBuffers = new Map<string, BridgedMessage[]>();
+  let lastPruneTime = 0;
 
   function pruneStaleMessageBuffers(): void {
     const threadIds = new Set<string>();
@@ -79,6 +79,15 @@ export function createContextBridge(
       if (!threadIds.has(threadCanonicalId)) {
         messageBuffers.delete(threadCanonicalId);
       }
+    }
+  }
+
+  /** Calls pruneStaleMessageBuffers only when PRUNE_INTERVAL_MS has elapsed since last run. */
+  function maybePrune(): void {
+    const now = Date.now();
+    if (now - lastPruneTime >= PRUNE_INTERVAL_MS) {
+      lastPruneTime = now;
+      pruneStaleMessageBuffers();
     }
   }
 
@@ -120,7 +129,7 @@ export function createContextBridge(
   function buildBridgeContext(params: BuildBridgeContextParams): BridgedContext | undefined {
     const { threadCanonicalId, sourceChannel, targetChannel, reason } = params;
 
-    pruneStaleMessageBuffers();
+    maybePrune();
 
     const thread = deps.threadRegistry.getThread(threadCanonicalId);
     if (!thread) {

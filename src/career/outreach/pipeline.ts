@@ -174,13 +174,13 @@ export function createOutreachPipeline(): OutreachPipeline {
     },
 
     toJSON(): OutreachRecord[] {
-      return records.map((r) => ({ ...r }));
+      return records.map((r) => ({ ...r, notes: r.notes ? [...r.notes] : [] }));
     },
 
     fromJSON(data: OutreachRecord[]): void {
       records.length = 0;
       for (const r of data) {
-        records.push({ ...r });
+        records.push({ ...r, notes: r.notes ? [...r.notes] : [] });
       }
       rebuildIndex();
     },

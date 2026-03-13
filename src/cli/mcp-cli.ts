@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
+import { validatePort } from "./validators.js";
 
 export function registerMcpCli(program: Command) {
   const mcp = program
@@ -35,10 +36,18 @@ export function registerMcpCli(program: Command) {
       }
       const transport: "stdio" | "sse" = rawTransport;
 
+      let port: number;
+      try {
+        port = validatePort(String(opts.port));
+      } catch (err) {
+        process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.exit(1);
+      }
+
       const { serveMcp } = await import("../mcp/serve/server.js");
       await serveMcp({
         transport,
-        port: Number(opts.port),
+        port,
         host: opts.host as string,
         gatewayUrl: opts.url as string | undefined,
         gatewayToken: opts.token as string | undefined,

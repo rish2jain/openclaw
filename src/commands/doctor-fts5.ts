@@ -15,8 +15,10 @@ import { note } from "../terminal/note.js";
 import { loadNodeSqlite } from "./doctor-fts5-sqlite.js";
 
 /**
- * Probe whether the current Node runtime's built-in SQLite supports FTS5.
- * Returns `true` when FTS5 is available, `false` otherwise.
+ * Probes the Node runtime's built-in SQLite for FTS5 support.
+ *
+ * @returns `{ available: true }` when FTS5 is available; otherwise
+ *   `{ available: false, error?: string }` with an optional error message.
  */
 export function probeFts5Availability(): { available: boolean; error?: string } {
   try {

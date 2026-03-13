@@ -100,7 +100,9 @@ export function applyLogLevel(level: LogLevel, consoleLevel?: LogLevel): void {
   loggingState.overrideSettings = overrides;
 
   state.currentLevel = level;
-  state.currentConsoleLevel = consoleLevel;
+  if (consoleLevel !== undefined) {
+    state.currentConsoleLevel = consoleLevel;
+  }
 
   if (prevLevel !== level || prevConsoleLevel !== consoleLevel) {
     log.info(

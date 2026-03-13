@@ -4,37 +4,8 @@
  * Actual browser navigation/authentication is the caller's responsibility.
  */
 
-import type { JobListing, RemotePolicy } from "../types.js";
-
-/** Strip HTML tags and decode entities. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Detect remote policy from text. */
-function detectRemotePolicy(text: string): RemotePolicy {
-  const lower = text.toLowerCase();
-  if (/\bremote\b/.test(lower)) {
-    return "remote";
-  }
-  if (/\bhybrid\b/.test(lower)) {
-    return "hybrid";
-  }
-  if (/\bon[\s-]?site\b/.test(lower)) {
-    return "onsite";
-  }
-  return "unknown";
-}
+import type { JobListing } from "../types.js";
+import { detectRemotePolicy, stripHtml } from "./utils.js";
 
 /** Generate a stable ID for a LinkedIn listing. */
 function makeId(title: string, company: string, index: number): string {

@@ -55,20 +55,31 @@ type RawUserPreferences = Record<
 
 function parseUserPreferences(
   raw: RawUserPreferences | undefined,
+  resolvedDefaultOrder: ChannelId[],
 ): Map<string, FailoverPreference> {
   const map = new Map<string, FailoverPreference>();
   if (!raw || typeof raw !== "object") {
     return map;
   }
-  const defaultOrder = DEFAULT_FAILOVER_CONFIG.defaultFallbackOrder;
+  if (resolvedDefaultOrder.length === 0) {
+    throw new Error("Failover config: defaultFallbackOrder must be non-empty");
+  }
   for (const [userKey, pref] of Object.entries(raw)) {
-    if (!pref || typeof userKey !== "string") {
+    if (!pref) {
       continue;
     }
-    const primaryChannel = pref.primaryChannel ?? defaultOrder[0];
+    const trimmed = typeof pref.primaryChannel === "string" ? pref.primaryChannel.trim() : "";
+    const prefPrimary = trimmed || undefined;
+    const rawFallback =
+      Array.isArray(pref.fallbackChannels) && pref.fallbackChannels.length > 0
+        ? pref.fallbackChannels[0]
+        : undefined;
+    const trimmedFallback = typeof rawFallback === "string" ? rawFallback.trim() : "";
+    const fromFallback = trimmedFallback || undefined;
+    const primaryChannel = prefPrimary ?? fromFallback ?? resolvedDefaultOrder[0];
     const fallbackChannels = Array.isArray(pref.fallbackChannels)
       ? pref.fallbackChannels.filter((ch): ch is string => typeof ch === "string")
-      : defaultOrder.filter((ch) => ch !== primaryChannel);
+      : resolvedDefaultOrder.filter((ch) => ch !== primaryChannel);
     map.set(userKey, {
       primaryChannel,
       fallbackChannels,
@@ -94,13 +105,14 @@ export function parseFailoverConfig(
   if (!raw) {
     return { ...DEFAULT_FAILOVER_CONFIG, userPreferences: new Map() };
   }
+  const defaultFallbackOrder =
+    Array.isArray(raw.defaultFallbackOrder) && raw.defaultFallbackOrder.length > 0
+      ? raw.defaultFallbackOrder
+      : DEFAULT_FAILOVER_CONFIG.defaultFallbackOrder;
   return {
     enabled: raw.enabled ?? DEFAULT_FAILOVER_CONFIG.enabled,
-    defaultFallbackOrder:
-      Array.isArray(raw.defaultFallbackOrder) && raw.defaultFallbackOrder.length > 0
-        ? raw.defaultFallbackOrder
-        : DEFAULT_FAILOVER_CONFIG.defaultFallbackOrder,
-    userPreferences: parseUserPreferences(raw.userPreferences),
+    defaultFallbackOrder,
+    userPreferences: parseUserPreferences(raw.userPreferences, defaultFallbackOrder),
     failoverGracePeriodMs:
       raw.failoverGracePeriodMs ?? DEFAULT_FAILOVER_CONFIG.failoverGracePeriodMs,
     failbackGracePeriodMs:

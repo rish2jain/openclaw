@@ -227,6 +227,16 @@ export async function serveMcp(opts: McpServerOptions): Promise<void> {
         }
 
         case "resources/list": {
+          if (!initialized) {
+            send(
+              createJsonRpcErrorResponse(
+                id,
+                McpErrorCode.INVALID_REQUEST,
+                "Server not initialized.",
+              ),
+            );
+            break;
+          }
           await ensureContext();
           const resources = await getAllResources(gatewayCtx!.callGateway);
           send(createJsonRpcResponse(id, { resources }));
@@ -234,6 +244,16 @@ export async function serveMcp(opts: McpServerOptions): Promise<void> {
         }
 
         case "resources/templates/list": {
+          if (!initialized) {
+            send(
+              createJsonRpcErrorResponse(
+                id,
+                McpErrorCode.INVALID_REQUEST,
+                "Server not initialized.",
+              ),
+            );
+            break;
+          }
           const templates = getResourceTemplates();
           send(createJsonRpcResponse(id, { resourceTemplates: templates }));
           break;

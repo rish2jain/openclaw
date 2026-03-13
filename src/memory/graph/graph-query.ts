@@ -19,6 +19,7 @@ const log = createSubsystemLogger("memory:graph:query");
 
 const DEFAULT_MAX_DEPTH = 3;
 const DEFAULT_MAX_RESULTS = 50;
+const DEFAULT_OVER_FETCH_MULTIPLIER = 3;
 
 export type TraversalOptions = {
   /** Maximum traversal depth (default: 3). */
@@ -31,6 +32,8 @@ export type TraversalOptions = {
   direction?: "out" | "in" | "both";
   /** Minimum edge weight to follow (0-1). */
   minWeight?: number;
+  /** If set, called for each visited node; return true to stop traversal early. */
+  stopWhen?: (node: EntityNode) => boolean;
 };
 
 /**
@@ -46,10 +49,12 @@ export function queryRelationships(
     label?: string;
     direction?: "out" | "in" | "both";
     limit?: number;
+    minWeight?: number;
   },
 ): RelationshipQueryResult[] {
   const direction = opts?.direction ?? "both";
   const limit = opts?.limit ?? DEFAULT_MAX_RESULTS;
+  const minWeight = opts?.minWeight ?? 0; // Match traverseGraph default so filtering is consistent.
   const results: RelationshipQueryResult[] = [];
 
   if (direction === "out" || direction === "both") {
@@ -57,6 +62,9 @@ export function queryRelationships(
     for (const edge of edges) {
       if (results.length >= limit) {
         break;
+      }
+      if (edge.weight < minWeight) {
+        continue;
       }
       const source = store.getNode(edge.sourceId);
       const target = store.getNode(edge.targetId);
@@ -71,6 +79,9 @@ export function queryRelationships(
     for (const edge of edges) {
       if (results.length >= limit) {
         break;
+      }
+      if (edge.weight < minWeight) {
+        continue;
       }
       const source = store.getNode(edge.sourceId);
       const target = store.getNode(edge.targetId);
@@ -105,7 +116,8 @@ export function traverseGraph(
   // BFS queue: [nodeId, currentDepth]
   const queue: Array<[string, number]> = [[startNodeId, 0]];
 
-  while (queue.length > 0 && results.length < maxResults) {
+  let stopTraversal = false;
+  while (queue.length > 0 && results.length < maxResults && !stopTraversal) {
     const entry = queue.shift();
     if (!entry) {
       break;
@@ -131,6 +143,10 @@ export function traverseGraph(
       const node = store.getNode(nodeId);
       if (node) {
         results.push(node);
+        if (opts?.stopWhen?.(node)) {
+          stopTraversal = true;
+          break;
+        }
         if (results.length >= maxResults) {
           break;
         }
@@ -210,17 +226,29 @@ export function findConnectedByType(
   store: GraphStore,
   startNodeId: string,
   targetType: string,
-  opts?: { maxDepth?: number; maxResults?: number },
+  opts?: { maxDepth?: number; maxResults?: number; overFetchMultiplier?: number },
 ): EntityNode[] {
+  const maxResults = opts?.maxResults ?? DEFAULT_MAX_RESULTS;
+  const overFetchMultiplier = Math.max(
+    1,
+    opts?.overFetchMultiplier ?? DEFAULT_OVER_FETCH_MULTIPLIER,
+  );
+  let targetTypeCount = 0;
+
   const all = traverseGraph(store, startNodeId, {
     maxDepth: opts?.maxDepth ?? DEFAULT_MAX_DEPTH,
-    maxResults: (opts?.maxResults ?? DEFAULT_MAX_RESULTS) * 3, // Over-fetch to filter
+    maxResults: maxResults * overFetchMultiplier,
     direction: "both",
+    stopWhen: (node) => {
+      if (node.type === targetType) {
+        targetTypeCount++;
+        return targetTypeCount >= maxResults;
+      }
+      return false;
+    },
   });
 
-  return all
-    .filter((node) => node.type === targetType)
-    .slice(0, opts?.maxResults ?? DEFAULT_MAX_RESULTS);
+  return all.filter((node) => node.type === targetType).slice(0, maxResults);
 }
 
 // --- Internal helpers ---

@@ -129,7 +129,12 @@ export class EntityGraph {
   /** Get all relationships for a node. */
   getRelationships(
     nodeId: string,
-    opts?: { label?: string; direction?: "out" | "in" | "both"; limit?: number },
+    opts?: {
+      label?: string;
+      direction?: "out" | "in" | "both";
+      limit?: number;
+      minWeight?: number;
+    },
   ): RelationshipQueryResult[] {
     return queryRelationships(this.store, nodeId, opts);
   }
@@ -156,7 +161,7 @@ export class EntityGraph {
   findConnectedByType(
     startNodeId: string,
     targetType: EntityType,
-    opts?: { maxDepth?: number; maxResults?: number },
+    opts?: { maxDepth?: number; maxResults?: number; overFetchMultiplier?: number },
   ): EntityNode[] {
     return findConnectedByType(this.store, startNodeId, targetType, opts);
   }

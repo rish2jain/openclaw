@@ -120,13 +120,13 @@ export class MemoryRouter {
     opts?: TieredMemoryStoreOptions & { hints?: MemoryRouterHints },
   ): TieredMemoryEntry {
     const tier = inferTier(key, value, opts?.hints);
-    const storeOpts = { ...opts };
-    if (tier === "agent") {
-      storeOpts.agentId = opts?.agentId ?? this.agentId;
-    } else if (tier === "session") {
-      storeOpts.sessionId = opts?.sessionId ?? this.sessionId;
+    if (tier === "session") {
+      return this.session.store(key, value, opts);
     }
-    return this.backend.store(tier, key, value, storeOpts);
+    if (tier === "agent") {
+      return this.agent.store(key, value, opts);
+    }
+    return this.shared.store(key, value, opts);
   }
 
   /**

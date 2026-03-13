@@ -187,17 +187,17 @@ function groupSegments(
   headingContext: string,
 ): SemanticChunk[] {
   const chunks: SemanticChunk[] = [];
-  let groupSegments: Segment[] = [];
+  let currentGroup: Segment[] = [];
   let groupChars = 0;
 
   const flushGroup = () => {
-    if (groupSegments.length === 0) {
+    if (currentGroup.length === 0) {
       return;
     }
-    const text = groupSegments.map((s) => s.text).join("\n\n");
+    const text = currentGroup.map((s) => s.text).join("\n\n");
     const contextual = headingContext ? `${headingContext}\n\n${text}` : text;
-    const first = groupSegments[0];
-    const last = groupSegments[groupSegments.length - 1];
+    const first = currentGroup[0];
+    const last = currentGroup[currentGroup.length - 1];
 
     chunks.push({
       text,
@@ -208,7 +208,7 @@ function groupSegments(
       headingContext: headingContext || undefined,
     });
 
-    groupSegments = [];
+    currentGroup = [];
     groupChars = 0;
   };
 
@@ -216,16 +216,16 @@ function groupSegments(
     const seg = segments[i];
 
     // Force-split if the group exceeds max chars
-    if (groupChars + seg.text.length > maxChars && groupSegments.length > 0) {
+    if (groupChars + seg.text.length > maxChars && currentGroup.length > 0) {
       flushGroup();
     }
 
     // Semantic breakpoint
-    if (breakpoints.has(i) && groupSegments.length > 0) {
+    if (breakpoints.has(i) && currentGroup.length > 0) {
       flushGroup();
     }
 
-    groupSegments.push(seg);
+    currentGroup.push(seg);
     groupChars += seg.text.length + 2; // +2 for paragraph separator
   }
 

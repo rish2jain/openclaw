@@ -18,6 +18,9 @@ import {
 } from "../protocol.js";
 import { fetchJsonRpc, type FetchJsonRpcParams } from "../transport.js";
 
+/** Max time (ms) to wait for each read during the initial SSE peek; prevents hang on slow networks. */
+const PEEK_READ_TIMEOUT_MS = 15_000;
+
 export type TaskManagerOptions = {
   /** The A2A JSON-RPC endpoint URL (typically `https://host/a2a`). */
   endpointUrl: string;
@@ -134,13 +137,31 @@ export class TaskManager {
     let peeked = "";
     let totalPeeked = 0;
     while (totalPeeked < maxPeek) {
-      const { done, value } = await reader.read();
+      let timerId: ReturnType<typeof setTimeout>;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timerId = setTimeout(
+          () => reject(new Error(`A2A stream peek timed out after ${PEEK_READ_TIMEOUT_MS}ms`)),
+          PEEK_READ_TIMEOUT_MS,
+        );
+      });
+      let done: boolean;
+      let value: Uint8Array | undefined;
+      try {
+        const result = await Promise.race([reader.read(), timeoutPromise]);
+        clearTimeout(timerId);
+        done = result.done;
+        value = result.value;
+      } catch (err) {
+        clearTimeout(timerId);
+        reader.cancel().catch(() => {});
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       if (done) {
         break;
       }
       const chunk = decoder.decode(value, { stream: true });
       peeked += chunk;
-      totalPeeked += chunk.length;
+      totalPeeked += value.byteLength;
       if (peeked.includes("\n\n")) {
         break;
       }

@@ -183,6 +183,18 @@ export function createFailoverRouter(deps: FailoverRouterDeps): FailoverRouter {
         if (failover.originalChannel !== event.channel) {
           continue;
         }
+        // Only fail back if the target channel is still operational.
+        const targetMetrics = deps.healthMonitor
+          .getAllMetrics()
+          .find((m) => m.channel === failover.targetChannel);
+        if (!targetMetrics || !isOperational(targetMetrics.level)) {
+          log.info("deferring failback: target channel not operational", {
+            originalChannel: failover.originalChannel,
+            targetChannel: failover.targetChannel,
+            targetLevel: targetMetrics?.level,
+          });
+          continue;
+        }
         const preference = resolveFailoverPreference(
           config,
           failover.userKey,

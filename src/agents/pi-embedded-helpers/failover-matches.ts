@@ -63,6 +63,7 @@ const ERROR_PATTERNS = {
     "plans & billing",
     "insufficient balance",
   ],
+  // No-retry: identity valid but not authorized, or key revoked/deactivated.
   authPermanent: [
     /api[_ ]?key[_ ]?(?:revoked|invalid|deactivated|deleted)/i,
     "invalid_api_key",
@@ -72,7 +73,10 @@ const ERROR_PATTERNS = {
     /could not (?:authenticate|validate).*(?:api[_ ]?key|credentials)/i,
     "permission_error",
     "not allowed for this organization",
+    // AWS Bedrock/IAM: AccessDeniedException = policy denial, no retry (#44435)
+    "accessdeniedexception",
   ],
+  // Retryable or user-fixable auth: wrong key, expired token, missing scopes, etc.
   auth: [
     /invalid[_ ]?api[_ ]?key/,
     "incorrect api key",
@@ -93,7 +97,6 @@ const ERROR_PATTERNS = {
     "no credentials found",
     "no api key found",
     // AWS Bedrock auth errors (#44435)
-    "accessdeniedexception",
     "unrecognizedclientexception",
   ],
   format: [

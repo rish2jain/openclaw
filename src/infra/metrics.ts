@@ -15,6 +15,9 @@ import { onSpanEnd, type SpanEndEvent } from "./tracing.js";
 /** Maximum number of duration samples to keep per channel for percentile calculations. */
 const MAX_SAMPLES = 1000;
 
+/** Maximum number of channels to track; oldest-by-lastSeen is evicted when full. */
+const MAX_CHANNELS = 500;
+
 /** How long to retain individual samples (ms). Default: 1 hour. */
 const SAMPLE_RETENTION_MS = 60 * 60 * 1000;
 
@@ -64,9 +67,14 @@ type ChannelState = {
   deliveryAttempts: number;
   deliverySuccesses: number;
   deliveryFailures: number;
+  /** Ring buffer of duration samples; overwrites oldest when full. */
   durationSamples: TimestampedSample[];
+  /** Running total of samples added (not capped at MAX_SAMPLES). Ring-buffer write position is computed as durationSamplesIndex % MAX_SAMPLES in addDurationSample. */
+  durationSamplesIndex: number;
   lastMessageAt?: number;
   lastErrorAt?: number;
+  /** Last time this channel had any activity; used for LRU eviction. */
+  lastSeen: number;
 };
 
 const METRICS_STATE_KEY: unique symbol = Symbol.for("openclaw.channelMetrics");
@@ -89,36 +97,76 @@ function getMetricsState(): MetricsGlobalState {
   return globalStore[METRICS_STATE_KEY];
 }
 
+function evictOldestChannel(state: MetricsGlobalState): void {
+  let oldestKey: string | null = null;
+  let oldestSeen = Infinity;
+  for (const [key, ch] of state.channels) {
+    const t = ch.lastSeen;
+    if (t < oldestSeen) {
+      oldestSeen = t;
+      oldestKey = key;
+    }
+  }
+  if (oldestKey !== null) {
+    state.channels.delete(oldestKey);
+  }
+}
+
 function getOrCreateChannel(channel: string): ChannelState {
   const state = getMetricsState();
   let ch = state.channels.get(channel);
-  if (!ch) {
-    ch = {
-      messagesReceived: 0,
-      messagesProcessed: 0,
-      messagesErrored: 0,
-      messagesSkipped: 0,
-      deliveryAttempts: 0,
-      deliverySuccesses: 0,
-      deliveryFailures: 0,
-      durationSamples: [],
-    };
-    state.channels.set(channel, ch);
+  if (ch) {
+    ch.lastSeen = Date.now();
+    return ch;
   }
+  if (state.channels.size >= MAX_CHANNELS) {
+    evictOldestChannel(state);
+  }
+  const now = Date.now();
+  ch = {
+    messagesReceived: 0,
+    messagesProcessed: 0,
+    messagesErrored: 0,
+    messagesSkipped: 0,
+    deliveryAttempts: 0,
+    deliverySuccesses: 0,
+    deliveryFailures: 0,
+    durationSamples: [],
+    durationSamplesIndex: 0,
+    lastSeen: now,
+  };
+  state.channels.set(channel, ch);
   return ch;
 }
 
 function addDurationSample(ch: ChannelState, durationMs: number): void {
   const now = Date.now();
-  if (ch.durationSamples.length >= MAX_SAMPLES) {
-    ch.durationSamples.shift();
+  ch.lastSeen = now;
+  if (ch.durationSamplesIndex < MAX_SAMPLES) {
+    ch.durationSamples.push({ value: durationMs, at: now });
+    ch.durationSamplesIndex += 1;
+  } else {
+    const idx = ch.durationSamplesIndex % MAX_SAMPLES;
+    ch.durationSamples[idx] = { value: durationMs, at: now };
+    ch.durationSamplesIndex += 1;
   }
-  ch.durationSamples.push({ value: durationMs, at: now });
+}
+
+/** Return duration samples in chronological order (for filtering and percentiles). */
+function getDurationSamplesChronological(ch: ChannelState): TimestampedSample[] {
+  const n = ch.durationSamplesIndex;
+  if (n <= MAX_SAMPLES) {
+    return ch.durationSamples.slice(0, n);
+  }
+  const start = ch.durationSamplesIndex % MAX_SAMPLES;
+  return [...ch.durationSamples.slice(start), ...ch.durationSamples.slice(0, start)];
 }
 
 function getRecentSamples(ch: ChannelState): number[] {
   const cutoff = Date.now() - SAMPLE_RETENTION_MS;
-  return ch.durationSamples.filter((s) => s.at >= cutoff).map((s) => s.value);
+  return getDurationSamplesChronological(ch)
+    .filter((s) => s.at >= cutoff)
+    .map((s) => s.value);
 }
 
 /**
@@ -220,6 +268,7 @@ export function stopMetricsCollection(): void {
 
 /**
  * Get metrics summary for a single channel.
+ * Read-only: uses state.channels.get (not getOrCreateChannel) so lastSeen is not refreshed, allowing inactive channels to be evicted.
  */
 export function getChannelMetrics(channel: string): ChannelMetrics | undefined {
   const state = getMetricsState();

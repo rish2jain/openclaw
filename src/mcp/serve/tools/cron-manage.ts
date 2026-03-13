@@ -22,7 +22,8 @@ export function createCronManageTool(callGateway: GatewayRpc): McpToolHandler {
           },
           id: {
             type: "string",
-            description: "The cron job ID. Required for 'remove' and 'runs' actions.",
+            description:
+              "The cron job ID. Required for 'remove'; optional for 'runs' (omit to list all runs).",
           },
           schedule: {
             type: "string",

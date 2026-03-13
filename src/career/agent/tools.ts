@@ -229,23 +229,29 @@ const networkIntroPath: ToolDefinition = {
   description:
     "Find warm introduction paths through the user's network to reach a " +
     "target company or specific person. Returns the shortest paths ranked " +
-    "by connection strength.",
+    "by connection strength. Exactly one of targetCompany or targetPersonId is required; " +
+    "they are mutually exclusive.",
   inputSchema: {
     type: "object",
     properties: {
       targetCompany: {
         type: "string",
-        description: "The company to find a path to. Provide this or targetPersonId.",
+        description:
+          "The company to find a path to. Required in every call; set to empty string when " +
+          "using targetPersonId instead (mutually exclusive with targetPersonId).",
       },
       targetPersonId: {
         type: "string",
-        description: "The ID of a specific person to reach. Provide this or targetCompany.",
+        description:
+          "The ID of a specific person to reach. Use when targetCompany is empty; " +
+          "mutually exclusive with targetCompany.",
       },
       maxHops: {
         type: "string",
         description: "Maximum number of intermediary hops. Default: 3.",
       },
     },
+    required: ["targetCompany"],
   },
 };
 

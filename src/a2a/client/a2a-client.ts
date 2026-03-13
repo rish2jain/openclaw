@@ -34,6 +34,7 @@ export class A2AClient {
   private readonly discoveryTimeoutMs: number;
   private cachedCard: AgentCard | null = null;
   private taskManager: TaskManager | null = null;
+  private _taskManagerPromise: Promise<TaskManager> | undefined = undefined;
 
   constructor(opts: A2AClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
@@ -66,6 +67,7 @@ export class A2AClient {
   clearCache(): void {
     this.cachedCard = null;
     this.taskManager = null;
+    this._taskManagerPromise = undefined;
   }
 
   // ── Messaging ──────────────────────────────────────────────────────
@@ -130,16 +132,25 @@ export class A2AClient {
     if (this.taskManager) {
       return this.taskManager;
     }
+    if (this._taskManagerPromise) {
+      return this._taskManagerPromise;
+    }
 
-    const card = await this.discover();
-    const endpoint = resolveEndpointFromCard(card, this.baseUrl);
+    this._taskManagerPromise = (async () => {
+      try {
+        const card = await this.discover();
+        const endpoint = resolveEndpointFromCard(card, this.baseUrl);
+        this.taskManager = new TaskManager({
+          endpointUrl: endpoint,
+          headers: this.headers,
+        });
+        return this.taskManager;
+      } finally {
+        this._taskManagerPromise = undefined;
+      }
+    })();
 
-    this.taskManager = new TaskManager({
-      endpointUrl: endpoint,
-      headers: this.headers,
-    });
-
-    return this.taskManager;
+    return this._taskManagerPromise;
   }
 }
 
@@ -154,5 +165,5 @@ function resolveEndpointFromCard(card: AgentCard, baseUrl: string): string {
   if (jsonRpcInterface?.url) {
     return jsonRpcInterface.url;
   }
-  return `${baseUrl.replace(/\/+$/, "")}/a2a`;
+  return `${baseUrl}/a2a`;
 }

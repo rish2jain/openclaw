@@ -133,6 +133,19 @@ export function createSseTransport(opts: SseTransportOptions): SseTransport {
   };
 
   const handlePostMessage = async (req: IncomingMessage, res: ServerResponse) => {
+    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    const rawSessionId = url.searchParams.get("sessionId");
+    const sessionId = typeof rawSessionId === "string" ? rawSessionId.trim() : "";
+    // Client IDs are String(++clientCounter), i.e. non-empty numeric strings
+    if (!sessionId || !/^\d+$/.test(sessionId) || !clients.has(sessionId)) {
+      res.writeHead(400, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": opts.corsOrigin ?? "*",
+      });
+      res.end(JSON.stringify({ error: "Missing or invalid sessionId" }));
+      return;
+    }
+
     const chunks: Buffer[] = [];
     for await (const chunk of req) {
       chunks.push(chunk as Buffer);
@@ -140,7 +153,10 @@ export function createSseTransport(opts: SseTransportOptions): SseTransport {
     const body = Buffer.concat(chunks).toString("utf-8");
     const msg = parseJsonRpcMessage(body);
     if (!msg) {
-      res.writeHead(400, { "Content-Type": "application/json" });
+      res.writeHead(400, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": opts.corsOrigin ?? "*",
+      });
       res.end(JSON.stringify({ error: "Invalid JSON-RPC message" }));
       return;
     }
@@ -159,7 +175,7 @@ export function createSseTransport(opts: SseTransportOptions): SseTransport {
 
         if (req.method === "OPTIONS") {
           res.writeHead(204, {
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": opts.corsOrigin ?? "*",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type",
           });

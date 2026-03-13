@@ -38,15 +38,18 @@ export class StreamingHandler {
   }
 
   /**
-   * Handle a tasks/subscribe request. Opens an SSE stream for an
-   * existing task and streams updates until the task completes or
-   * the client disconnects. Call canSubscribe(taskId) first and only
-   * call this when it returns ok.
+   * Handle a tasks/subscribe request. Validates the task first; only
+   * opens the SSE stream after validation so errors can be sent. Then
+   * streams updates until the task completes or the client disconnects.
    */
   handleTaskSubscription(
     taskId: string,
     res: ServerResponse,
   ): { ok: true } | { ok: false; code: number; message: string } {
+    const pre = this.taskHandler.canSubscribeToTask(taskId);
+    if (!pre.ok) {
+      return pre;
+    }
     const sse = initSseStream(res);
     return this.taskHandler.subscribeToTask({ id: taskId }, sse);
   }

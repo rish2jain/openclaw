@@ -65,10 +65,11 @@ export function chunkByHeadings(
   const flush = (endLine: number) => {
     const text = currentLines.join("\n").trim();
     if (text.length < minChunkChars && chunks.length > 0) {
-      // Merge tiny chunks into the previous one
+      // Merge tiny chunks into the previous one; adopt current heading context so path and text match.
       const prev = chunks[chunks.length - 1];
       if (prev) {
         prev.text = `${prev.text}\n\n${text}`;
+        prev.headingPath = headingStack.map((h) => h.title).join(" > ");
         prev.contextualText = buildContextualText(headingStack, prev.text);
         prev.endLine = endLine;
         prev.hash = hashText(prev.contextualText);

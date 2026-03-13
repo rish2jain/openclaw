@@ -143,6 +143,7 @@ export function registerA2aCli(program: Command) {
     .description("Send a task to an external A2A agent")
     .option("--stream", "Use streaming (SSE) mode")
     .option("--timeout <ms>", "Request timeout in milliseconds", "60000")
+    .option("--discovery-timeout <ms>", "Agent Card discovery timeout in milliseconds", "10000")
     .option("--json", "Output raw JSON response")
     .option("--header <header...>", "Additional headers (key:value)")
     .action(async (agentUrl: string, message: string, opts) => {
@@ -159,10 +160,11 @@ export function registerA2aCli(program: Command) {
           }
         }
 
+        const discoveryTimeoutMs = Number.parseInt(opts.discoveryTimeout as string, 10) || 10_000;
         const client = new A2AClient({
           baseUrl: agentUrl,
           headers,
-          discoveryTimeoutMs: Number.parseInt(opts.timeout as string, 10),
+          discoveryTimeoutMs,
         });
 
         const controller = new AbortController();
@@ -187,6 +189,7 @@ export function registerA2aCli(program: Command) {
               process.stdout.write(value);
             }
           } finally {
+            clearTimeout(timeout);
             reader.releaseLock();
           }
         } else {

@@ -75,6 +75,21 @@ describe("MessageAdapter", () => {
       expect(result.supportedMedia).toHaveLength(1);
       expect(result.unsupportedMedia).toHaveLength(1);
     });
+
+    it("reports all media unsupported when channel has no media capabilities", () => {
+      const result = adapter.adaptMessage(
+        {
+          text: "Check this",
+          media: [
+            { url: "photo.jpg", mimeType: "image/jpeg" },
+            { url: "doc.pdf", mimeType: "application/pdf" },
+          ],
+        },
+        "unknown-channel",
+      );
+      expect(result.supportedMedia).toHaveLength(0);
+      expect(result.unsupportedMedia).toHaveLength(2);
+    });
   });
 });
 

@@ -23,10 +23,24 @@ type HistogramEntry = {
   name: string;
   help: string;
   labels: Record<string, string>;
+  /** Ring buffer of observations; length = maxSamples. */
   samples: number[];
+  /** Number of observations so far; valid count = min(writeIndex, maxSamples). */
+  writeIndex: number;
   maxSamples: number;
   updatedAt: number;
 };
+
+/** Returns current histogram samples in chronological order (for percentile/snapshot). */
+function getHistogramSamples(entry: HistogramEntry): number[] {
+  const max = entry.maxSamples;
+  const w = entry.writeIndex;
+  if (w <= max) {
+    return entry.samples.slice(0, w);
+  }
+  const start = w % max;
+  return [...entry.samples.slice(start), ...entry.samples.slice(0, start)];
+}
 
 export type MetricsSnapshot = {
   counters: Record<string, { value: number; labels: Record<string, string> }[]>;
@@ -138,17 +152,19 @@ export function createMetricsExporter(options?: MetricsExporterOptions): Metrics
     const key = metricKey(fullName, labels);
     const existing = histograms.get(key);
     if (existing) {
-      existing.samples.push(value);
-      if (existing.samples.length > maxHistogramSamples) {
-        existing.samples = existing.samples.slice(existing.samples.length - maxHistogramSamples);
-      }
+      const idx = existing.writeIndex % maxHistogramSamples;
+      existing.samples[idx] = value;
+      existing.writeIndex += 1;
       existing.updatedAt = Date.now();
     } else {
+      const samples = Array.from<number>({ length: maxHistogramSamples });
+      samples[0] = value;
       histograms.set(key, {
         name: fullName,
         help: helpMap.get(fullName)?.help ?? "",
         labels,
-        samples: [value],
+        samples,
+        writeIndex: 1,
         maxSamples: maxHistogramSamples,
         updatedAt: Date.now(),
       });
@@ -181,7 +197,8 @@ export function createMetricsExporter(options?: MetricsExporterOptions): Metrics
       if (!snapshot.histograms[entry.name]) {
         snapshot.histograms[entry.name] = [];
       }
-      const sorted = entry.samples.toSorted((a, b) => a - b);
+      const samples = getHistogramSamples(entry);
+      const sorted = samples.toSorted((a, b) => a - b);
       const sum = sorted.reduce((s, v) => s + v, 0);
       snapshot.histograms[entry.name].push({
         count: sorted.length,
@@ -242,7 +259,8 @@ export function createMetricsExporter(options?: MetricsExporterOptions): Metrics
         }
         lines.push(`# TYPE ${entry.name} summary`);
       }
-      const sorted = entry.samples.toSorted((a, b) => a - b);
+      const samples = getHistogramSamples(entry);
+      const sorted = samples.toSorted((a, b) => a - b);
       const sum = sorted.reduce((s, v) => s + v, 0);
       const lbls = formatLabels(entry.labels);
       const p50 = computePercentile(sorted, 50);

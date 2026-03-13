@@ -108,10 +108,12 @@ describe("semantic-chunker", () => {
 
   it("produces unique hashes", async () => {
     const content = "Alpha content.\n\nBeta content.\n\nGamma content.";
-    const chunks = await chunkSemantically(content, null, { maxChunkChars: 50 });
-    if (chunks.length > 1) {
-      const hashes = new Set(chunks.map((c) => c.hash));
-      expect(hashes.size).toBe(chunks.length);
-    }
+    const chunks = await chunkSemantically(content, null, {
+      maxChunkChars: 25,
+      minChunkChars: 1,
+    });
+    expect(chunks.length).toBeGreaterThan(1);
+    const hashes = new Set(chunks.map((c) => c.hash));
+    expect(hashes.size).toBe(chunks.length);
   });
 });

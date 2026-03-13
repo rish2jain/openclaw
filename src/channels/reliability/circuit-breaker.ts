@@ -38,6 +38,8 @@ type CircuitEntry = {
   totalFailures: number;
   totalSuccesses: number;
   totalRejections: number;
+  /** When half_open, true while the single allowed probe request is in flight. */
+  probeInFlight: boolean;
 };
 
 export type CircuitBreakerMetrics = {
@@ -94,6 +96,7 @@ export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBr
         totalFailures: 0,
         totalSuccesses: 0,
         totalRejections: 0,
+        probeInFlight: false,
       };
       circuits.set(key, entry);
     }
@@ -119,16 +122,21 @@ export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBr
         const elapsed = now - entry.lastFailureAt;
         if (elapsed >= entry.currentCooldownMs) {
           transitionTo(entry, key, "half_open");
+          entry.probeInFlight = true;
           return true;
         }
         entry.totalRejections += 1;
         return false;
       }
 
-      case "half_open":
-        // Only one request at a time in half-open.
-        // If we're already in half-open, allow it (the probe).
+      case "half_open": {
+        if (entry.probeInFlight) {
+          entry.totalRejections += 1;
+          return false;
+        }
+        entry.probeInFlight = true;
         return true;
+      }
     }
   }
 
@@ -138,6 +146,7 @@ export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBr
     entry.consecutiveFailures = 0;
 
     if (entry.state === "half_open") {
+      entry.probeInFlight = false;
       transitionTo(entry, key, "closed");
       entry.currentCooldownMs = initialCooldownMs;
     }
@@ -150,7 +159,7 @@ export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBr
     entry.lastFailureAt = Date.now();
 
     if (entry.state === "half_open") {
-      // Probe failed — reopen with increased cooldown.
+      entry.probeInFlight = false;
       entry.currentCooldownMs = Math.min(
         entry.currentCooldownMs * cooldownMultiplier,
         maxCooldownMs,
@@ -204,6 +213,7 @@ export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBr
     if (entry) {
       entry.consecutiveFailures = 0;
       entry.currentCooldownMs = initialCooldownMs;
+      entry.probeInFlight = false;
       transitionTo(entry, key, "closed");
     }
   }

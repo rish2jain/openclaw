@@ -24,13 +24,13 @@ export function createManageConfigTool(callGateway: GatewayRpc): McpToolHandler 
             type: "string",
             description:
               "The configuration key path (e.g. 'gateway.mode', 'channels.telegram.enabled'). " +
-              "Required for 'get' and 'set' actions.",
+              "Required for 'set'; optional for 'get' (if omitted returns the entire config).",
           },
           value: {
-            type: "string",
+            type: ["string", "number", "boolean"],
             description:
               "The value to set. Required for 'set' action. " +
-              "Strings, numbers, and booleans are auto-detected.",
+              "Strings, numbers, and booleans are accepted.",
           },
         },
         required: ["action"],

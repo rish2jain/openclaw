@@ -397,30 +397,36 @@ export async function* streamWithPiAgentEvents(
   // Usage: AI SDK stream exposes .usage / .totalUsage (Promise) after consumption (v6: inputTokens/outputTokens)
   let usage: PiAgentEventUsage | undefined;
   try {
-    const s = stream as {
-      usage?: Promise<{
-        inputTokens?: number;
-        outputTokens?: number;
-        totalTokens?: number;
-      }>;
-      totalUsage?: Promise<{
-        inputTokens?: number;
-        outputTokens?: number;
-        totalTokens?: number;
-      }>;
-    };
-    const usagePromise = s?.totalUsage ?? s?.usage;
-    if (usagePromise) {
-      const u = await usagePromise;
-      if (
-        u &&
-        (u.inputTokens !== undefined || u.outputTokens !== undefined || u.totalTokens !== undefined)
-      ) {
-        usage = {
-          input: u.inputTokens,
-          output: u.outputTokens,
-          total: u.totalTokens ?? (u.inputTokens ?? 0) + (u.outputTokens ?? 0),
-        };
+    if (!stream) {
+      // Skip usage extraction when stream was never created (e.g. error before streamText)
+    } else {
+      const s = stream as {
+        usage?: Promise<{
+          inputTokens?: number;
+          outputTokens?: number;
+          totalTokens?: number;
+        }>;
+        totalUsage?: Promise<{
+          inputTokens?: number;
+          outputTokens?: number;
+          totalTokens?: number;
+        }>;
+      };
+      const usagePromise = s.totalUsage ?? s.usage;
+      if (usagePromise) {
+        const u = await usagePromise;
+        if (
+          u &&
+          (u.inputTokens !== undefined ||
+            u.outputTokens !== undefined ||
+            u.totalTokens !== undefined)
+        ) {
+          usage = {
+            input: u.inputTokens,
+            output: u.outputTokens,
+            total: u.totalTokens ?? (u.inputTokens ?? 0) + (u.outputTokens ?? 0),
+          };
+        }
       }
     }
   } catch {

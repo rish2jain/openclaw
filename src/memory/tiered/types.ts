@@ -70,8 +70,11 @@ export interface TieredMemoryStore {
   /** Delete a specific entry. */
   delete(tier: MemoryTier, key: string): boolean;
 
-  /** List all entries for a tier (with optional pagination). */
-  list(tier: MemoryTier, opts?: { limit?: number; offset?: number }): TieredMemoryEntry[];
+  /** List all entries for a tier (with optional pagination and key prefix filter). */
+  list(
+    tier: MemoryTier,
+    opts?: { limit?: number; offset?: number; prefix?: string },
+  ): TieredMemoryEntry[];
 
   /** Close resources. */
   close(): void;
