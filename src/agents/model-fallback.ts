@@ -521,7 +521,7 @@ export async function runWithModelFallback<T>(params: {
     : null;
   const attempts: FallbackAttempt[] = [];
   let lastError: unknown;
-  const cooldownProbeUsedProviders = new Set<string>();
+  const cooldownProbeUsedModels = new Set<string>();
 
   const hasFallbackCandidates = candidates.length > 1;
 
@@ -595,8 +595,9 @@ export async function runWithModelFallback<T>(params: {
           // cross-provider fallback on providers with long internal retries.
           const isTransientCooldownReason =
             decision.reason === "rate_limit" || decision.reason === "overloaded";
-          if (isTransientCooldownReason && cooldownProbeUsedProviders.has(candidate.provider)) {
-            const error = `Provider ${candidate.provider} is in cooldown (probe already attempted this run)`;
+          const candidateKey = modelKey(candidate.provider, candidate.model);
+          if (isTransientCooldownReason && cooldownProbeUsedModels.has(candidateKey)) {
+            const error = `Provider ${candidate.provider} model ${candidate.model} is in cooldown (probe already attempted this run)`;
             attempts.push({
               provider: candidate.provider,
               model: candidate.model,
@@ -623,7 +624,7 @@ export async function runWithModelFallback<T>(params: {
           }
           runOptions = { allowTransientCooldownProbe: true };
           if (isTransientCooldownReason) {
-            transientProbeProviderForAttempt = candidate.provider;
+            transientProbeProviderForAttempt = modelKey(candidate.provider, candidate.model);
           }
         }
         attemptedDuringCooldown = true;
@@ -688,7 +689,7 @@ export async function runWithModelFallback<T>(params: {
           probeFailureReason === "auth_permanent" ||
           probeFailureReason === "session_expired";
         if (!shouldPreserveTransientProbeSlot) {
-          cooldownProbeUsedProviders.add(transientProbeProviderForAttempt);
+          cooldownProbeUsedModels.add(transientProbeProviderForAttempt);
         }
       }
       // Context overflow errors should be handled by the inner runner's

@@ -1319,7 +1319,7 @@ describe("runWithModelFallback", () => {
       expect(run).toHaveBeenNthCalledWith(2, "groq", "llama-3.3-70b-versatile"); // Cross-provider works
     });
 
-    it("limits cooldown probes to one per provider before moving to cross-provider fallback", async () => {
+    it("tracks cooldown probes per model so different models on the same provider each get a probe", async () => {
       const { dir } = await makeAuthStoreWithCooldown("anthropic", "rate_limit");
       const cfg = makeCfg({
         agents: {
@@ -1338,8 +1338,9 @@ describe("runWithModelFallback", () => {
 
       const run = vi
         .fn()
-        .mockRejectedValueOnce(new Error("Still rate limited")) // First same-provider probe fails
-        .mockResolvedValueOnce("groq success"); // Next provider succeeds
+        .mockRejectedValueOnce(new Error("Still rate limited")) // First same-provider model probe fails
+        .mockRejectedValueOnce(new Error("Still rate limited")) // Second same-provider model probe fails
+        .mockResolvedValueOnce("groq success"); // Cross-provider fallback succeeds
 
       const result = await runWithModelFallback({
         cfg,
@@ -1350,13 +1351,17 @@ describe("runWithModelFallback", () => {
       });
 
       expect(result.result).toBe("groq success");
-      // Primary is skipped, first same-provider fallback is probed, second same-provider fallback
-      // is skipped (probe already attempted), then cross-provider fallback runs.
-      expect(run).toHaveBeenCalledTimes(2);
+      // Primary is skipped, each same-provider fallback model gets its own
+      // probe (per-model tracking instead of per-provider), then cross-provider
+      // fallback runs. See #44332.
+      expect(run).toHaveBeenCalledTimes(3);
       expect(run).toHaveBeenNthCalledWith(1, "anthropic", "claude-sonnet-4-5", {
         allowTransientCooldownProbe: true,
       });
-      expect(run).toHaveBeenNthCalledWith(2, "groq", "llama-3.3-70b-versatile");
+      expect(run).toHaveBeenNthCalledWith(2, "anthropic", "claude-haiku-3-5", {
+        allowTransientCooldownProbe: true,
+      });
+      expect(run).toHaveBeenNthCalledWith(3, "groq", "llama-3.3-70b-versatile");
     });
 
     it("does not consume transient probe slot when first same-provider probe fails with model_not_found", async () => {
