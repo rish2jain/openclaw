@@ -13,8 +13,12 @@ const TELEGRAM_POLL_RESTART_POLICY = {
   jitter: 0.25,
 };
 
-const POLL_STALL_THRESHOLD_MS = 90_000;
-const POLL_WATCHDOG_INTERVAL_MS = 30_000;
+// Reduced from 90s/30s to detect polling stalls faster (#44396).
+// grammY getUpdates uses a 30s timeout, so missing 2 cycles (60s) indicates
+// a genuine stall. The 15s watchdog interval ensures detection within ~75s
+// worst case (60s threshold + 15s interval) instead of the previous ~120s.
+const POLL_STALL_THRESHOLD_MS = 60_000;
+const POLL_WATCHDOG_INTERVAL_MS = 15_000;
 
 type TelegramBot = ReturnType<typeof createTelegramBot>;
 
