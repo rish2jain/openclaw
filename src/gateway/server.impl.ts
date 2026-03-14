@@ -813,6 +813,22 @@ export async function startGatewayServer(
 
   const canvasHostServerPort = (canvasHostServer as CanvasHostServer | null)?.port;
 
+  // Initialize channel orchestrator subsystems (health monitoring, failover, metrics).
+  const { initChannelOrchestratorSubsystems } =
+    await import("./server-startup-channels-orchestrator.js");
+  const orchestratorSubs = initChannelOrchestratorSubsystems({
+    isChannelConnected: (channel, accountId) => {
+      const snapshot = getRuntimeSnapshot();
+      const accounts = snapshot.channelAccounts[channel];
+      if (accounts) {
+        const acct = accounts[accountId];
+        return Boolean(acct?.linked);
+      }
+      const ch = snapshot.channels[channel];
+      return Boolean(ch?.linked);
+    },
+  });
+
   const gatewayRequestContext: import("./server-methods/types.js").GatewayRequestContext = {
     deps,
     cron,
@@ -863,6 +879,11 @@ export async function startGatewayServer(
     markChannelLoggedOut,
     wizardRunner,
     broadcastVoiceWakeChanged,
+    metricsExporter: orchestratorSubs.metricsExporter,
+    failoverRouter: orchestratorSubs.failoverRouter,
+    deliveryHealthMonitor: orchestratorSubs.deliveryHealthMonitor,
+    channelOrchestrator: orchestratorSubs.channelOrchestrator,
+    failoverHistory: orchestratorSubs.failoverHistory,
   };
 
   // Store the gateway context as a fallback for plugin subagent dispatch
@@ -1065,6 +1086,7 @@ export async function startGatewayServer(
       authRateLimiter?.dispose();
       browserAuthRateLimiter.dispose();
       channelHealthMonitor?.stop();
+      orchestratorSubs.deliveryHealthMonitor.stop();
       clearSecretsRuntimeSnapshot();
       await close(opts);
     },

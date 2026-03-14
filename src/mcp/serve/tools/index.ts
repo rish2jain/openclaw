@@ -5,6 +5,7 @@
  */
 import type { GatewayRpc, McpToolHandler } from "../types.js";
 import { createAgentManageTool } from "./agent-manage.js";
+import { createCareerTools } from "./career.js";
 import { createChannelStatusTool } from "./channel-status.js";
 import { createCronManageTool } from "./cron-manage.js";
 import { createFailoverStatusTool } from "./failover-status.js";
@@ -27,5 +28,6 @@ export function getAllTools(callGateway: GatewayRpc): McpToolHandler[] {
     createAgentManageTool(callGateway),
     createMemoryQueryTool(callGateway),
     createFailoverStatusTool(callGateway),
+    ...createCareerTools(),
   ];
 }
