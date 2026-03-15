@@ -23,6 +23,7 @@ function makeInteraction(
   return {
     personId: "p1",
     channel,
+    type: channel,
     date: Date.now() - daysAgo * DAY_MS,
   };
 }
@@ -145,7 +146,7 @@ describe("createConnectionScorer", () => {
     it("scores meeting highest", () => {
       const meeting = scorer.scoreConnection(person, [makeInteraction(1, "meeting")], []);
       const dm = scorer.scoreConnection(person, [makeInteraction(1, "dm")], []);
-      expect(meeting).toBeGreaterThanOrEqual(dm);
+      expect(meeting).toBeGreaterThan(dm);
     });
 
     it("averages depth over the most recent 20 interactions", () => {
