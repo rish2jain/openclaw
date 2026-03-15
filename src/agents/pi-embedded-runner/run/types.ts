@@ -64,6 +64,6 @@ export type EmbeddedRunAttemptResult = {
   compactionCount?: number;
   /** Client tool call detected (OpenResponses hosted tools). */
   clientToolCall?: { name: string; params: Record<string, unknown> };
-  /** True when bootstrap was injected this run and injectMode is "once" (caller should patch session bootstrapInjected). */
-  bootstrapInjectedThisRun?: boolean;
+  /** True when sessions_yield tool was called during this attempt. */
+  yieldDetected?: boolean;
 };

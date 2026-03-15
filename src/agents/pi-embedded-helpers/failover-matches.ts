@@ -15,9 +15,6 @@ const ERROR_PATTERNS = {
     /\btpm\b/i,
     "tokens per minute",
     "tokens per day",
-    // AWS Bedrock throttling errors (#44435)
-    "throttlingexception",
-    "servicequotaexceededexception",
   ],
   overloaded: [
     /overloaded_error|"type"\s*:\s*"overloaded_error"/i,
@@ -27,8 +24,6 @@ const ERROR_PATTERNS = {
     // provider-overload (#32828).
     /service[_ ]unavailable.*(?:overload|capacity|high[_ ]demand)|(?:overload|capacity|high[_ ]demand).*service[_ ]unavailable/i,
     "high demand",
-    // AWS Bedrock model availability errors (#44435)
-    "modelnotreadyexception",
   ],
   timeout: [
     "timeout",
@@ -42,17 +37,19 @@ const ERROR_PATTERNS = {
     "fetch failed",
     "socket hang up",
     /\beconn(?:refused|reset|aborted)\b/i,
+    /\benetunreach\b/i,
+    /\behostunreach\b/i,
+    /\behostdown\b/i,
+    /\benetreset\b/i,
+    /\betimedout\b/i,
+    /\besockettimedout\b/i,
+    /\bepipe\b/i,
     /\benotfound\b/i,
     /\beai_again\b/i,
     /without sending (?:any )?chunks?/i,
-    /\bstop reason:\s*(?:abort|error|malformed_response)\b/i,
-    /\breason:\s*(?:abort|error|malformed_response)\b/i,
-    /\bunhandled stop reason:\s*(?:abort|error|malformed_response)\b/i,
-    // AWS Bedrock transient errors (#44435)
-    "internalservererror",
-    "modelstreamerror",
-    "modelerror",
-    "modeltimeoutexception",
+    /\bstop reason:\s*(?:abort|error|malformed_response|network_error)\b/i,
+    /\breason:\s*(?:abort|error|malformed_response|network_error)\b/i,
+    /\bunhandled stop reason:\s*(?:abort|error|malformed_response|network_error)\b/i,
   ],
   billing: [
     /["']?(?:status|code)["']?\s*[:=]\s*402\b|\bhttp\s*402\b|\berror(?:\s+code)?\s*[:=]?\s*402\b|\b(?:got|returned|received)\s+(?:a\s+)?402\b|^\s*402\s+payment/i,
@@ -62,8 +59,9 @@ const ERROR_PATTERNS = {
     "credit balance",
     "plans & billing",
     "insufficient balance",
+    "insufficient usd or diem balance",
+    /requires?\s+more\s+credits/i,
   ],
-  // No-retry: identity valid but not authorized, or key revoked/deactivated.
   authPermanent: [
     /api[_ ]?key[_ ]?(?:revoked|invalid|deactivated|deleted)/i,
     "invalid_api_key",
@@ -73,10 +71,7 @@ const ERROR_PATTERNS = {
     /could not (?:authenticate|validate).*(?:api[_ ]?key|credentials)/i,
     "permission_error",
     "not allowed for this organization",
-    // AWS Bedrock/IAM: AccessDeniedException = policy denial, no retry (#44435)
-    "accessdeniedexception",
   ],
-  // Retryable or user-fixable auth: wrong key, expired token, missing scopes, etc.
   auth: [
     /invalid[_ ]?api[_ ]?key/,
     "incorrect api key",
@@ -96,8 +91,6 @@ const ERROR_PATTERNS = {
     /\b403\b/,
     "no credentials found",
     "no api key found",
-    // AWS Bedrock auth errors (#44435)
-    "unrecognizedclientexception",
   ],
   format: [
     "string should match pattern",

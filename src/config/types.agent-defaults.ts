@@ -117,46 +117,19 @@ export type CliBackendConfig = {
   };
 };
 
-export type AgentRoutingConfig = {
-  /** Enable smart model routing (default: false). */
-  enabled?: boolean;
-  /** Fast model for simple queries (provider/model, e.g. "ollama/llama3.2"). */
-  fastModel?: string;
-  /** Max message length (chars) to consider for fast-model routing (default: 150). */
-  maxSimpleLength?: number;
-  /** Max context tokens when routed to the fast model (default: 4096). */
-  fastModelContextTokens?: number;
-};
-
-export type OrchestratorStrategy = "auto" | "always" | "fallback-only";
-
-export type AgentOrchestratorConfig = {
-  /** Enable orchestrator model (default: false). */
-  enabled?: boolean;
-  /** Powerful API model for complex tasks (provider/model, e.g. "anthropic/claude-sonnet-4"). */
-  model?: string;
-  /**
-   * Routing strategy:
-   * - "auto": use orchestrator for complex tasks, local for simple ones (default).
-   * - "always": always try orchestrator first; fall back to local on failure.
-   * - "fallback-only": use local by default; escalate to orchestrator only when local fails.
-   */
-  strategy?: OrchestratorStrategy;
-  /** Max message length (chars) for complexity classification in "auto" mode (default: 150). */
-  maxSimpleLength?: number;
-};
-
 export type AgentDefaultsConfig = {
   /** Primary model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   model?: AgentModelConfig;
   /** Optional image-capable model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   imageModel?: AgentModelConfig;
-  /** Optional model for PDF tool (provider/model). */
+  /** Optional PDF-capable model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   pdfModel?: AgentModelConfig;
+  /** Maximum PDF file size in megabytes (default: 10). */
+  pdfMaxBytesMb?: number;
+  /** Maximum number of PDF pages to process (default: 20). */
+  pdfMaxPages?: number;
   /** Model catalog with optional aliases (full provider/model keys). */
   models?: Record<string, AgentModelEntryConfig>;
-  /** Embedded Pi agent runtime options (experimental). */
-  embeddedPi?: Record<string, unknown>;
   /** Agent working directory (preferred). Used as the default cwd for agent runs. */
   workspace?: string;
   /** Optional repository root for system prompt runtime line (overrides auto-detect). */
@@ -165,19 +138,15 @@ export type AgentDefaultsConfig = {
   skipBootstrap?: boolean;
   /** Max chars for injected bootstrap files before truncation (default: 20000). */
   bootstrapMaxChars?: number;
-  /** When to emit a warning when bootstrap content is truncated: "off" | "once" | "always". */
-  bootstrapPromptTruncationWarning?: "off" | "once" | "always";
   /** Max total chars across all injected bootstrap files (default: 150000). */
   bootstrapTotalMaxChars?: number;
   /**
-   * When to inject workspace bootstrap files (AGENTS.md, TOOLS.md, etc.).
-   * - "every-turn": inject on every turn (default).
-   * - "once": inject only on first message of the session; later turns get none.
-   * - "minimal": inject once, then a minimal set on later turns (e.g. identity only).
+   * Agent-visible bootstrap truncation warning mode:
+   * - off: do not inject warning text
+   * - once: inject once per unique truncation signature (default)
+   * - always: inject on every run with truncation
    */
-  bootstrap?: {
-    injectMode?: "every-turn" | "once" | "minimal";
-  };
+  bootstrapPromptTruncationWarning?: "off" | "once" | "always";
   /** Optional IANA timezone for the user (used in system prompt; defaults to host timezone). */
   userTimezone?: string;
   /** Time format in system prompt: auto (OS preference), 12-hour, or 24-hour. */
@@ -198,22 +167,24 @@ export type AgentDefaultsConfig = {
   contextTokens?: number;
   /** Optional CLI backends for text-only fallback (claude-cli, etc.). */
   cliBackends?: Record<string, CliBackendConfig>;
-  /**
-   * Context assembly mode for workspace/memory injection.
-   * - "raw": full bootstrap files and raw memory (default).
-   * - "index-rank-compact": indexed, ranked, and compacted snippets within a token budget (when implemented).
-   */
-  context?: {
-    mode?: "raw" | "index-rank-compact";
-  };
   /** Opt-in: prune old tool results from the LLM context to reduce token usage. */
   contextPruning?: AgentContextPruningConfig;
   /** Compaction tuning and pre-compaction memory flush behavior. */
   compaction?: AgentCompactionConfig;
+  /** Embedded Pi runner hardening and compatibility controls. */
+  embeddedPi?: {
+    /**
+     * How embedded Pi should trust workspace-local `.pi/config/settings.json`.
+     * - sanitize (default): apply project settings except shellPath/shellCommandPrefix
+     * - ignore: ignore project settings entirely
+     * - trusted: trust project settings as-is
+     */
+    projectSettingsPolicy?: "trusted" | "sanitize" | "ignore";
+  };
   /** Vector memory search configuration (per-agent overrides supported). */
   memorySearch?: MemorySearchConfig;
   /** Default thinking level when no /think directive is present. */
-  thinkingDefault?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+  thinkingDefault?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "adaptive";
   /** Default verbose level when no /verbose directive is present. */
   verboseDefault?: "off" | "on" | "full";
   /** Default elevated level when no /elevated directive is present. */
@@ -265,6 +236,8 @@ export type AgentDefaultsConfig = {
     session?: string;
     /** Delivery target ("last", "none", or a channel id). */
     target?: "last" | "none" | ChannelId;
+    /** Direct/DM delivery policy. Default: "allow". */
+    directPolicy?: "allow" | "block";
     /** Optional delivery override (E.164 for WhatsApp, chat id for Telegram). Supports :topic:NNN suffix for Telegram topics. */
     to?: string;
     /** Optional account id for multi-account channels. */
@@ -276,21 +249,25 @@ export type AgentDefaultsConfig = {
     /** Suppress tool error warning payloads during heartbeat runs. */
     suppressToolErrorWarnings?: boolean;
     /**
+     * If true, run heartbeat turns with lightweight bootstrap context.
+     * Lightweight mode keeps only HEARTBEAT.md from workspace bootstrap files.
+     */
+    lightContext?: boolean;
+    /**
+     * If true, run heartbeat turns in an isolated session with no prior
+     * conversation history. The heartbeat only sees its bootstrap context
+     * (HEARTBEAT.md when lightContext is also enabled). Dramatically reduces
+     * per-heartbeat token cost by avoiding the full session transcript.
+     */
+    isolatedSession?: boolean;
+    /**
      * When enabled, deliver the model's reasoning payload for heartbeat runs (when available)
      * as a separate message prefixed with `Reasoning:` (same as `/reasoning on`).
      *
      * Default: false (only the final heartbeat payload is delivered).
      */
     includeReasoning?: boolean;
-    /** When true, use lightweight bootstrap context for heartbeat runs. */
-    lightContext?: boolean;
-    /** Policy for direct/DM delivery ("allow" | "block"). When "block", heartbeat is not delivered to DMs. */
-    directPolicy?: "allow" | "block";
   };
-  /** Smart model routing — route simple queries to a fast model, complex to orchestrator. */
-  routing?: AgentRoutingConfig;
-  /** Orchestrator model — route complex tasks to a powerful API model. */
-  orchestrator?: AgentOrchestratorConfig;
   /** Max concurrent agent runs across all conversations. Default: 1 (sequential). */
   maxConcurrent?: number;
   /** Sub-agent defaults (spawned via sessions_spawn). */
@@ -309,7 +286,7 @@ export type AgentDefaultsConfig = {
     thinking?: string;
     /** Default run timeout in seconds for spawned sub-agents (0 = no timeout). */
     runTimeoutSeconds?: number;
-    /** Gateway timeout in ms for sub-agent announce delivery calls (default: 60000). */
+    /** Gateway timeout in ms for sub-agent announce delivery calls (default: 90000). */
     announceTimeoutMs?: number;
   };
   /** Optional sandbox settings for non-main sessions. */
@@ -317,9 +294,14 @@ export type AgentDefaultsConfig = {
 };
 
 export type AgentCompactionMode = "default" | "safeguard";
-
-/** Identifier policy for compaction safeguard (strict, off, or custom instructions). */
+export type AgentCompactionPostIndexSyncMode = "off" | "async" | "await";
 export type AgentCompactionIdentifierPolicy = "strict" | "off" | "custom";
+export type AgentCompactionQualityGuardConfig = {
+  /** Enable compaction summary quality audits and regeneration retries. Default: false. */
+  enabled?: boolean;
+  /** Maximum regeneration retries after a failed quality audit. Default: 1 when enabled. */
+  maxRetries?: number;
+};
 
 export type AgentCompactionConfig = {
   /** Compaction summarization mode. */
@@ -332,21 +314,32 @@ export type AgentCompactionConfig = {
   reserveTokensFloor?: number;
   /** Max share of context window for history during safeguard pruning (0.1–0.9, default 0.5). */
   maxHistoryShare?: number;
+  /** Additional compaction-summary instructions that can preserve language or persona continuity. */
+  customInstructions?: string;
+  /** Preserve this many most-recent user/assistant turns verbatim in compaction summary context. */
+  recentTurnsPreserve?: number;
+  /** Identifier-preservation instruction policy for compaction summaries. */
+  identifierPolicy?: AgentCompactionIdentifierPolicy;
+  /** Custom identifier-preservation instructions used when identifierPolicy is "custom". */
+  identifierInstructions?: string;
+  /** Optional quality-audit retries for safeguard compaction summaries. */
+  qualityGuard?: AgentCompactionQualityGuardConfig;
+  /** Post-compaction session memory index sync mode. */
+  postIndexSync?: AgentCompactionPostIndexSyncMode;
   /** Pre-compaction memory flush (agentic turn). Default: enabled. */
   memoryFlush?: AgentCompactionMemoryFlushConfig;
-  /** Safeguard quality guard (retries, etc.). */
-  qualityGuard?: {
-    enabled?: boolean;
-    maxRetries?: number;
-  };
-  /** Identifier policy for safeguard compaction (strict | off | custom). */
-  identifierPolicy?: AgentCompactionIdentifierPolicy;
-  /** Custom identifier instructions when identifierPolicy is "custom". */
-  identifierInstructions?: string;
-  /** Number of recent turns to preserve during compaction. */
-  recentTurnsPreserve?: number;
-  /** Section keys or content to inject after compaction (post-compaction context). */
-  postCompactionSections?: Record<string, string> | string[];
+  /**
+   * H2/H3 section names from AGENTS.md to inject after compaction.
+   * Defaults to ["Session Startup", "Red Lines"] when unset.
+   * Set to [] to disable post-compaction context injection entirely.
+   */
+  postCompactionSections?: string[];
+  /** Optional model override for compaction summarization (e.g. "openrouter/anthropic/claude-sonnet-4-5").
+   * When set, compaction uses this model instead of the agent's primary model.
+   * Falls back to the primary model when unset. */
+  model?: string;
+  /** Maximum time in seconds for a single compaction operation (default: 900). */
+  timeoutSeconds?: number;
 };
 
 export type AgentCompactionMemoryFlushConfig = {
@@ -354,10 +347,13 @@ export type AgentCompactionMemoryFlushConfig = {
   enabled?: boolean;
   /** Run the memory flush when context is within this many tokens of the compaction threshold. */
   softThresholdTokens?: number;
+  /**
+   * Force a memory flush when transcript size reaches this threshold
+   * (bytes, or byte-size string like "2mb"). Set to 0 to disable.
+   */
+  forceFlushTranscriptBytes?: number | string;
   /** User prompt used for the memory flush turn (NO_REPLY is enforced if missing). */
   prompt?: string;
   /** System prompt appended for the memory flush turn. */
   systemPrompt?: string;
-  /** Force flush when transcript size exceeds this many bytes (optional). */
-  forceFlushTranscriptBytes?: number;
 };

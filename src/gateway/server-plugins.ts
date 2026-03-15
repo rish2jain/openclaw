@@ -87,7 +87,7 @@ async function dispatchGatewayMethod<T>(
       method,
       params,
     },
-    client: createSyntheticOperatorClient(),
+    client: scope?.client ?? createSyntheticOperatorClient(),
     isWebchatConnect,
     respond: (ok, payload, error) => {
       if (!result) {

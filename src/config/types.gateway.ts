@@ -2,46 +2,6 @@ import type { SecretInput } from "./types.secrets.js";
 
 export type GatewayBindMode = "auto" | "lan" | "loopback" | "custom" | "tailnet";
 
-/**
- * User roles for multi-user deployments.
- * - admin: full access to all config, commands, and tools
- * - user:  standard access (AI + commands, but sensitive config is redacted)
- * - guest: AI only, no commands, config access denied
- */
-export type GatewayAccessRole = "admin" | "user" | "guest";
-
-/**
- * Per-user role assignments for fine-grained access control.
- *
- * User identities use the `channel:id` format (e.g. `telegram:12345678`,
- * `slack:U0123ABCDEF`, `discord:999888777`). You can also use bare IDs when
- * only one channel is configured.
- */
-export type GatewayAccessRolesConfig = Record<string, GatewayAccessRole>;
-
-/**
- * Access control configuration for multi-user deployments.
- * Controls which users can view sensitive config, run admin commands, etc.
- */
-export type GatewayAccessConfig = {
-  /**
-   * Shorthand for granting admin role to a list of users.
-   * Equivalent to setting `roles["user-id"] = "admin"` for each entry.
-   * Takes precedence over `roles` if the same user appears in both.
-   */
-  adminUsers?: string[];
-  /**
-   * Explicit role assignments per user identity.
-   * Use `channel:id` format for disambiguation across channels.
-   */
-  roles?: GatewayAccessRolesConfig;
-  /**
-   * Default role for users not listed in adminUsers or roles.
-   * Defaults to "user" when not set.
-   */
-  defaultRole?: GatewayAccessRole;
-};
-
 export type GatewayTlsConfig = {
   /** Enable TLS for the gateway server. */
   enabled?: boolean;
@@ -226,6 +186,8 @@ export type GatewayTailscaleConfig = {
 };
 
 export type GatewayRemoteConfig = {
+  /** Whether remote gateway surfaces are enabled. Default: true when absent. */
+  enabled?: boolean;
   /** Remote Gateway WebSocket URL (ws:// or wss://). */
   url?: string;
   /** Transport for macOS remote connections (ssh tunnel or direct WS). */
@@ -385,6 +347,21 @@ export type GatewayHttpConfig = {
   securityHeaders?: GatewayHttpSecurityHeadersConfig;
 };
 
+export type GatewayPushApnsRelayConfig = {
+  /** Base HTTPS URL for the external iOS APNs relay service. */
+  baseUrl?: string;
+  /** Timeout in milliseconds for relay send requests (default: 10000). */
+  timeoutMs?: number;
+};
+
+export type GatewayPushApnsConfig = {
+  relay?: GatewayPushApnsRelayConfig;
+};
+
+export type GatewayPushConfig = {
+  apns?: GatewayPushApnsConfig;
+};
+
 export type GatewayNodesConfig = {
   /** Browser routing policy for node-hosted browser proxies. */
   browser?: {
@@ -433,6 +410,7 @@ export type GatewayConfig = {
   reload?: GatewayReloadConfig;
   tls?: GatewayTlsConfig;
   http?: GatewayHttpConfig;
+  push?: GatewayPushConfig;
   nodes?: GatewayNodesConfig;
   /**
    * IPs of trusted reverse proxies (e.g. Traefik, nginx). When a connection
@@ -454,8 +432,15 @@ export type GatewayConfig = {
    */
   channelHealthCheckMinutes?: number;
   /**
-   * Multi-user access control.
-   * Defines which users are admins, standard users, or guests.
+   * Stale event threshold in minutes for the channel health monitor.
+   * A connected channel that receives no events for this duration is treated
+   * as a stale socket and restarted. Default: 30.
    */
-  access?: GatewayAccessConfig;
+  channelStaleEventThresholdMinutes?: number;
+  /**
+   * Maximum number of health-monitor-initiated channel restarts per hour.
+   * Once this limit is reached, the monitor skips further restarts until
+   * the rolling window expires. Default: 10.
+   */
+  channelMaxRestartsPerHour?: number;
 };

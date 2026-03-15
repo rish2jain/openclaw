@@ -1,8 +1,11 @@
+import { sanitizeExecApprovalDisplayText } from "../../infra/exec-approval-command-display.js";
 import type { ExecApprovalForwarder } from "../../infra/exec-approval-forwarder.js";
 import {
   DEFAULT_EXEC_APPROVAL_TIMEOUT_MS,
   type ExecApprovalDecision,
 } from "../../infra/exec-approvals.js";
+import { buildSystemRunApprovalBinding } from "../../infra/system-run-approval-binding.js";
+import { resolveSystemRunApprovalRequestContext } from "../../infra/system-run-approval-context.js";
 import type { ExecApprovalManager } from "../exec-approval-manager.js";
 import {
   ErrorCodes,
@@ -10,9 +13,6 @@ import {
   formatValidationErrors,
   validateExecApprovalRequestParams,
   validateExecApprovalResolveParams,
-  validateExecApprovalPauseParams,
-  validateExecApprovalResumeParams,
-  validateExecApprovalInterruptParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
@@ -20,14 +20,6 @@ export function createExecApprovalHandlers(
   manager: ExecApprovalManager,
   opts?: { forwarder?: ExecApprovalForwarder },
 ): GatewayRequestHandlers {
-  const hasApprovalClients = (context: { hasExecApprovalClients?: () => boolean }) => {
-    if (typeof context.hasExecApprovalClients === "function") {
-      return context.hasExecApprovalClients();
-    }
-    // Fail closed when no operator-scope probe is available.
-    return false;
-  };
-
   return {
     "exec.approval.request": async ({ params, respond, context, client }) => {
       if (!validateExecApprovalRequestParams(params)) {
@@ -46,7 +38,10 @@ export function createExecApprovalHandlers(
       const p = params as {
         id?: string;
         command: string;
+        commandArgv?: string[];
+        env?: Record<string, string>;
         cwd?: string;
+        systemRunPlan?: unknown;
         nodeId?: string;
         host?: string;
         security?: string;
@@ -54,8 +49,10 @@ export function createExecApprovalHandlers(
         agentId?: string;
         resolvedPath?: string;
         sessionKey?: string;
-        riskLevel?: "low" | "medium" | "high" | null;
-        workflow?: string | null;
+        turnSourceChannel?: string;
+        turnSourceTo?: string;
+        turnSourceAccountId?: string;
+        turnSourceThreadId?: string | number;
         timeoutMs?: number;
         twoPhase?: boolean;
       };
@@ -65,6 +62,20 @@ export function createExecApprovalHandlers(
       const explicitId = typeof p.id === "string" && p.id.trim().length > 0 ? p.id.trim() : null;
       const host = typeof p.host === "string" ? p.host.trim() : "";
       const nodeId = typeof p.nodeId === "string" ? p.nodeId.trim() : "";
+      const approvalContext = resolveSystemRunApprovalRequestContext({
+        host,
+        command: p.command,
+        commandArgv: p.commandArgv,
+        systemRunPlan: p.systemRunPlan,
+        cwd: p.cwd,
+        agentId: p.agentId,
+        sessionKey: p.sessionKey,
+      });
+      const effectiveCommandArgv = approvalContext.commandArgv;
+      const effectiveCwd = approvalContext.cwd;
+      const effectiveAgentId = approvalContext.agentId;
+      const effectiveSessionKey = approvalContext.sessionKey;
+      const effectiveCommandText = approvalContext.commandText;
       if (host === "node" && !nodeId) {
         respond(
           false,
@@ -73,6 +84,39 @@ export function createExecApprovalHandlers(
         );
         return;
       }
+      if (host === "node" && !approvalContext.plan) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, "systemRunPlan is required for host=node"),
+        );
+        return;
+      }
+      if (!effectiveCommandText) {
+        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "command is required"));
+        return;
+      }
+      if (
+        host === "node" &&
+        (!Array.isArray(effectiveCommandArgv) || effectiveCommandArgv.length === 0)
+      ) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, "commandArgv is required for host=node"),
+        );
+        return;
+      }
+      const systemRunBinding =
+        host === "node"
+          ? buildSystemRunApprovalBinding({
+              argv: effectiveCommandArgv,
+              cwd: effectiveCwd,
+              agentId: effectiveAgentId,
+              sessionKey: effectiveSessionKey,
+              env: p.env,
+            })
+          : null;
       if (explicitId && manager.getSnapshot(explicitId)) {
         respond(
           false,
@@ -82,17 +126,29 @@ export function createExecApprovalHandlers(
         return;
       }
       const request = {
-        command: p.command,
-        cwd: p.cwd ?? null,
+        command: sanitizeExecApprovalDisplayText(effectiveCommandText),
+        commandPreview:
+          host === "node" || !approvalContext.commandPreview
+            ? undefined
+            : sanitizeExecApprovalDisplayText(approvalContext.commandPreview),
+        commandArgv: host === "node" ? undefined : effectiveCommandArgv,
+        envKeys: systemRunBinding?.envKeys?.length ? systemRunBinding.envKeys : undefined,
+        systemRunBinding: systemRunBinding?.binding ?? null,
+        systemRunPlan: approvalContext.plan,
+        cwd: effectiveCwd ?? null,
         nodeId: host === "node" ? nodeId : null,
         host: host || null,
         security: p.security ?? null,
         ask: p.ask ?? null,
-        agentId: p.agentId ?? null,
+        agentId: effectiveAgentId ?? null,
         resolvedPath: p.resolvedPath ?? null,
-        sessionKey: p.sessionKey ?? null,
-        riskLevel: p.riskLevel ?? null,
-        workflow: p.workflow ?? null,
+        sessionKey: effectiveSessionKey ?? null,
+        turnSourceChannel:
+          typeof p.turnSourceChannel === "string" ? p.turnSourceChannel.trim() || null : null,
+        turnSourceTo: typeof p.turnSourceTo === "string" ? p.turnSourceTo.trim() || null : null,
+        turnSourceAccountId:
+          typeof p.turnSourceAccountId === "string" ? p.turnSourceAccountId.trim() || null : null,
+        turnSourceThreadId: p.turnSourceThreadId ?? null,
       };
       const record = manager.create(request, timeoutMs, explicitId);
       record.requestedByConnId = client?.connId ?? null;
@@ -123,10 +179,11 @@ export function createExecApprovalHandlers(
         },
         { dropIfSlow: true },
       );
-      let forwardedToTargets = false;
+      const hasExecApprovalClients = context.hasExecApprovalClients?.() ?? false;
+      let forwarded = false;
       if (opts?.forwarder) {
         try {
-          forwardedToTargets = await opts.forwarder.handleRequested({
+          forwarded = await opts.forwarder.handleRequested({
             id: record.id,
             request: record.request,
             createdAtMs: record.createdAtMs,
@@ -137,8 +194,19 @@ export function createExecApprovalHandlers(
         }
       }
 
-      if (!hasApprovalClients(context) && !forwardedToTargets) {
-        manager.expire(record.id, "auto-expire:no-approver-clients");
+      if (!hasExecApprovalClients && !forwarded) {
+        manager.expire(record.id, "no-approval-route");
+        respond(
+          true,
+          {
+            id: record.id,
+            decision: null,
+            createdAtMs: record.createdAtMs,
+            expiresAtMs: record.expiresAtMs,
+          },
+          undefined,
+        );
+        return;
       }
 
       // Only send immediate "accepted" response when twoPhase is requested.
@@ -220,21 +288,48 @@ export function createExecApprovalHandlers(
         respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "invalid decision"));
         return;
       }
-      const snapshot = manager.getSnapshot(p.id);
+      const resolvedId = manager.lookupPendingId(p.id);
+      if (resolvedId.kind === "none") {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, "unknown or expired approval id"),
+        );
+        return;
+      }
+      if (resolvedId.kind === "ambiguous") {
+        const candidates = resolvedId.ids.slice(0, 3).join(", ");
+        const remainder = resolvedId.ids.length > 3 ? ` (+${resolvedId.ids.length - 3} more)` : "";
+        respond(
+          false,
+          undefined,
+          errorShape(
+            ErrorCodes.INVALID_REQUEST,
+            `ambiguous approval id prefix; matches: ${candidates}${remainder}. Use the full id.`,
+          ),
+        );
+        return;
+      }
+      const approvalId = resolvedId.id;
+      const snapshot = manager.getSnapshot(approvalId);
       const resolvedBy = client?.connect?.client?.displayName ?? client?.connect?.client?.id;
-      const ok = manager.resolve(p.id, decision, resolvedBy ?? null);
+      const ok = manager.resolve(approvalId, decision, resolvedBy ?? null);
       if (!ok) {
-        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown approval id"));
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, "unknown or expired approval id"),
+        );
         return;
       }
       context.broadcast(
         "exec.approval.resolved",
-        { id: p.id, decision, resolvedBy, ts: Date.now(), request: snapshot?.request },
+        { id: approvalId, decision, resolvedBy, ts: Date.now(), request: snapshot?.request },
         { dropIfSlow: true },
       );
       void opts?.forwarder
         ?.handleResolved({
-          id: p.id,
+          id: approvalId,
           decision,
           resolvedBy,
           ts: Date.now(),
@@ -244,75 +339,6 @@ export function createExecApprovalHandlers(
           context.logGateway?.error?.(`exec approvals: forward resolve failed: ${String(err)}`);
         });
       respond(true, { ok: true }, undefined);
-    },
-    "exec.approval.pause": async ({ params, respond }) => {
-      if (!validateExecApprovalPauseParams(params)) {
-        respond(
-          false,
-          undefined,
-          errorShape(
-            ErrorCodes.INVALID_REQUEST,
-            `invalid exec.approval.pause params: ${formatValidationErrors(
-              validateExecApprovalPauseParams.errors,
-            )}`,
-          ),
-        );
-        return;
-      }
-      const id = (params as { id: string }).id.trim();
-      const ok = manager.pause(id);
-      respond(true, { ok }, undefined);
-    },
-    "exec.approval.resume": async ({ params, respond }) => {
-      if (!validateExecApprovalResumeParams(params)) {
-        respond(
-          false,
-          undefined,
-          errorShape(
-            ErrorCodes.INVALID_REQUEST,
-            `invalid exec.approval.resume params: ${formatValidationErrors(
-              validateExecApprovalResumeParams.errors,
-            )}`,
-          ),
-        );
-        return;
-      }
-      const id = (params as { id: string }).id.trim();
-      const ok = manager.resume(id);
-      respond(true, { ok }, undefined);
-    },
-    "exec.approval.interrupt": async ({ params, respond, client, context }) => {
-      if (!validateExecApprovalInterruptParams(params)) {
-        respond(
-          false,
-          undefined,
-          errorShape(
-            ErrorCodes.INVALID_REQUEST,
-            `invalid exec.approval.interrupt params: ${formatValidationErrors(
-              validateExecApprovalInterruptParams.errors,
-            )}`,
-          ),
-        );
-        return;
-      }
-      const id = (params as { id: string }).id.trim();
-      const resolvedBy = client?.connect?.client?.displayName ?? client?.connect?.client?.id;
-      const ok = manager.interrupt(id, resolvedBy ?? null);
-      if (ok) {
-        const snapshot = manager.getSnapshot(id);
-        const resolution = {
-          id,
-          decision: "interrupted" as const,
-          resolvedBy,
-          ts: Date.now(),
-          request: snapshot?.request,
-        };
-        context.broadcast("exec.approval.resolved", resolution, { dropIfSlow: true });
-        void opts?.forwarder?.handleResolved(resolution).catch((err) => {
-          context.logGateway?.error?.(`exec approvals: forward interrupt failed: ${String(err)}`);
-        });
-      }
-      respond(true, { ok }, undefined);
     },
   };
 }

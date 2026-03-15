@@ -406,6 +406,7 @@ export async function agentCommand(
         catalog: modelCatalog,
         defaultProvider,
         defaultModel,
+        agentId: sessionAgentId,
       });
       allowedModelKeys = allowed.allowedKeys;
       allowedModelCatalog = allowed.allowedCatalog;
