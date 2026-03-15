@@ -117,6 +117,31 @@ export type CliBackendConfig = {
   };
 };
 
+/** Smart routing: route simple messages to a fast/small model. */
+export type AgentRoutingConfig = {
+  enabled?: boolean;
+  /** Provider/model for simple messages (e.g. "ollama/llama3.1:8b"). */
+  fastModel?: string;
+  /** Max message length to consider for simple routing (default from DEFAULT_MAX_SIMPLE_LENGTH). */
+  maxSimpleLength?: number;
+};
+
+/** Orchestrator: route complex tasks to a powerful API model, keep simple work local. */
+export type AgentOrchestratorConfig = {
+  enabled?: boolean;
+  /** Provider/model for complex tasks (e.g. "anthropic/claude-sonnet-4"). */
+  model?: string;
+  /** "auto" | "always" | "fallback-only". */
+  strategy?: "auto" | "always" | "fallback-only";
+  /** Max message length to treat as simple (stay on local). */
+  maxSimpleLength?: number;
+};
+
+/** Context resolution mode for agent runs (e.g. index-rank-compact vs raw bootstrap). */
+export type AgentContextConfig = {
+  mode?: "index-rank-compact" | "bootstrap";
+};
+
 export type AgentDefaultsConfig = {
   /** Primary model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   model?: AgentModelConfig;
@@ -165,10 +190,16 @@ export type AgentDefaultsConfig = {
   envelopeElapsed?: "on" | "off";
   /** Optional context window cap (used for runtime estimates + status %). */
   contextTokens?: number;
+  /** Context resolution for runs (e.g. index-rank-compact vs bootstrap). */
+  context?: AgentContextConfig;
   /** Optional CLI backends for text-only fallback (claude-cli, etc.). */
   cliBackends?: Record<string, CliBackendConfig>;
   /** Opt-in: prune old tool results from the LLM context to reduce token usage. */
   contextPruning?: AgentContextPruningConfig;
+  /** Smart routing: route simple messages to fast model. */
+  routing?: AgentRoutingConfig;
+  /** Orchestrator: route complex tasks to API model. */
+  orchestrator?: AgentOrchestratorConfig;
   /** Compaction tuning and pre-compaction memory flush behavior. */
   compaction?: AgentCompactionConfig;
   /** Embedded Pi runner hardening and compatibility controls. */

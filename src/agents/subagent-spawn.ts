@@ -56,6 +56,8 @@ export type SpawnSubagentParams = {
   cleanup?: "delete" | "keep";
   sandbox?: SpawnSubagentSandboxMode;
   expectsCompletionMessage?: boolean;
+  /** Restrict tools for the subagent: "none" | "inherit" | string[] (tool names). */
+  tools?: "none" | "inherit" | string[];
   attachments?: Array<{
     name: string;
     content: string;

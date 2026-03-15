@@ -2,7 +2,7 @@ import { getChannelDock } from "../channels/dock.js";
 import { DEFAULT_SUBAGENT_MAX_SPAWN_DEPTH } from "../config/agent-limits.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveChannelGroupToolsPolicy } from "../config/group-policy.js";
-import { normalizeAgentId } from "../routing/session-key.js";
+import { getSubagentDepth, normalizeAgentId } from "../routing/session-key.js";
 import { resolveThreadParentSessionKey } from "../sessions/session-key-utils.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
 import { resolveAgentConfig, resolveAgentIdFromSessionKey } from "./agent-scope.js";
@@ -81,6 +81,17 @@ function resolveSubagentDenyList(depth: number, maxSpawnDepth: number): string[]
   // Orchestrator sub-agent: only deny the always-denied tools.
   // sessions_spawn, subagents, sessions_list, sessions_history are allowed.
   return [...SUBAGENT_TOOL_DENY_ALWAYS];
+}
+
+/**
+ * Resolve subagent tool policy for a session key (derives depth from key and calls resolveSubagentToolPolicy).
+ */
+export function resolveSubagentToolPolicyForSession(
+  cfg: OpenClawConfig | undefined,
+  sessionKey: string,
+): SandboxToolPolicy {
+  const depth = getSubagentDepth(sessionKey);
+  return resolveSubagentToolPolicy(cfg, depth);
 }
 
 export function resolveSubagentToolPolicy(cfg?: OpenClawConfig, depth?: number): SandboxToolPolicy {

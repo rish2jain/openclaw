@@ -80,4 +80,6 @@ export type AgentCommandOpts = {
   streamParams?: AgentStreamParams;
   /** Restrict tools for this run: "none" | "inherit" | string[] (tool names). Used by sessions_spawn. */
   toolsFilter?: "none" | "inherit" | string[];
+  /** Whether the sender is the configured owner (affects owner-only tool policy). */
+  senderIsOwner?: boolean;
 };

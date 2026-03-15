@@ -62,7 +62,9 @@ export function resolveUserRole(params: {
 
   // 1. adminUsers shorthand (takes precedence over roles map)
   if (accessConfig.adminUsers && accessConfig.adminUsers.length > 0) {
-    const isAdmin = accessConfig.adminUsers.some((entry) => matchesIdentity(entry, identity));
+    const isAdmin = accessConfig.adminUsers.some((entry: string) =>
+      matchesIdentity(entry, identity),
+    );
     if (isAdmin) {
       return "admin";
     }

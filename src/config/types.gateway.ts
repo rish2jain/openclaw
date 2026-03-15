@@ -383,6 +383,16 @@ export type GatewayToolsConfig = {
   allow?: string[];
 };
 
+/** RBAC access config: admin users, roles map, default role. */
+export type GatewayAccessConfig = {
+  /** List of identities (channel:id or bare id) that get admin role. */
+  adminUsers?: string[];
+  /** Map of identity → role (admin | user | guest). */
+  roles?: Record<string, "admin" | "user" | "guest">;
+  /** Default role when no entry matches (default: user). */
+  defaultRole?: "admin" | "user" | "guest";
+};
+
 export type GatewayConfig = {
   /** Single multiplexed port for Gateway WS + HTTP (default: 18789). */
   port?: number;
@@ -404,6 +414,8 @@ export type GatewayConfig = {
   /** Custom IP address for bind="custom" mode. Fallback: 0.0.0.0. */
   customBindHost?: string;
   controlUi?: GatewayControlUiConfig;
+  /** RBAC: admin users, roles, default role. */
+  access?: GatewayAccessConfig;
   auth?: GatewayAuthConfig;
   tailscale?: GatewayTailscaleConfig;
   remote?: GatewayRemoteConfig;
