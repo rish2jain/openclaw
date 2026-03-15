@@ -18,11 +18,32 @@ export type CronMessageChannel = ChannelId | "last";
 
 export type CronDeliveryMode = "none" | "announce" | "webhook";
 
+/** Shared fields for failure destination / alert config. */
+export type CronFailureDestinationBase = {
+  channel?: CronMessageChannel;
+  to?: string;
+  accountId?: string;
+  mode?: "announce" | "webhook";
+};
+
+/** Failure destination override (where to send failure alerts). */
+export type CronFailureDestinationInput = CronFailureDestinationBase;
+
+/** Per-job failure notification config (after N errors, cooldown, channel, etc.). */
+export type CronFailureAlert = CronFailureDestinationBase & {
+  after?: number;
+  cooldownMs?: number;
+};
+
 export type CronDelivery = {
   mode: CronDeliveryMode;
   channel?: CronMessageChannel;
   to?: string;
   bestEffort?: boolean;
+  /** Explicit channel account id for delivery. */
+  accountId?: string;
+  /** Where to send failure notifications (overrides global config). */
+  failureDestination?: CronFailureDestinationInput;
 };
 
 export type CronDeliveryPatch = Partial<CronDelivery>;
@@ -63,6 +84,7 @@ export type CronPayload =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
+      lightContext?: boolean;
       allowUnsafeExternalContent?: boolean;
       deliver?: boolean;
       channel?: CronMessageChannel;
@@ -78,6 +100,7 @@ export type CronPayloadPatch =
       model?: string;
       thinking?: string;
       timeoutSeconds?: number;
+      lightContext?: boolean;
       allowUnsafeExternalContent?: boolean;
       deliver?: boolean;
       channel?: CronMessageChannel;
@@ -105,6 +128,10 @@ export type CronJobState = {
   lastDeliveryError?: string;
   /** Whether the last run's output was delivered to the target channel. */
   lastDelivered?: boolean;
+  /** Classifier for execution errors (e.g. rate_limit, timeout). */
+  lastErrorReason?: string;
+  /** Timestamp of last failure alert (for cooldown). */
+  lastFailureAlertAtMs?: number;
 };
 
 export type CronJob = {
@@ -128,6 +155,8 @@ export type CronJob = {
   wakeMode: CronWakeMode;
   payload: CronPayload;
   delivery?: CronDelivery;
+  /** Per-job failure alert config; false to disable. */
+  failureAlert?: CronFailureAlert | false;
   state: CronJobState;
 };
 

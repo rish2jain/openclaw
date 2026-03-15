@@ -151,8 +151,12 @@ export type AgentDefaultsConfig = {
   model?: AgentModelConfig;
   /** Optional image-capable model and fallbacks (provider/model). Accepts string or {primary,fallbacks}. */
   imageModel?: AgentModelConfig;
+  /** Optional model for PDF tool (provider/model). */
+  pdfModel?: AgentModelConfig;
   /** Model catalog with optional aliases (full provider/model keys). */
   models?: Record<string, AgentModelEntryConfig>;
+  /** Embedded Pi agent runtime options (experimental). */
+  embeddedPi?: Record<string, unknown>;
   /** Agent working directory (preferred). Used as the default cwd for agent runs. */
   workspace?: string;
   /** Optional repository root for system prompt runtime line (overrides auto-detect). */
@@ -161,6 +165,8 @@ export type AgentDefaultsConfig = {
   skipBootstrap?: boolean;
   /** Max chars for injected bootstrap files before truncation (default: 20000). */
   bootstrapMaxChars?: number;
+  /** When to emit a warning when bootstrap content is truncated: "off" | "once" | "always". */
+  bootstrapPromptTruncationWarning?: "off" | "once" | "always";
   /** Max total chars across all injected bootstrap files (default: 150000). */
   bootstrapTotalMaxChars?: number;
   /**
@@ -276,6 +282,10 @@ export type AgentDefaultsConfig = {
      * Default: false (only the final heartbeat payload is delivered).
      */
     includeReasoning?: boolean;
+    /** When true, use lightweight bootstrap context for heartbeat runs. */
+    lightContext?: boolean;
+    /** Policy for direct/DM delivery ("allow" | "block"). When "block", heartbeat is not delivered to DMs. */
+    directPolicy?: "allow" | "block";
   };
   /** Smart model routing — route simple queries to a fast model, complex to orchestrator. */
   routing?: AgentRoutingConfig;
@@ -308,6 +318,9 @@ export type AgentDefaultsConfig = {
 
 export type AgentCompactionMode = "default" | "safeguard";
 
+/** Identifier policy for compaction safeguard (strict, off, or custom instructions). */
+export type AgentCompactionIdentifierPolicy = "strict" | "off" | "custom";
+
 export type AgentCompactionConfig = {
   /** Compaction summarization mode. */
   mode?: AgentCompactionMode;
@@ -321,6 +334,19 @@ export type AgentCompactionConfig = {
   maxHistoryShare?: number;
   /** Pre-compaction memory flush (agentic turn). Default: enabled. */
   memoryFlush?: AgentCompactionMemoryFlushConfig;
+  /** Safeguard quality guard (retries, etc.). */
+  qualityGuard?: {
+    enabled?: boolean;
+    maxRetries?: number;
+  };
+  /** Identifier policy for safeguard compaction (strict | off | custom). */
+  identifierPolicy?: AgentCompactionIdentifierPolicy;
+  /** Custom identifier instructions when identifierPolicy is "custom". */
+  identifierInstructions?: string;
+  /** Number of recent turns to preserve during compaction. */
+  recentTurnsPreserve?: number;
+  /** Section keys or content to inject after compaction (post-compaction context). */
+  postCompactionSections?: Record<string, string> | string[];
 };
 
 export type AgentCompactionMemoryFlushConfig = {
@@ -332,4 +358,6 @@ export type AgentCompactionMemoryFlushConfig = {
   prompt?: string;
   /** System prompt appended for the memory flush turn. */
   systemPrompt?: string;
+  /** Force flush when transcript size exceeds this many bytes (optional). */
+  forceFlushTranscriptBytes?: number;
 };

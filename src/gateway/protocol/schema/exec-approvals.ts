@@ -107,6 +107,7 @@ export const ExecApprovalRequestParamsSchema = Type.Object(
     workflow: Type.Optional(Type.Union([Type.String(), Type.Null()])),
     timeoutMs: Type.Optional(Type.Integer({ minimum: 1 })),
     twoPhase: Type.Optional(Type.Boolean()),
+    envKeys: Type.Optional(Type.Array(Type.String())),
   },
   { additionalProperties: false },
 );

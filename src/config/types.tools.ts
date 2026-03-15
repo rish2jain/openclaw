@@ -100,7 +100,13 @@ export type MediaUnderstandingConfig = {
   attachments?: MediaUnderstandingAttachmentsConfig;
   /** Ordered model list (fallbacks in order). */
   models?: MediaUnderstandingModelConfig[];
+  /** When true, echo transcript back to chat before agent processing (e.g. audio). */
+  echoTranscript?: boolean;
+  /** Format for echoed transcript: "text" (quoted) or "markdown" (backticks). */
+  echoFormat?: EchoFormat;
 };
+
+export type EchoFormat = "text" | "markdown";
 
 export type LinkModelConfig = {
   /** Use a CLI command for link processing. */
@@ -186,6 +192,37 @@ export type GroupToolPolicyConfig = {
 
 export type GroupToolPolicyBySenderConfig = Record<string, GroupToolPolicyConfig>;
 
+/** Valid key types for toolsBySender keys (explicit prefixes). */
+export type ToolsBySenderKeyType = "id" | "e164" | "username" | "name";
+
+const TOOLS_BY_SENDER_PREFIXES: readonly ToolsBySenderKeyType[] = [
+  "id",
+  "e164",
+  "username",
+  "name",
+] as const;
+
+/**
+ * Parses a typed toolsBySender key (e.g. "id:abc", "e164:+123").
+ * Returns undefined if the key has no recognized prefix.
+ */
+export function parseToolsBySenderTypedKey(
+  raw: string,
+): { type: ToolsBySenderKeyType; value: string } | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  for (const type of TOOLS_BY_SENDER_PREFIXES) {
+    const prefix = `${type}:`;
+    if (trimmed.toLowerCase().startsWith(prefix)) {
+      const value = trimmed.slice(prefix.length).trim();
+      return value ? { type, value } : undefined;
+    }
+  }
+  return undefined;
+}
+
 export type ExecToolConfig = {
   /** Exec host routing (default: sandbox). */
   host?: "sandbox" | "gateway" | "node";
@@ -199,6 +236,8 @@ export type ExecToolConfig = {
   pathPrepend?: string[];
   /** Safe stdin-only binaries that can run without allowlist entries. */
   safeBins?: string[];
+  /** Trusted directories for exec (paths allowed when security allows). */
+  safeBinTrustedDirs?: string[];
   /** Default time (ms) before an exec command auto-backgrounds. */
   backgroundMs?: number;
   /** Default timeout (seconds) before auto-killing exec commands. */
@@ -287,7 +326,7 @@ export type MemorySearchConfig = {
     sessionMemory?: boolean;
   };
   /** Embedding provider mode. */
-  provider?: "openai" | "gemini" | "local" | "voyage";
+  provider?: "openai" | "gemini" | "local" | "voyage" | "mistral" | "ollama" | "auto";
   remote?: {
     baseUrl?: string;
     apiKey?: string;
@@ -306,7 +345,7 @@ export type MemorySearchConfig = {
     };
   };
   /** Fallback behavior when embeddings fail. */
-  fallback?: "openai" | "gemini" | "local" | "voyage" | "none";
+  fallback?: "openai" | "gemini" | "local" | "voyage" | "mistral" | "ollama" | "none";
   /** Embedding model id (remote) or alias (local). */
   model?: string;
   /** Local embedding settings (node-llama-cpp). */
@@ -571,6 +610,8 @@ export type ToolsConfig = {
     model?: string | { primary?: string; fallbacks?: string[] };
     tools?: {
       allow?: string[];
+      /** Additional allowlist entries merged into allow. */
+      alsoAllow?: string[];
       deny?: string[];
     };
   };

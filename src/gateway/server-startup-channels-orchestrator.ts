@@ -24,7 +24,11 @@ import {
 import { createFailoverRouter, type FailoverRouter } from "../channels/failover/failover-router.js";
 import { createHealthMonitor, type HealthMonitor } from "../channels/health/health-monitor.js";
 import { healthLevelSeverity } from "../channels/health/health-status.js";
-import { createChannelOrchestrator, type ChannelOrchestrator } from "../channels/orchestrator.js";
+import {
+  createChannelOrchestrator,
+  type ChannelOrchestrator,
+  type FailoverHistoryHolder,
+} from "../channels/orchestrator.js";
 import type { ChannelId } from "../channels/plugins/types.js";
 import { createMetricsExporter, type MetricsExporter } from "../infra/metrics-export.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
@@ -40,7 +44,6 @@ export type ChannelOrchestratorSubsystems = {
   messageAdapter: MessageAdapter;
   failoverRouter: FailoverRouter;
   channelOrchestrator: ChannelOrchestrator;
-  failoverHistory: Array<Record<string, unknown>>;
 };
 
 export type OrchestratorInitDeps = {
@@ -56,7 +59,19 @@ export function initChannelOrchestratorSubsystems(
   deps: OrchestratorInitDeps,
 ): ChannelOrchestratorSubsystems {
   const metricsExporter = createMetricsExporter();
-  const failoverHistory: Array<Record<string, unknown>> = [];
+
+  const FAILOVER_HISTORY_CAP = 200;
+  const failoverHistoryBuffer: Record<string, unknown>[] = [];
+  const failoverHistoryHolder: FailoverHistoryHolder = {
+    getFailoverHistory: (): ReadonlyArray<Record<string, unknown>> =>
+      [...failoverHistoryBuffer] as ReadonlyArray<Record<string, unknown>>,
+    addFailoverEvent(event: Record<string, unknown>): void {
+      failoverHistoryBuffer.push(event);
+      if (failoverHistoryBuffer.length > FAILOVER_HISTORY_CAP) {
+        failoverHistoryBuffer.splice(0, failoverHistoryBuffer.length - FAILOVER_HISTORY_CAP);
+      }
+    },
+  };
 
   // Delivery health monitor feeds metrics exporter on health changes.
   const deliveryHealthMonitor = createHealthMonitor({
@@ -64,12 +79,16 @@ export function initChannelOrchestratorSubsystems(
     onHealthChange: (event) => {
       metricsExporter.setGauge("channel_health_level", healthLevelSeverity(event.currentLevel), {
         channel: event.channel,
-        account: event.accountId,
+      });
+      log.debug("health level changed", {
+        channel: event.channel,
+        accountId: event.accountId,
+        from: event.previousLevel,
+        to: event.currentLevel,
       });
 
-      // Record failover events in history.
       if (event.currentLevel === "unhealthy" || event.currentLevel === "offline") {
-        failoverHistory.push({
+        failoverHistoryHolder.addFailoverEvent({
           type: "health_change",
           channel: event.channel,
           accountId: event.accountId,
@@ -77,17 +96,7 @@ export function initChannelOrchestratorSubsystems(
           to: event.currentLevel,
           timestamp: new Date().toISOString(),
         });
-        // Keep history bounded.
-        if (failoverHistory.length > 200) {
-          failoverHistory.splice(0, failoverHistory.length - 200);
-        }
       }
-
-      log.debug("health level changed", {
-        channel: event.channel,
-        from: event.previousLevel,
-        to: event.currentLevel,
-      });
     },
   });
 
@@ -108,6 +117,7 @@ export function initChannelOrchestratorSubsystems(
     contextBridge,
     identityLinker,
     threadRegistry,
+    failoverHistoryHolder,
   });
 
   log.info("channel orchestrator subsystems initialized");
@@ -121,6 +131,5 @@ export function initChannelOrchestratorSubsystems(
     messageAdapter,
     failoverRouter,
     channelOrchestrator,
-    failoverHistory,
   };
 }

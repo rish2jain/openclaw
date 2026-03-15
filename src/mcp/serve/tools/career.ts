@@ -26,16 +26,30 @@ function textResult(data: unknown): McpToolCallResult {
   };
 }
 
+/**
+ * Parses a JSON string into an array of strings. Returns undefined for missing/empty
+ * input; rejects non-arrays, non-string elements, and malformed JSON by throwing
+ * ArgError so callers can treat bad input as validation failure.
+ */
 function tryParseJsonArray(val: string | undefined): string[] | undefined {
-  if (!val) {
+  if (!val || val.trim() === "") {
     return undefined;
   }
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(val);
-    return Array.isArray(parsed) ? parsed : undefined;
+    parsed = JSON.parse(val);
   } catch {
-    return undefined;
+    throw new ArgError("Invalid JSON for array field");
   }
+  if (!Array.isArray(parsed)) {
+    throw new ArgError("Value must be a JSON array");
+  }
+  for (let i = 0; i < parsed.length; i++) {
+    if (typeof parsed[i] !== "string") {
+      throw new ArgError(`Array element at index ${i} must be a string`);
+    }
+  }
+  return parsed as string[];
 }
 
 // ── Tool handlers ──────────────────────────────────────────────────────────
@@ -111,9 +125,9 @@ function handleCareerProfileUpdate(): McpToolHandler {
 
         if (arrayFields.includes(field)) {
           const parsed = tryParseJsonArray(value);
-          if (!parsed) {
+          if (parsed === undefined) {
             return argErrorResult(
-              new ArgError(`'value' for '${field}' must be a JSON-encoded array`),
+              new ArgError(`'value' for '${field}' must be a JSON-encoded array of strings`),
             );
           }
           update[field] = parsed;
@@ -386,9 +400,18 @@ function handleNetworkIntroPath(): McpToolHandler {
         }
 
         const target = hasCompany ? targetCompany : targetPersonId!;
-        const maxHops = maxHopsStr
-          ? Math.min(Math.max(Number.parseInt(maxHopsStr, 10) || 3, 1), 6)
-          : 3;
+        let maxHops: number;
+        if (maxHopsStr === undefined || maxHopsStr.trim() === "") {
+          maxHops = 3;
+        } else {
+          const parsed = Number.parseInt(maxHopsStr, 10);
+          if (!Number.isInteger(parsed) || parsed < 1 || parsed > 6) {
+            return argErrorResult(
+              new ArgError("Invalid maxHops; must be an integer between 1 and 6"),
+            );
+          }
+          maxHops = parsed;
+        }
 
         const persons = Array.from(ctx.networkGraph.persons.values());
         const self = persons.find((p) => p.tags.includes("self"));
@@ -449,8 +472,17 @@ function handleOutreachDraft(): McpToolHandler {
         }
 
         const profile = ctx.profileStore.getFullProfile();
+        const senderId = profile.profile?.id;
+        if (senderId === undefined) {
+          return textResult({
+            error:
+              "Sender profile is incomplete (no profile id). Add or complete your career profile before drafting outreach.",
+          });
+        }
         const edges = ctx.networkGraph.edges.filter(
-          (e) => e.fromId === personId || e.toId === personId,
+          (e) =>
+            (e.fromId === personId && e.toId === senderId) ||
+            (e.toId === personId && e.fromId === senderId),
         );
 
         const context: Record<string, unknown> = {

@@ -54,6 +54,9 @@ function writeJsonFile(filename: string, data: unknown): void {
 
 let _instance: CareerContext | undefined;
 
+/** Serializes save() calls so concurrent invocations do not interleave writes. */
+let _saveLock: Promise<void> = Promise.resolve();
+
 /**
  * Get the shared CareerContext singleton. Lazy-loads from disk on first call.
  */
@@ -70,7 +73,7 @@ export async function getCareerContext(): Promise<CareerContext> {
   const outreachPipeline = createOutreachPipeline();
   const modeManager = createModeManager();
 
-  // Load persisted data in parallel.
+  // Load persisted data synchronously.
   const profileData = readJsonFile("profile.json");
   const jobData = readJsonFile<{ listings: unknown[]; searches: unknown[] }>("jobs.json");
   const networkData = readJsonFile<{
@@ -121,6 +124,12 @@ export async function getCareerContext(): Promise<CareerContext> {
   }
 
   async function save(): Promise<void> {
+    const previous = _saveLock;
+    let release!: () => void;
+    _saveLock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
     try {
       writeJsonFile("profile.json", profileStore.toJSON());
       writeJsonFile("jobs.json", jobStore.toJSON());
@@ -132,6 +141,8 @@ export async function getCareerContext(): Promise<CareerContext> {
     } catch (err) {
       log.error(`failed to save career data: ${String(err)}`);
       throw err;
+    } finally {
+      release();
     }
   }
 

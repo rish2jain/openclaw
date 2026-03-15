@@ -287,6 +287,11 @@ export async function detectAndLoadPromptImages(params: {
   workspaceDir: string;
   model: { input?: string[] };
   existingImages?: ImageContent[];
+  /**
+   * Session history messages to scan for image refs (map index -> loaded images).
+   * TODO: Implement scanning of history messages for image refs and populate historyImagesByIndex.
+   */
+  historyMessages?: unknown[];
   maxBytes?: number;
   maxDimensionPx?: number;
   workspaceOnly?: boolean;
@@ -294,14 +299,19 @@ export async function detectAndLoadPromptImages(params: {
 }): Promise<{
   /** Images for the current prompt (existingImages + detected in current prompt) */
   images: ImageContent[];
+  /** Map history message index -> ImageContent[] for session injection. TODO: currently always empty; will be populated when historyMessages is scanned. */
+  historyImagesByIndex: Map<number, ImageContent[]>;
   detectedRefs: DetectedImageRef[];
   loadedCount: number;
   skippedCount: number;
 }> {
+  // TODO: populate when history message scanning is implemented (history message index -> ImageContent[] for session injection)
+  const emptyHistoryMap = new Map<number, ImageContent[]>();
   // If model doesn't support images, return empty results
   if (!modelSupportsImages(params.model)) {
     return {
       images: [],
+      historyImagesByIndex: emptyHistoryMap,
       detectedRefs: [],
       loadedCount: 0,
       skippedCount: 0,
@@ -314,6 +324,7 @@ export async function detectAndLoadPromptImages(params: {
   if (allRefs.length === 0) {
     return {
       images: params.existingImages ?? [],
+      historyImagesByIndex: emptyHistoryMap,
       detectedRefs: [],
       loadedCount: 0,
       skippedCount: 0,
@@ -353,6 +364,7 @@ export async function detectAndLoadPromptImages(params: {
 
   return {
     images: sanitizedPromptImages,
+    historyImagesByIndex: emptyHistoryMap,
     detectedRefs: allRefs,
     loadedCount,
     skippedCount,

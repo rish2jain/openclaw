@@ -132,6 +132,8 @@ export type MsgContext = {
   Provider?: string;
   /** Provider surface label (e.g. discord, slack). Prefer this over `Provider` when available. */
   Surface?: string;
+  /** Resolved message channel for routing (e.g. telegram, discord, or internal). */
+  MessageChannel?: string;
   /** Platform bot username when command mentions should be normalized. */
   BotUsername?: string;
   WasMentioned?: boolean;

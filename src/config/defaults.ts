@@ -178,6 +178,9 @@ export function applyTalkApiKey(config: OpenClawConfig): OpenClawConfig {
 
   const talk = normalized.talk;
   const active = resolveActiveTalkProviderConfig(talk);
+  if (!active) {
+    return normalized;
+  }
   if (active.provider && active.provider !== DEFAULT_TALK_PROVIDER) {
     return normalized;
   }

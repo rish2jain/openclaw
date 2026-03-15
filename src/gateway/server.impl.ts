@@ -883,7 +883,7 @@ export async function startGatewayServer(
     failoverRouter: orchestratorSubs.failoverRouter,
     deliveryHealthMonitor: orchestratorSubs.deliveryHealthMonitor,
     channelOrchestrator: orchestratorSubs.channelOrchestrator,
-    failoverHistory: orchestratorSubs.failoverHistory,
+    getFailoverHistory: orchestratorSubs.channelOrchestrator.getFailoverHistory,
   };
 
   // Store the gateway context as a fallback for plugin subagent dispatch
@@ -1086,7 +1086,7 @@ export async function startGatewayServer(
       authRateLimiter?.dispose();
       browserAuthRateLimiter.dispose();
       channelHealthMonitor?.stop();
-      orchestratorSubs.deliveryHealthMonitor.stop();
+      orchestratorSubs.deliveryHealthMonitor?.stop();
       clearSecretsRuntimeSnapshot();
       await close(opts);
     },

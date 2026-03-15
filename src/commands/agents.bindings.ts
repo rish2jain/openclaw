@@ -125,6 +125,7 @@ export function applyAgentBindings(
       const previousKey = bindingMatchKey(current.match);
       const upgradedBinding: AgentRouteBinding = {
         ...current,
+        type: "route",
         agentId,
         match: {
           ...current.match,

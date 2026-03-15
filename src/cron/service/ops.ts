@@ -1,3 +1,6 @@
+import crypto from "node:crypto";
+import { enqueueCommandInLane } from "../../process/command-queue.js";
+import { CommandLane } from "../../process/lanes.js";
 import type { CronJob, CronJobCreate, CronJobPatch } from "../types.js";
 import {
   applyJobPatch,
@@ -73,6 +76,68 @@ function mergeManualRunSnapshotAfterReload(params: {
   reloaded.enabled = params.snapshot.enabled;
   reloaded.updatedAtMs = params.snapshot.updatedAtMs;
   reloaded.state = params.snapshot.state;
+}
+
+/** Shared post-run cleanup: apply result, emit finished, handle deletion, reload, merge snapshot, recompute, persist, arm timer. */
+async function finalizeJobRun(
+  state: CronServiceState,
+  jobId: string,
+  coreResult: Awaited<ReturnType<typeof executeJobCoreWithTimeout>>,
+  startedAt: number,
+  endedAt: number,
+): Promise<void> {
+  await ensureLoaded(state, { skipRecompute: true });
+  const job = state.store?.jobs.find((entry) => entry.id === jobId);
+  if (!job) {
+    return;
+  }
+  const shouldDelete = applyJobResult(state, job, {
+    status: coreResult.status,
+    error: coreResult.error,
+    delivered: coreResult.delivered,
+    startedAt,
+    endedAt,
+  });
+  emit(state, {
+    jobId: job.id,
+    action: "finished",
+    status: coreResult.status,
+    error: coreResult.error,
+    summary: coreResult.summary,
+    delivered: coreResult.delivered,
+    deliveryStatus: job.state.lastDeliveryStatus,
+    deliveryError: job.state.lastDeliveryError,
+    sessionId: coreResult.sessionId,
+    sessionKey: coreResult.sessionKey,
+    runAtMs: startedAt,
+    durationMs: job.state.lastDurationMs,
+    nextRunAtMs: job.state.nextRunAtMs,
+    model: coreResult.model,
+    provider: coreResult.provider,
+    usage: coreResult.usage,
+  });
+  if (shouldDelete && state.store) {
+    state.store.jobs = state.store.jobs.filter((entry) => entry.id !== job.id);
+    emit(state, { jobId: job.id, action: "removed" });
+  }
+  const postRunSnapshot = shouldDelete
+    ? null
+    : {
+        enabled: job.enabled,
+        updatedAtMs: job.updatedAtMs,
+        state: structuredClone(job.state),
+      };
+  await ensureLoaded(state, { forceReload: true, skipRecompute: true });
+  mergeManualRunSnapshotAfterReload({
+    state,
+    jobId,
+    snapshot: postRunSnapshot,
+    removed: shouldDelete,
+  });
+  markChainedJobsDue(state, jobId, endedAt);
+  recomputeNextRunsForMaintenance(state);
+  await persist(state);
+  armTimer(state);
 }
 
 async function ensureLoadedForRead(state: CronServiceState) {
@@ -390,71 +455,72 @@ export async function run(state: CronServiceState, id: string, mode?: "due" | "f
   const endedAt = state.deps.nowMs();
 
   await locked(state, async () => {
-    await ensureLoaded(state, { skipRecompute: true });
-    const job = state.store?.jobs.find((entry) => entry.id === jobId);
-    if (!job) {
-      return;
-    }
-
-    const shouldDelete = applyJobResult(state, job, {
-      status: coreResult.status,
-      error: coreResult.error,
-      delivered: coreResult.delivered,
-      startedAt,
-      endedAt,
-    });
-
-    emit(state, {
-      jobId: job.id,
-      action: "finished",
-      status: coreResult.status,
-      error: coreResult.error,
-      summary: coreResult.summary,
-      delivered: coreResult.delivered,
-      deliveryStatus: job.state.lastDeliveryStatus,
-      deliveryError: job.state.lastDeliveryError,
-      sessionId: coreResult.sessionId,
-      sessionKey: coreResult.sessionKey,
-      runAtMs: startedAt,
-      durationMs: job.state.lastDurationMs,
-      nextRunAtMs: job.state.nextRunAtMs,
-      model: coreResult.model,
-      provider: coreResult.provider,
-      usage: coreResult.usage,
-    });
-
-    if (shouldDelete && state.store) {
-      state.store.jobs = state.store.jobs.filter((entry) => entry.id !== job.id);
-      emit(state, { jobId: job.id, action: "removed" });
-    }
-
-    // Manual runs should not advance other due jobs without executing them.
-    // Use maintenance-only recompute to repair missing values while
-    // preserving existing past-due nextRunAtMs entries for future timer ticks.
-    const postRunSnapshot = shouldDelete
-      ? null
-      : {
-          enabled: job.enabled,
-          updatedAtMs: job.updatedAtMs,
-          state: structuredClone(job.state),
-        };
-    const postRunRemoved = shouldDelete;
-    // Isolated Telegram send can persist target writeback directly to disk.
-    // Reload before final persist so manual `cron run` keeps those changes.
-    await ensureLoaded(state, { forceReload: true, skipRecompute: true });
-    mergeManualRunSnapshotAfterReload({
-      state,
-      jobId,
-      snapshot: postRunSnapshot,
-      removed: postRunRemoved,
-    });
-    markChainedJobsDue(state, jobId, endedAt);
-    recomputeNextRunsForMaintenance(state);
-    await persist(state);
-    armTimer(state);
+    await finalizeJobRun(state, jobId, coreResult, startedAt, endedAt);
   });
 
   return { ok: true, ran: true } as const;
+}
+
+export async function enqueueRun(
+  state: CronServiceState,
+  id: string,
+  mode?: "due" | "force",
+): Promise<
+  | { ok: true; enqueued: true; runId: string }
+  | { ok: true; ran: false; reason: "not-due" | "already-running" }
+  | { ok: false }
+> {
+  const prepared = await locked(state, async () => {
+    warnIfDisabled(state, "run");
+    await ensureLoaded(state, { skipRecompute: true });
+    const job = findJobOrThrow(state, id);
+    if (typeof job.state.runningAtMs === "number") {
+      return { ok: true, ran: false, reason: "already-running" as const };
+    }
+    const now = state.deps.nowMs();
+    const due = isJobDue(job, now, { forced: mode === "force" });
+    if (!due) {
+      return { ok: true, ran: false, reason: "not-due" as const };
+    }
+    job.state.runningAtMs = now;
+    job.state.lastError = undefined;
+    await persist(state);
+    emit(state, { jobId: job.id, action: "started", runAtMs: now });
+    const executionJob = JSON.parse(JSON.stringify(job)) as CronJob;
+    const runId = crypto.randomUUID();
+    return {
+      ok: true,
+      enqueued: true,
+      runId,
+      jobId: job.id,
+      startedAt: now,
+      executionJob,
+    } as const;
+  });
+
+  if (!prepared.enqueued) {
+    return { ok: true as const, ran: false as const, reason: prepared.reason };
+  }
+
+  const { runId, jobId, startedAt, executionJob } = prepared;
+  void enqueueCommandInLane(CommandLane.Cron, async () => {
+    let coreResult: Awaited<ReturnType<typeof executeJobCoreWithTimeout>>;
+    try {
+      coreResult = await executeJobCoreWithTimeout(state, executionJob);
+    } catch (err) {
+      state.deps.log.error(
+        { jobId, runId, err: String(err) },
+        "cron: queued manual run background execution failed",
+      );
+      coreResult = { status: "error", error: String(err) };
+    }
+    const endedAt = state.deps.nowMs();
+    await locked(state, async () => {
+      await finalizeJobRun(state, jobId, coreResult, startedAt, endedAt);
+    });
+  });
+
+  return { ok: true, enqueued: true, runId };
 }
 
 export function wakeNow(

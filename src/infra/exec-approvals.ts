@@ -11,6 +11,30 @@ export type ExecHost = "sandbox" | "gateway" | "node";
 export type ExecSecurity = "deny" | "allowlist" | "full";
 export type ExecAsk = "off" | "on-miss" | "always";
 
+export function normalizeExecHost(value?: string | null): ExecHost | undefined {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "sandbox" || normalized === "gateway" || normalized === "node") {
+    return normalized;
+  }
+  return undefined;
+}
+
+export function normalizeExecSecurity(value?: string | null): ExecSecurity | undefined {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "deny" || normalized === "allowlist" || normalized === "full") {
+    return normalized;
+  }
+  return undefined;
+}
+
+export function normalizeExecAsk(value?: string | null): ExecAsk | undefined {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "off" || normalized === "on-miss" || normalized === "always") {
+    return normalized;
+  }
+  return undefined;
+}
+
 export type ExecApprovalRiskLevel = "low" | "medium" | "high";
 
 export type ExecApprovalRequest = {
@@ -27,9 +51,53 @@ export type ExecApprovalRequest = {
     sessionKey?: string | null;
     riskLevel?: ExecApprovalRiskLevel | null;
     workflow?: string | null;
+    /** Env var names that are overridden for this request (for display). */
+    envKeys?: string[];
+    /** Turn source channel for reply routing (e.g. telegram). */
+    turnSourceChannel?: string | null;
+    /** Turn source delivery target (e.g. chat id). */
+    turnSourceTo?: string | null;
+    /** Turn source account id for multi-account channels. */
+    turnSourceAccountId?: string | null;
+    /** Turn source thread/topic id. */
+    turnSourceThreadId?: string | number | null;
   };
   createdAtMs: number;
   expiresAtMs: number;
+};
+
+/** System-run approval file operand (mutable file snapshot for approval binding). */
+export type SystemRunApprovalFileOperand = {
+  argvIndex: number;
+  path: string;
+  sha256: string;
+};
+
+/** System-run approval plan (argv, cwd, command text, optional mutable file). */
+export type SystemRunApprovalPlan = {
+  argv: string[];
+  cwd?: string | null | undefined;
+  commandText: string;
+  commandPreview?: string | null | undefined;
+  agentId?: string | null | undefined;
+  sessionKey?: string | null | undefined;
+  mutableFileOperand?: SystemRunApprovalFileOperand | null;
+};
+
+/** System-run approval binding (env hash + argv/cwd/agentId/sessionKey for matching). */
+export type SystemRunApprovalBinding = {
+  argv: string[];
+  cwd?: string | null | undefined;
+  agentId?: string | null | undefined;
+  sessionKey?: string | null | undefined;
+  envHash?: string | null;
+};
+
+/** Flattened request payload for exec approval display/gateway (request shape + optional display fields). */
+export type ExecApprovalRequestPayload = ExecApprovalRequest["request"] & {
+  commandPreview?: string | null;
+  systemRunPlan?: SystemRunApprovalPlan | null;
+  systemRunBinding?: SystemRunApprovalBinding | null;
 };
 
 export type ExecApprovalResolved = {

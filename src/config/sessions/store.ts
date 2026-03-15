@@ -17,7 +17,7 @@ import {
   normalizeSessionDeliveryFields,
   type DeliveryContext,
 } from "../../utils/delivery-context.js";
-import { getFileMtimeMs, isCacheEnabled, resolveCacheTtlMs } from "../cache-utils.js";
+import { getFileStatSnapshot, isCacheEnabled, resolveCacheTtlMs } from "../cache-utils.js";
 import { loadConfig } from "../config.js";
 import type { SessionMaintenanceConfig, SessionMaintenanceMode } from "../types.base.js";
 import { enforceSessionDiskBudget, type SessionDiskBudgetSweepResult } from "./disk-budget.js";
@@ -156,6 +156,9 @@ function resolveStoreSessionEntry(params: {
   };
 }
 
+/** Resolve session key to normalized key and entry; exported for callers that load the store elsewhere. */
+export { resolveStoreSessionEntry as resolveSessionStoreEntry };
+
 function normalizeSessionStore(store: Record<string, SessionEntry>): void {
   for (const [key, entry] of Object.entries(store)) {
     if (!entry) {
@@ -203,7 +206,7 @@ export function loadSessionStore(
   if (!opts.skipCache && isSessionStoreCacheEnabled()) {
     const cached = SESSION_STORE_CACHE.get(storePath);
     if (cached && isSessionStoreCacheValid(cached)) {
-      const currentMtimeMs = getFileMtimeMs(storePath);
+      const currentMtimeMs = getFileStatSnapshot(storePath)?.mtimeMs;
       if (currentMtimeMs === cached.mtimeMs) {
         // Return a deep copy to prevent external mutations affecting cache
         return structuredClone(cached.store);
@@ -219,7 +222,7 @@ export function loadSessionStore(
   // A short synchronous backoff (50 ms via `Atomics.wait`) is enough for the
   // writer to finish.
   let store: Record<string, SessionEntry> = {};
-  let mtimeMs = getFileMtimeMs(storePath);
+  let mtimeMs = getFileStatSnapshot(storePath)?.mtimeMs;
   const maxReadAttempts = process.platform === "win32" ? 3 : 1;
   const retryBuf = maxReadAttempts > 1 ? new Int32Array(new SharedArrayBuffer(4)) : undefined;
   for (let attempt = 0; attempt < maxReadAttempts; attempt++) {
@@ -234,7 +237,7 @@ export function loadSessionStore(
       if (isSessionStoreRecord(parsed)) {
         store = parsed;
       }
-      mtimeMs = getFileMtimeMs(storePath) ?? mtimeMs;
+      mtimeMs = getFileStatSnapshot(storePath)?.mtimeMs ?? mtimeMs;
       break;
     } catch {
       // File missing, locked, or transiently corrupt — retry on Windows.

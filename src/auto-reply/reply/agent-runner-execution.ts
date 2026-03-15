@@ -464,7 +464,7 @@ export async function runAgentTurnWithFallback(params: {
         await updateSessionStoreEntry({
           storePath: params.storePath,
           sessionKey: params.sessionKey,
-          update: () => ({ bootstrapInjected: true }),
+          update: async () => ({ bootstrapInjected: true }),
         });
         const entry = params.getActiveSessionEntry();
         if (entry && params.activeSessionStore) {

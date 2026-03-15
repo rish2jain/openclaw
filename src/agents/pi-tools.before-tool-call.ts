@@ -15,8 +15,9 @@ export type HookContext = {
   loopDetection?: ToolLoopDetectionConfig;
 };
 
-type HookOutcome =
-  | { blocked: true; reason: string }
+/** Outcome of before_tool_call hook; syntheticResult is only set when blocked is false. */
+export type HookOutcome =
+  | { blocked: true; reason: string; syntheticResult?: undefined }
   | { blocked: false; params: unknown; syntheticResult?: unknown };
 
 const log = createSubsystemLogger("agents/tools");

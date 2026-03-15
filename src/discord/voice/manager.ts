@@ -21,7 +21,8 @@ import type { MsgContext } from "../../auto-reply/templating.js";
 import { agentCommandFromIngress } from "../../commands/agent.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { isDangerousNameMatchingEnabled } from "../../config/dangerous-name-matching.js";
-import type { DiscordAccountConfig, TtsConfig } from "../../config/types.js";
+import type { DiscordAccountConfig } from "../../config/types.discord.js";
+import type { TtsConfig } from "../../config/types.tts.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { resolvePreferredOpenClawTmpDir } from "../../infra/tmp-openclaw-dir.js";
@@ -647,15 +648,17 @@ export class DiscordVoiceManager {
         sessionKey: entry.route.sessionKey,
         agentId: entry.route.agentId,
         messageChannel: "discord",
-        senderIsOwner: speaker.senderIsOwner,
         deliver: false,
       },
       this.params.runtime,
     );
 
     const replyText = (result.payloads ?? [])
-      .map((payload) => payload.text)
-      .filter((text) => typeof text === "string" && text.trim())
+      .map((payload: { text?: string }) => payload.text)
+      .filter(
+        (text: string | undefined): text is string =>
+          typeof text === "string" && text.trim().length > 0,
+      )
       .join("\n")
       .trim();
 

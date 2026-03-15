@@ -11,6 +11,9 @@ import { chunkDiscordTextWithMode } from "../chunk.js";
 import { sendMessageDiscord, sendVoiceMessageDiscord, sendWebhookMessageDiscord } from "../send.js";
 import type { ThreadBindingManager, ThreadBindingRecord } from "./thread-bindings.js";
 
+/** Alias for thread bindings lookup passed into preflight/delivery. */
+export type DiscordThreadBindingLookup = ThreadBindingManager;
+
 function resolveTargetChannelId(target: string): string | undefined {
   if (!target.startsWith("channel:")) {
     return undefined;

@@ -90,7 +90,7 @@ function createAudioCtxWithProvider(mediaPath: string, extra?: Partial<MsgContex
 
 function createAudioConfigWithEcho(opts?: {
   echoTranscript?: boolean;
-  echoFormat?: string;
+  echoFormat?: "text" | "markdown";
   transcribedText?: string;
 }): {
   cfg: OpenClawConfig;
@@ -206,19 +206,19 @@ describe("applyMediaUnderstanding – echo transcript", () => {
     expect(callArgs.payloads[0].text).toBe('📝 "hello world"');
   });
 
-  it("uses custom echoFormat when provided", async () => {
+  it("uses markdown echoFormat when provided", async () => {
     const mediaPath = await createTempAudioFile();
     const ctx = createAudioCtxWithProvider(mediaPath);
     const { cfg, providers } = createAudioConfigWithEcho({
       echoTranscript: true,
-      echoFormat: "🎙️ Heard: {transcript}",
+      echoFormat: "markdown",
       transcribedText: "custom message",
     });
 
     await applyMediaUnderstanding({ ctx, cfg, providers });
 
     const callArgs = expectSingleEchoDeliveryCall();
-    expect(callArgs.payloads[0].text).toBe("🎙️ Heard: custom message");
+    expect(callArgs.payloads[0].text).toBe("📝 `custom message`");
   });
 
   it("does NOT echo when there are no audio attachments", async () => {

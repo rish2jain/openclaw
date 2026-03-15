@@ -39,6 +39,8 @@ export function createSessionsSpawnTool(opts?: {
   sandboxed?: boolean;
   /** Explicit agent ID override for cron/hook sessions where session key parsing may not work. */
   requesterAgentIdOverride?: string;
+  /** Workspace directory to pass to spawned subagents (e.g. for inheritance). */
+  workspaceDir?: string;
 }): AnyAgentTool {
   return {
     label: "Sessions",

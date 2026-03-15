@@ -96,7 +96,8 @@ export type GatewayRequestContext = {
   failoverRouter?: FailoverRouter;
   deliveryHealthMonitor?: HealthMonitor;
   channelOrchestrator?: ChannelOrchestrator;
-  failoverHistory?: Array<Record<string, unknown>>;
+  /** Read-only failover event history; use getFailoverHistory() from channelOrchestrator when available. */
+  getFailoverHistory?: () => ReadonlyArray<Record<string, unknown>>;
 };
 
 export type GatewayRequestOptions = {

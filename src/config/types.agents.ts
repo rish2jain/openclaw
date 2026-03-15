@@ -37,6 +37,16 @@ export type AgentConfig = {
   /** Optional per-agent stream params (e.g. cacheRetention, temperature). */
   params?: Record<string, unknown>;
   tools?: AgentToolsConfig;
+  /** Runtime type and options (e.g. ACP for persistent bindings). */
+  runtime?: {
+    type?: "acp";
+    acp?: {
+      agent?: string;
+      mode?: string;
+      cwd?: string;
+      backend?: string;
+    };
+  };
 };
 
 /** LLM engine to use for agent runs. */
@@ -49,16 +59,35 @@ export type AgentsConfig = {
   engine?: LlmEngineType;
 };
 
-export type AgentBinding = {
+type AgentBindingMatch = {
+  channel: string;
+  accountId?: string;
+  peer?: { kind: ChatType; id: string };
+  guildId?: string;
+  teamId?: string;
+  /** Discord role IDs used for role-based routing. */
+  roles?: string[];
+};
+
+export type AgentRouteBinding = {
+  type: "route";
   agentId: string;
   comment?: string;
-  match: {
-    channel: string;
-    accountId?: string;
-    peer?: { kind: ChatType; id: string };
-    guildId?: string;
-    teamId?: string;
-    /** Discord role IDs used for role-based routing. */
-    roles?: string[];
+  match: AgentBindingMatch;
+};
+
+export type AgentAcpBinding = {
+  type: "acp";
+  agentId: string;
+  comment?: string;
+  match: AgentBindingMatch;
+  /** Per-binding ACP overrides (mode, cwd, backend, label). */
+  acp?: {
+    mode?: string;
+    cwd?: string;
+    backend?: string;
+    label?: string;
   };
 };
+
+export type AgentBinding = AgentRouteBinding | AgentAcpBinding;

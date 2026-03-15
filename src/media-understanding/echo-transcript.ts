@@ -1,5 +1,6 @@
 import type { MsgContext } from "../auto-reply/templating.js";
 import type { OpenClawConfig } from "../config/config.js";
+import type { EchoFormat } from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { isDeliverableMessageChannel } from "../utils/message-channel.js";
 
@@ -11,10 +12,15 @@ function loadDeliverRuntime() {
   return deliverRuntimePromise;
 }
 
-export const DEFAULT_ECHO_TRANSCRIPT_FORMAT = '📝 "{transcript}"';
+const ECHO_PLACEHOLDER = "{{ECHO_TRANSCRIPT}}";
 
-function formatEchoTranscript(transcript: string, format: string): string {
-  return format.replace("{transcript}", transcript);
+const ECHO_TEMPLATES: Record<EchoFormat, string> = {
+  text: `📝 "${ECHO_PLACEHOLDER}"`,
+  markdown: `📝 \`${ECHO_PLACEHOLDER}\``,
+};
+
+function formatEchoTranscript(transcript: string, template: string): string {
+  return template.replaceAll(ECHO_PLACEHOLDER, transcript);
 }
 
 /**
@@ -25,7 +31,7 @@ export async function sendTranscriptEcho(params: {
   ctx: MsgContext;
   cfg: OpenClawConfig;
   transcript: string;
-  format?: string;
+  format?: EchoFormat;
 }): Promise<void> {
   const { ctx, cfg, transcript } = params;
   const channel = ctx.Provider ?? ctx.Surface ?? "";
@@ -48,7 +54,8 @@ export async function sendTranscriptEcho(params: {
     return;
   }
 
-  const text = formatEchoTranscript(transcript, params.format ?? DEFAULT_ECHO_TRANSCRIPT_FORMAT);
+  const resolvedFormat: EchoFormat = params.format ?? "text";
+  const text = formatEchoTranscript(transcript, ECHO_TEMPLATES[resolvedFormat]);
 
   try {
     const { deliverOutboundPayloads } = await loadDeliverRuntime();

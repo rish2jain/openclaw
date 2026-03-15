@@ -227,6 +227,36 @@ export function archiveSessionTranscripts(opts: {
   return archived;
 }
 
+/**
+ * Archive transcript files for multiple removed sessions; returns set of archive directory paths.
+ * Used by cron session reaper and store maintenance.
+ */
+export function archiveRemovedSessionTranscripts(opts: {
+  removedSessionFiles: Map<string, string | undefined>;
+  referencedSessionIds: Set<string>;
+  storePath: string;
+  reason: "reset" | "deleted";
+  restrictToStoreDir?: boolean;
+}): Set<string> {
+  const archivedDirs = new Set<string>();
+  for (const [sessionId, sessionFile] of opts.removedSessionFiles) {
+    if (opts.referencedSessionIds.has(sessionId)) {
+      continue;
+    }
+    const archived = archiveSessionTranscripts({
+      sessionId,
+      storePath: opts.storePath,
+      sessionFile,
+      reason: opts.reason,
+      restrictToStoreDir: opts.restrictToStoreDir ?? false,
+    });
+    for (const archivedPath of archived) {
+      archivedDirs.add(path.dirname(archivedPath));
+    }
+  }
+  return archivedDirs;
+}
+
 export async function cleanupArchivedSessionTranscripts(opts: {
   directories: string[];
   olderThanMs: number;

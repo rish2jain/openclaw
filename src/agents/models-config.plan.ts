@@ -34,7 +34,6 @@ async function resolveProvidersForModelsJson(params: {
   const explicitProviders = cfg.models?.providers ?? {};
   const implicitProviders = await resolveImplicitProviders({
     agentDir,
-    config: cfg,
     env,
     explicitProviders,
   });
@@ -104,9 +103,6 @@ export async function planOpenClawModelsJson(params: {
     normalizeProviders({
       providers,
       agentDir,
-      env,
-      secretDefaults: cfg.secrets?.defaults,
-      secretRefManagedProviders,
     }) ?? providers;
   const mergedProviders = await resolveProvidersForMode({
     mode,

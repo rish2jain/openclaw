@@ -10,7 +10,7 @@ import {
 } from "../media/input-files.js";
 import { resolveAttachmentKind } from "./attachments.js";
 import { runWithConcurrency } from "./concurrency.js";
-import { DEFAULT_ECHO_TRANSCRIPT_FORMAT, sendTranscriptEcho } from "./echo-transcript.js";
+import { sendTranscriptEcho } from "./echo-transcript.js";
 import {
   extractMediaUserText,
   formatAudioTranscripts,
@@ -536,7 +536,7 @@ export async function applyMediaUnderstanding(params: {
             ctx,
             cfg,
             transcript,
-            format: audioCfg.echoFormat ?? DEFAULT_ECHO_TRANSCRIPT_FORMAT,
+            format: audioCfg.echoFormat ?? "text",
           });
         }
       } else if (originalUserText) {

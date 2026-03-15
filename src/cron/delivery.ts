@@ -108,13 +108,6 @@ export type CronFailureDeliveryPlan = {
   accountId?: string;
 };
 
-export type CronFailureDestinationInput = {
-  channel?: CronMessageChannel;
-  to?: string;
-  accountId?: string;
-  mode?: "announce" | "webhook";
-};
-
 function normalizeFailureMode(value: unknown): "announce" | "webhook" | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -131,7 +124,7 @@ export function resolveFailureDestination(
   globalConfig?: CronFailureDestinationConfig,
 ): CronFailureDeliveryPlan | null {
   const delivery = job.delivery;
-  const jobFailureDest = delivery?.failureDestination as CronFailureDestinationInput | undefined;
+  const jobFailureDest = delivery?.failureDestination;
   const hasJobFailureDest = jobFailureDest && typeof jobFailureDest === "object";
 
   let channel: CronMessageChannel | undefined;

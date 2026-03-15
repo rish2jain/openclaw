@@ -19,7 +19,7 @@ const MIN_EDITS_THRESHOLD = 3;
 const SMOOTHING = 0.3;
 
 /** Max length samples to keep; sliding window to avoid unbounded memory growth. */
-const MAX_LENGTH_SAMPLES = 200;
+export const MAX_LENGTH_SAMPLES = 200;
 
 // ── Vocabulary lists for formality detection ────────────────────────────────
 

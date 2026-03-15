@@ -36,6 +36,11 @@ export const AgentDefaultsSchema = z
     skipBootstrap: z.boolean().optional(),
     bootstrapMaxChars: z.number().int().positive().optional(),
     bootstrapTotalMaxChars: z.number().int().positive().optional(),
+    bootstrapPromptTruncationWarning: z
+      .union([z.literal("off"), z.literal("once"), z.literal("always")])
+      .optional(),
+    pdfModel: AgentModelSchema.optional(),
+    embeddedPi: z.record(z.string(), z.unknown()).optional(),
     bootstrap: z
       .object({
         injectMode: z
@@ -104,8 +109,24 @@ export const AgentDefaultsSchema = z
             softThresholdTokens: z.number().int().nonnegative().optional(),
             prompt: z.string().optional(),
             systemPrompt: z.string().optional(),
+            forceFlushTranscriptBytes: z.number().int().nonnegative().optional(),
           })
           .strict()
+          .optional(),
+        qualityGuard: z
+          .object({
+            enabled: z.boolean().optional(),
+            maxRetries: z.number().int().nonnegative().optional(),
+          })
+          .strict()
+          .optional(),
+        identifierPolicy: z
+          .union([z.literal("strict"), z.literal("off"), z.literal("custom")])
+          .optional(),
+        identifierInstructions: z.string().optional(),
+        recentTurnsPreserve: z.number().int().nonnegative().optional(),
+        postCompactionSections: z
+          .union([z.record(z.string(), z.string()), z.array(z.string())])
           .optional(),
       })
       .strict()

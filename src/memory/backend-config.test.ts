@@ -24,7 +24,11 @@ describe("resolveMemoryBackendConfig", () => {
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(resolved.backend).toBe("qmd");
     expect(resolved.qmd?.collections.length).toBeGreaterThanOrEqual(3);
-    expect(resolved.qmd?.command).toBe("qmd");
+    // Default command is "qmd" or ~/.bun/bin/qmd when that path exists (avoids broken global shim).
+    expect(resolved.qmd?.command).toBeDefined();
+    expect(resolved.qmd?.command === "qmd" || path.isAbsolute(resolved.qmd?.command ?? "")).toBe(
+      true,
+    );
     expect(resolved.qmd?.searchMode).toBe("search");
     expect(resolved.qmd?.update.intervalMs).toBeGreaterThan(0);
     expect(resolved.qmd?.update.waitForBootSync).toBe(false);

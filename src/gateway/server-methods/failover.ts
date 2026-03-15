@@ -27,8 +27,8 @@ export const failoverHandlers: GatewayRequestHandlers = {
   },
 
   "failover.history": async ({ respond, context, params }) => {
-    const log = context.failoverHistory ?? [];
-    const limit = typeof params.limit === "number" ? Math.min(params.limit, 100) : 20;
+    const log = context.getFailoverHistory?.() ?? [];
+    const limit = typeof params.limit === "number" ? Math.max(0, Math.min(params.limit, 100)) : 20;
     respond(true, { events: log.slice(-limit) });
   },
 
@@ -46,7 +46,13 @@ export const failoverHandlers: GatewayRequestHandlers = {
     const failoverCounters = snapshot.counters["openclaw_failover_total"] ?? [];
     const totalFailovers = failoverCounters.reduce((sum, c) => sum + c.value, 0);
     const failoverDuration = snapshot.histograms["openclaw_failover_duration_seconds"] ?? [];
-    const avgDuration = failoverDuration.length > 0 ? failoverDuration[0].avg : 0;
+    let totalWeighted = 0;
+    let totalCount = 0;
+    for (const entry of failoverDuration) {
+      totalWeighted += entry.avg * entry.count;
+      totalCount += entry.count;
+    }
+    const avgDuration = totalCount > 0 ? totalWeighted / totalCount : 0;
 
     respond(true, {
       totalFailovers,

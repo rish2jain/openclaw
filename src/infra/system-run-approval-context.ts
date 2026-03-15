@@ -22,9 +22,9 @@ type SystemRunApprovalRuntimeContext =
       ok: true;
       plan: SystemRunApprovalPlan | null;
       argv: string[];
-      cwd: string | null;
-      agentId: string | null;
-      sessionKey: string | null;
+      cwd: string | null | undefined;
+      agentId: string | null | undefined;
+      sessionKey: string | null | undefined;
       commandText: string;
     }
   | {

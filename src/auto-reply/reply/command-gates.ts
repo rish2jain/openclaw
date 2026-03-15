@@ -2,6 +2,7 @@ import type { CommandFlagKey } from "../../config/commands.js";
 import { isCommandFlagEnabled } from "../../config/commands.js";
 import { logVerbose } from "../../globals.js";
 import { hasPermission } from "../../rbac/index.js";
+import { isInternalMessageChannel } from "../../utils/message-channel.js";
 import type { ReplyPayload } from "../types.js";
 import type { CommandHandlerResult, HandleCommandsParams } from "./commands-types.js";
 
@@ -67,5 +68,28 @@ export function requireCommandFlagEnabled(
   return {
     shouldContinue: false,
     reply: buildDisabledCommandReply(params),
+  };
+}
+
+/**
+ * When the command is from an internal channel (e.g. webchat), requires at least one of allowedScopes
+ * in ctx.GatewayClientScopes. Returns a blocking result when the scope is missing; null when allowed.
+ */
+export function requireGatewayClientScopeForInternalChannel(
+  params: HandleCommandsParams,
+  opts: { label: string; allowedScopes: string[]; missingText: string },
+): CommandHandlerResult | null {
+  const channel = params.ctx.MessageChannel ?? params.command.channel;
+  if (!isInternalMessageChannel(channel)) {
+    return null;
+  }
+  const scopes = params.ctx.GatewayClientScopes ?? [];
+  const hasScope = opts.allowedScopes.some((s) => scopes.includes(s));
+  if (hasScope) {
+    return null;
+  }
+  return {
+    shouldContinue: false,
+    reply: { text: opts.missingText },
   };
 }

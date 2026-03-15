@@ -158,8 +158,8 @@ function requestMismatch(details?: Record<string, unknown>): SystemRunApprovalMa
 }
 
 export function matchSystemRunApprovalEnvHash(params: {
-  expectedEnvHash: string | null;
-  actualEnvHash: string | null;
+  expectedEnvHash: string | null | undefined;
+  actualEnvHash: string | null | undefined;
   actualEnvKeys: string[];
 }): SystemRunApprovalMatchResult {
   if (!params.expectedEnvHash && !params.actualEnvHash) {

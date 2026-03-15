@@ -341,13 +341,18 @@ function normalizeApiKeyConfig(value: string): string {
   return match?.[1] ?? trimmed;
 }
 
-function resolveEnvApiKeyVarName(provider: string): string | undefined {
-  const resolved = resolveEnvApiKey(provider);
+function resolveEnvApiKeyVarName(provider: string, env?: NodeJS.ProcessEnv): string | undefined {
+  const resolved = resolveEnvApiKey(provider, env ?? process.env);
   if (!resolved) {
     return undefined;
   }
   const match = /^(?:env: |shell env: )([A-Z0-9_]+)$/.exec(resolved.source);
   return match ? match[1] : undefined;
+}
+
+function getKeyFromEnv(env: NodeJS.ProcessEnv, provider: string): string | undefined {
+  const varName = resolveEnvApiKeyVarName(provider, env);
+  return varName ? (env[varName] ?? undefined) : undefined;
 }
 
 function resolveAwsSdkApiKeyVarName(): string {
@@ -400,8 +405,9 @@ function normalizeGoogleProvider(provider: ProviderConfig): ProviderConfig {
 export function normalizeProviders(params: {
   providers: ModelsConfig["providers"];
   agentDir: string;
+  env?: NodeJS.ProcessEnv;
 }): ModelsConfig["providers"] {
-  const { providers } = params;
+  const { providers, env } = params;
   if (!providers) {
     return providers;
   }
@@ -415,15 +421,13 @@ export function normalizeProviders(params: {
     const normalizedKey = key.trim();
     let normalizedProvider = provider;
 
-    // Fix common misconfig: apiKey set to "${ENV_VAR}" instead of "ENV_VAR".
-    if (
-      normalizedProvider.apiKey &&
-      normalizeApiKeyConfig(normalizedProvider.apiKey) !== normalizedProvider.apiKey
-    ) {
+    // Fix common misconfig: apiKey set to "${ENV_VAR}" instead of "ENV_VAR" (string only).
+    const rawApiKey = normalizedProvider.apiKey;
+    if (typeof rawApiKey === "string" && normalizeApiKeyConfig(rawApiKey) !== rawApiKey) {
       mutated = true;
       normalizedProvider = {
         ...normalizedProvider,
-        apiKey: normalizeApiKeyConfig(normalizedProvider.apiKey),
+        apiKey: normalizeApiKeyConfig(rawApiKey),
       };
     }
 
@@ -431,7 +435,9 @@ export function normalizeProviders(params: {
     // Fill it from the environment or auth profiles when possible.
     const hasModels =
       Array.isArray(normalizedProvider.models) && normalizedProvider.models.length > 0;
-    if (hasModels && !normalizedProvider.apiKey?.trim()) {
+    const apiKeyStr =
+      typeof normalizedProvider.apiKey === "string" ? normalizedProvider.apiKey.trim() : "";
+    if (hasModels && !apiKeyStr) {
       const authMode =
         normalizedProvider.auth ?? (normalizedKey === "amazon-bedrock" ? "aws-sdk" : undefined);
       if (authMode === "aws-sdk") {
@@ -439,7 +445,7 @@ export function normalizeProviders(params: {
         mutated = true;
         normalizedProvider = { ...normalizedProvider, apiKey };
       } else {
-        const fromEnv = resolveEnvApiKeyVarName(normalizedKey);
+        const fromEnv = resolveEnvApiKeyVarName(normalizedKey, env);
         const fromProfiles = resolveApiKeyFromProfiles({
           provider: normalizedKey,
           store: authStore,
@@ -852,14 +858,16 @@ export function buildKilocodeProvider(): ProviderConfig {
 export async function resolveImplicitProviders(params: {
   agentDir: string;
   explicitProviders?: Record<string, ProviderConfig> | null;
+  env?: NodeJS.ProcessEnv;
 }): Promise<ModelsConfig["providers"]> {
+  const env = params.env ?? process.env;
   const providers: Record<string, ProviderConfig> = {};
   const authStore = ensureAuthProfileStore(params.agentDir, {
     allowKeychainPrompt: false,
   });
 
   const minimaxKey =
-    resolveEnvApiKeyVarName("minimax") ??
+    getKeyFromEnv(env, "minimax") ??
     resolveApiKeyFromProfiles({ provider: "minimax", store: authStore });
   if (minimaxKey) {
     providers.minimax = { ...buildMinimaxProvider(), apiKey: minimaxKey };
@@ -884,28 +892,28 @@ export async function resolveImplicitProviders(params: {
   }
 
   const moonshotKey =
-    resolveEnvApiKeyVarName("moonshot") ??
+    getKeyFromEnv(env, "moonshot") ??
     resolveApiKeyFromProfiles({ provider: "moonshot", store: authStore });
   if (moonshotKey) {
     providers.moonshot = { ...buildMoonshotProvider(), apiKey: moonshotKey };
   }
 
   const kimiCodingKey =
-    resolveEnvApiKeyVarName("kimi-coding") ??
+    getKeyFromEnv(env, "kimi-coding") ??
     resolveApiKeyFromProfiles({ provider: "kimi-coding", store: authStore });
   if (kimiCodingKey) {
     providers["kimi-coding"] = { ...buildKimiCodingProvider(), apiKey: kimiCodingKey };
   }
 
   const syntheticKey =
-    resolveEnvApiKeyVarName("synthetic") ??
+    getKeyFromEnv(env, "synthetic") ??
     resolveApiKeyFromProfiles({ provider: "synthetic", store: authStore });
   if (syntheticKey) {
     providers.synthetic = { ...buildSyntheticProvider(), apiKey: syntheticKey };
   }
 
   const veniceKey =
-    resolveEnvApiKeyVarName("venice") ??
+    getKeyFromEnv(env, "venice") ??
     resolveApiKeyFromProfiles({ provider: "venice", store: authStore });
   if (veniceKey) {
     providers.venice = { ...(await buildVeniceProvider()), apiKey: veniceKey };
@@ -920,7 +928,7 @@ export async function resolveImplicitProviders(params: {
   }
 
   const volcengineKey =
-    resolveEnvApiKeyVarName("volcengine") ??
+    getKeyFromEnv(env, "volcengine") ??
     resolveApiKeyFromProfiles({ provider: "volcengine", store: authStore });
   if (volcengineKey) {
     providers.volcengine = { ...buildDoubaoProvider(), apiKey: volcengineKey };
@@ -931,7 +939,7 @@ export async function resolveImplicitProviders(params: {
   }
 
   const byteplusKey =
-    resolveEnvApiKeyVarName("byteplus") ??
+    getKeyFromEnv(env, "byteplus") ??
     resolveApiKeyFromProfiles({ provider: "byteplus", store: authStore });
   if (byteplusKey) {
     providers.byteplus = { ...buildBytePlusProvider(), apiKey: byteplusKey };
@@ -942,7 +950,7 @@ export async function resolveImplicitProviders(params: {
   }
 
   const xiaomiKey =
-    resolveEnvApiKeyVarName("xiaomi") ??
+    getKeyFromEnv(env, "xiaomi") ??
     resolveApiKeyFromProfiles({ provider: "xiaomi", store: authStore });
   if (xiaomiKey) {
     providers.xiaomi = { ...buildXiaomiProvider(), apiKey: xiaomiKey };
@@ -963,7 +971,7 @@ export async function resolveImplicitProviders(params: {
     if (!baseUrl) {
       continue;
     }
-    const apiKey = resolveEnvApiKeyVarName("cloudflare-ai-gateway") ?? cred.key?.trim() ?? "";
+    const apiKey = getKeyFromEnv(env, "cloudflare-ai-gateway") ?? cred.key?.trim() ?? "";
     if (!apiKey) {
       continue;
     }
@@ -980,7 +988,7 @@ export async function resolveImplicitProviders(params: {
   // Use the user's configured baseUrl (from explicit providers) for model
   // discovery so that remote / non-default Ollama instances are reachable.
   const ollamaKey =
-    resolveEnvApiKeyVarName("ollama") ??
+    getKeyFromEnv(env, "ollama") ??
     resolveApiKeyFromProfiles({ provider: "ollama", store: authStore });
   if (ollamaKey) {
     const ollamaBaseUrl = params.explicitProviders?.ollama?.baseUrl;
@@ -990,13 +998,11 @@ export async function resolveImplicitProviders(params: {
   // vLLM provider - OpenAI-compatible local server (opt-in via env/profile).
   // If explicitly configured, keep user-defined models/settings as-is.
   if (!params.explicitProviders?.vllm) {
-    const vllmEnvVar = resolveEnvApiKeyVarName("vllm");
+    const vllmEnvKey = getKeyFromEnv(env, "vllm");
     const vllmProfileKey = resolveApiKeyFromProfiles({ provider: "vllm", store: authStore });
-    const vllmKey = vllmEnvVar ?? vllmProfileKey;
+    const vllmKey = vllmEnvKey ?? vllmProfileKey;
     if (vllmKey) {
-      const discoveryApiKey = vllmEnvVar
-        ? (process.env[vllmEnvVar]?.trim() ?? "")
-        : (vllmProfileKey ?? "");
+      const discoveryApiKey = (vllmEnvKey ?? vllmProfileKey ?? "").trim();
       providers.vllm = {
         ...(await buildVllmProvider({ apiKey: discoveryApiKey || undefined })),
         apiKey: vllmKey,
@@ -1005,7 +1011,7 @@ export async function resolveImplicitProviders(params: {
   }
 
   const togetherKey =
-    resolveEnvApiKeyVarName("together") ??
+    getKeyFromEnv(env, "together") ??
     resolveApiKeyFromProfiles({ provider: "together", store: authStore });
   if (togetherKey) {
     providers.together = {
@@ -1015,7 +1021,7 @@ export async function resolveImplicitProviders(params: {
   }
 
   const huggingfaceKey =
-    resolveEnvApiKeyVarName("huggingface") ??
+    getKeyFromEnv(env, "huggingface") ??
     resolveApiKeyFromProfiles({ provider: "huggingface", store: authStore });
   if (huggingfaceKey) {
     const hfProvider = await buildHuggingfaceProvider(huggingfaceKey);
@@ -1026,28 +1032,28 @@ export async function resolveImplicitProviders(params: {
   }
 
   const qianfanKey =
-    resolveEnvApiKeyVarName("qianfan") ??
+    getKeyFromEnv(env, "qianfan") ??
     resolveApiKeyFromProfiles({ provider: "qianfan", store: authStore });
   if (qianfanKey) {
     providers.qianfan = { ...buildQianfanProvider(), apiKey: qianfanKey };
   }
 
   const openrouterKey =
-    resolveEnvApiKeyVarName("openrouter") ??
+    getKeyFromEnv(env, "openrouter") ??
     resolveApiKeyFromProfiles({ provider: "openrouter", store: authStore });
   if (openrouterKey) {
     providers.openrouter = { ...buildOpenrouterProvider(), apiKey: openrouterKey };
   }
 
   const nvidiaKey =
-    resolveEnvApiKeyVarName("nvidia") ??
+    getKeyFromEnv(env, "nvidia") ??
     resolveApiKeyFromProfiles({ provider: "nvidia", store: authStore });
   if (nvidiaKey) {
     providers.nvidia = { ...buildNvidiaProvider(), apiKey: nvidiaKey };
   }
 
   const kilocodeKey =
-    resolveEnvApiKeyVarName("kilocode") ??
+    getKeyFromEnv(env, "kilocode") ??
     resolveApiKeyFromProfiles({ provider: "kilocode", store: authStore });
   if (kilocodeKey) {
     providers.kilocode = { ...buildKilocodeProvider(), apiKey: kilocodeKey };
@@ -1072,14 +1078,14 @@ export async function resolveImplicitCopilotProvider(params: {
     return null;
   }
 
-  let selectedGithubToken = githubToken;
+  let selectedGithubToken: string | undefined = githubToken || undefined;
   if (!selectedGithubToken && hasProfile) {
     // Use the first available profile as a default for discovery (it will be
     // re-resolved per-run by the embedded runner).
     const profileId = listProfilesForProvider(authStore, "github-copilot")[0];
     const profile = profileId ? authStore.profiles[profileId] : undefined;
     if (profile && profile.type === "token") {
-      selectedGithubToken = profile.token;
+      selectedGithubToken = typeof profile.token === "string" ? profile.token : undefined;
     }
   }
 

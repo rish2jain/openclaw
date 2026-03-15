@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import { parseDurationMs } from "../cli/parse-duration.js";
@@ -315,7 +316,19 @@ export function resolveMemoryBackendConfig(params: {
 
   const rawCommand = qmdCfg?.command?.trim() || "qmd";
   const parsedCommand = splitShellArgs(rawCommand);
-  const command = parsedCommand?.[0] || rawCommand.split(/\s+/)[0] || "qmd";
+  let command = parsedCommand?.[0] || rawCommand.split(/\s+/)[0] || "qmd";
+  // Prefer ~/.bun/bin/qmd when default "qmd" is used, so we avoid broken global shims
+  // that resolve to missing @tobilu/qmd dist in Bun's global node_modules.
+  if (command === "qmd") {
+    const bunBinQmd = path.join(resolveUserPath("~"), ".bun", "bin", "qmd");
+    try {
+      if (fs.statSync(bunBinQmd).isFile()) {
+        command = bunBinQmd;
+      }
+    } catch {
+      // Keep "qmd" for PATH resolution (e.g. npx, system install).
+    }
+  }
   const resolved: ResolvedQmdConfig = {
     command,
     mcporter: resolveMcporterConfig(qmdCfg?.mcporter),

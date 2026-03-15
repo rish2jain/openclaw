@@ -52,6 +52,8 @@ import type {
   ConfigApplyParamsSchema,
   ConfigGetParamsSchema,
   ConfigPatchParamsSchema,
+  ConfigSchemaLookupParamsSchema,
+  ConfigSchemaLookupResultSchema,
   ConfigSchemaParamsSchema,
   ConfigSchemaResponseSchema,
   ConfigSetParamsSchema,
@@ -118,6 +120,11 @@ import type {
   NodePairRequestParamsSchema,
   NodePairVerifyParamsSchema,
   NodeRenameParamsSchema,
+  NodePendingAckParamsSchema,
+  NodePendingDrainParamsSchema,
+  NodePendingDrainResultSchema,
+  NodePendingEnqueueParamsSchema,
+  NodePendingEnqueueResultSchema,
 } from "./nodes.js";
 import type { PushTestParamsSchema, PushTestResultSchema } from "./push.js";
 import type {
@@ -169,6 +176,11 @@ export type NodeDescribeParams = Static<typeof NodeDescribeParamsSchema>;
 export type NodeInvokeParams = Static<typeof NodeInvokeParamsSchema>;
 export type NodeInvokeResultParams = Static<typeof NodeInvokeResultParamsSchema>;
 export type NodeEventParams = Static<typeof NodeEventParamsSchema>;
+export type NodePendingAckParams = Static<typeof NodePendingAckParamsSchema>;
+export type NodePendingDrainParams = Static<typeof NodePendingDrainParamsSchema>;
+export type NodePendingDrainResult = Static<typeof NodePendingDrainResultSchema>;
+export type NodePendingEnqueueParams = Static<typeof NodePendingEnqueueParamsSchema>;
+export type NodePendingEnqueueResult = Static<typeof NodePendingEnqueueResultSchema>;
 export type PushTestParams = Static<typeof PushTestParamsSchema>;
 export type PushTestResult = Static<typeof PushTestResultSchema>;
 export type SessionsListParams = Static<typeof SessionsListParamsSchema>;
@@ -184,6 +196,8 @@ export type ConfigSetParams = Static<typeof ConfigSetParamsSchema>;
 export type ConfigApplyParams = Static<typeof ConfigApplyParamsSchema>;
 export type ConfigPatchParams = Static<typeof ConfigPatchParamsSchema>;
 export type ConfigSchemaParams = Static<typeof ConfigSchemaParamsSchema>;
+export type ConfigSchemaLookupParams = Static<typeof ConfigSchemaLookupParamsSchema>;
+export type ConfigSchemaLookupResult = Static<typeof ConfigSchemaLookupResultSchema>;
 export type ConfigSchemaResponse = Static<typeof ConfigSchemaResponseSchema>;
 export type WizardStartParams = Static<typeof WizardStartParamsSchema>;
 export type WizardNextParams = Static<typeof WizardNextParamsSchema>;

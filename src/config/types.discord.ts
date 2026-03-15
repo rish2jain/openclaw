@@ -115,6 +115,21 @@ export type DiscordVoiceConfig = {
   tts?: TtsConfig;
 };
 
+export type DiscordAutoPresenceConfig = {
+  /** Enable auto-presence updates. Default: false. */
+  enabled?: boolean;
+  /** Interval between presence updates (ms). Default: 30000. */
+  intervalMs?: number;
+  /** Minimum interval between updates (ms). Default: 15000. */
+  minUpdateIntervalMs?: number;
+  /** Status text when healthy. */
+  healthyText?: string;
+  /** Status text when degraded. */
+  degradedText?: string;
+  /** Status text when exhausted. */
+  exhaustedText?: string;
+};
+
 export type DiscordExecApprovalConfig = {
   /** Enable exec approval forwarding to Discord DMs. Default: false. */
   enabled?: boolean;
@@ -159,6 +174,14 @@ export type DiscordThreadBindingsConfig = {
    */
   ttlHours?: number;
   /**
+   * Idle timeout for thread bindings in hours (unbind after no activity).
+   */
+  idleHours?: number;
+  /**
+   * Max age for thread bindings in hours (unbind after this age).
+   */
+  maxAgeHours?: number;
+  /**
    * Allow `sessions_spawn({ thread: true })` to auto-create + bind Discord
    * threads for subagent sessions. Default: false (opt-in).
    */
@@ -186,8 +209,8 @@ export type DiscordAccountConfig = {
   token?: string;
   /** HTTP(S) proxy URL for Discord gateway WebSocket connections. */
   proxy?: string;
-  /** Allow bot-authored messages to trigger replies (default: false). */
-  allowBots?: boolean;
+  /** Allow bot-authored messages to trigger replies: true = all, "mentions" = only when bot is mentioned (default: false). */
+  allowBots?: boolean | "mentions";
   /**
    * Break-glass override: allow mutable identity matching (names/tags/slugs) in allowlists.
    * Default behavior is ID-only matching.
@@ -275,6 +298,14 @@ export type DiscordAccountConfig = {
   voice?: DiscordVoiceConfig;
   /** PluralKit identity resolution for proxied messages. */
   pluralkit?: DiscordPluralKitConfig;
+  /** Auto-presence (status/activity) update configuration. */
+  autoPresence?: DiscordAutoPresenceConfig;
+  /** Per-account ack reaction scope override. */
+  ackReactionScope?: "group-mentions" | "group-all" | "direct" | "all" | "off" | "none";
+  /** Event queue tuning for gateway listener (e.g. listenerTimeout). */
+  eventQueue?: { listenerTimeout?: number };
+  /** Inbound worker tuning (e.g. runTimeoutMs for queued jobs). */
+  inboundWorker?: { runTimeoutMs?: number };
   /** Outbound response prefix override for this channel/account. */
   responsePrefix?: string;
   /**

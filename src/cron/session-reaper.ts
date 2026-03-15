@@ -7,13 +7,12 @@
  */
 
 import { parseDurationMs } from "../cli/parse-duration.js";
+import { loadSessionStore, updateSessionStore } from "../config/sessions.js";
+import type { CronConfig } from "../config/types.cron.js";
 import {
   archiveRemovedSessionTranscripts,
-  loadSessionStore,
-  updateSessionStore,
-} from "../config/sessions.js";
-import type { CronConfig } from "../config/types.cron.js";
-import { cleanupArchivedSessionTranscripts } from "../gateway/session-utils.fs.js";
+  cleanupArchivedSessionTranscripts,
+} from "../gateway/session-utils.fs.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import type { Logger } from "./service/state.js";
 

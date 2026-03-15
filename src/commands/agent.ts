@@ -56,6 +56,7 @@ import {
   emitAgentEvent,
   registerAgentRunContext,
 } from "../infra/agent-events.js";
+import { buildOutboundSessionContext } from "../infra/outbound/session-context.js";
 import { getRemoteSkillEligibility } from "../infra/skills-remote.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
@@ -655,6 +656,11 @@ export async function agentCommand(
       deps,
       runtime,
       opts,
+      outboundSession: buildOutboundSessionContext({
+        cfg,
+        sessionKey: sessionKey ?? opts.sessionKey ?? null,
+        agentId: sessionAgentId,
+      }),
       sessionEntry,
       result,
       payloads,
@@ -663,3 +669,6 @@ export async function agentCommand(
     clearAgentRunContext(runId);
   }
 }
+
+/** Alias for agentCommand used by gateway/discord voice and other ingress callers. */
+export const agentCommandFromIngress = agentCommand;

@@ -187,6 +187,8 @@ export type SlackAccountConfig = {
    * Slack uses shortcodes (e.g., "eyes") rather than unicode emoji.
    */
   ackReaction?: string;
+  /** Optional typing indicator reaction (shortcode, e.g. "eyes"). */
+  typingReaction?: string;
   /** Outbound rate limiting (inter-message delay in ms). */
   outbound?: { interMessageMs?: number };
 };

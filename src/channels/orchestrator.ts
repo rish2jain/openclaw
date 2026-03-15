@@ -21,6 +21,12 @@ import type { ChannelId } from "./plugins/types.js";
 
 const log = createSubsystemLogger("channels/orchestrator");
 
+/** Optional holder for failover history; when provided, orchestrator exposes getFailoverHistory/addFailoverEvent. */
+export type FailoverHistoryHolder = {
+  getFailoverHistory: () => ReadonlyArray<Record<string, unknown>>;
+  addFailoverEvent: (event: Record<string, unknown>) => void;
+};
+
 export type ChannelOrchestratorDeps = {
   healthMonitor: HealthMonitor;
   failoverRouter: FailoverRouter;
@@ -28,6 +34,8 @@ export type ChannelOrchestratorDeps = {
   contextBridge: ContextBridge;
   identityLinker: IdentityLinker;
   threadRegistry: ThreadRegistry;
+  /** When set, orchestrator exposes getFailoverHistory and addFailoverEvent. */
+  failoverHistoryHolder?: FailoverHistoryHolder;
 };
 
 export type InboundMessageParams = {
@@ -78,6 +86,10 @@ export type ChannelOrchestrator = {
   prepareOutbound: (params: OutboundMessageParams) => OutboundResult;
   /** Record delivery outcome after sending. */
   recordDelivery: (outcome: DeliveryOutcome) => void;
+  /** Read-only failover event history (when failoverHistoryHolder was provided). */
+  getFailoverHistory?: () => ReadonlyArray<Record<string, unknown>>;
+  /** Append a failover event (enforces 200-entry cap). */
+  addFailoverEvent?: (event: Record<string, unknown>) => void;
 };
 
 export function createChannelOrchestrator(deps: ChannelOrchestratorDeps): ChannelOrchestrator {
@@ -190,9 +202,15 @@ export function createChannelOrchestrator(deps: ChannelOrchestratorDeps): Channe
     });
   }
 
-  return {
+  const orchestrator: ChannelOrchestrator = {
     handleInbound,
     prepareOutbound,
     recordDelivery,
   };
+  if (deps.failoverHistoryHolder) {
+    const holder = deps.failoverHistoryHolder;
+    orchestrator.getFailoverHistory = () => holder.getFailoverHistory();
+    orchestrator.addFailoverEvent = (event) => holder.addFailoverEvent(event);
+  }
+  return orchestrator;
 }
