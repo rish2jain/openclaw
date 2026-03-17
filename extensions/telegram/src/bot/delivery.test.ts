@@ -187,7 +187,6 @@ describe("deliverReplies", () => {
     const bot = createBot({ sendMessage });
 
     await deliverWith({
-      accountId: "work",
       replies: [{ text: "hello" }],
       runtime,
       bot,
@@ -217,9 +216,6 @@ describe("deliverReplies", () => {
     const bot = createBot({ sendMessage });
 
     await deliverWith({
-      sessionKeyForInternalHooks: "agent:test:telegram:123",
-      mirrorIsGroup: true,
-      mirrorGroupId: "123",
       replies: [{ text: "hello" }],
       runtime,
       bot,
@@ -265,7 +261,6 @@ describe("deliverReplies", () => {
 
     await expect(
       deliverWith({
-        sessionKeyForInternalHooks: "agent:test:telegram:123",
         replies: [{ text: "hello" }],
         runtime,
         bot,

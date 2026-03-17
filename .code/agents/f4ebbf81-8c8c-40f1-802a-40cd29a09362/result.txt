@@ -1,0 +1,104 @@
+---
+
+## OpenClaw Strategic Enhancement Plan
+
+I've completed a comprehensive end-to-end review of the OpenClaw repository. Here's the synthesis:
+
+### **Summary: 3 Tiers of Strategic Improvements**
+
+OpenClaw has clean channel orchestration (health monitoring, failover routing) and a well-isolated career subsystem, but carries 8 years of accumulated technical debt in three areas: **duplicate systems**, **incomplete observability adoption**, and **subsystem complexity**. Addressing these would require ~8 weeks of work across a single senior engineer.
+
+---
+
+### **Tier 1: Must Do First (Weeks 1-2) — Low Risk, Unblocks Others**
+
+| Theme | Issue | Solution | Impact | Effort |
+|-------|-------|----------|--------|--------|
+| **MCP Consolidation** | `src/mcp/tools/` and `src/mcp/serve/tools/` are byte-for-byte duplicates, with diverging validation logic in `career.ts` | Merge into single registry; use the more correct validation from `serve/tools/` | Single source of truth; eliminates duplicate maintenance | **1 week** |
+| **Structured Logging** | `createStructuredLogger` + correlation context exist but have **zero** production usage (only 2 files); 150+ files use old logger | Wire structured logger into gateway entry point; thread correlation context (requestId, sessionId, channelId, agentId) through message/agent flows | Enables request tracing, auditing, performance analysis across gateway → MCP → agents | **2 weeks** |
+
+---
+
+### **Tier 2: Unblock Product Development (Weeks 3-5)**
+
+| Theme | Issue | Solution | Impact | Effort |
+|-------|-------|----------|--------|--------|
+| **Plugin SDK Refactor** | `src/plugin-sdk/index.ts` hardcodes 10+ named extensions (Discord, Slack, Telegram, Signal, etc.) as re-exports; any breaking change in Discord export breaks SDK for all consumers | Create `plugin-sdk/extensions/discord.ts`, `slack.ts`, etc. entry points; remove all named extension re-exports from main SDK; update `package.json` exports | Enables independent extension development; prevents SDK breakage from extension changes | **2 weeks** |
+| **Config Schema Consolidation** | 10+ `zod-schema.*.ts` files + 8+ `types.*.ts` files scattered across `src/config/`; import DAG is opaque; circular dependency risk; blocks hot-reload | Reorganize into domain-based files (`zod-schema.gateway.ts`, `zod-schema.agents.ts`, etc.); co-locate types with schemas; create `configRegistry.ts` documenting all keys | Unblocks hot-reload; import DAG becomes traceable; reduces cognitive load | **2 weeks** |
+
+---
+
+### **Tier 3: Simplification & Maintainability (Weeks 5-8)**
+
+| Theme | Issue | Solution | Impact | Effort |
+|-------|-------|----------|--------|--------|
+| **Auto-Reply Extraction** | `src/auto-reply/reply/` has **90+ files** and is explicitly excluded from unit tests; ACP-specific code mixed with core reply handling; commands, directives, and ACP are interdependent | Split into `auto-reply/commands/`, `directives/`, `acp/` subdirectories; add unit tests for each; thin down `reply.ts` to coordinate subsystems | Enables unit testing of reply pipeline; clearer API boundaries; easier onboarding | **2 weeks** |
+| **Gateway HTTP Routing** | `src/gateway/server-http.ts` special-cases Slack with hardcoded import; violates "all channel concerns in extensions" boundary | Register Slack HTTP routes via plugin registry like all other channels | Maintains boundary integrity; simpler gateway code | **1 week** |
+| **Message Adapter Capabilities** | Per-channel format capabilities are hardcoded static table (`supportsMarkdown`, `maxLength`, etc.); not queryable at runtime; not extensible | Expose capabilities from channel plugin; query at runtime based on channel + account | Format rules are discoverable; supports per-account variation; testable | **1 week** |
+| **Career Module Authorization** | Career data reads/writes directly to `~/.openclaw/career/` with **no gateway auth, audit logging, or rate limiting**; not multi-tenant ready | Add gateway auth layer + audit logging; implement per-user data paths (`~/.openclaw/career/{userId}/`) | Enables multi-user setups; audit trail for compliance | **1 week** |
+| **Test Config Consolidation** | 5 Vitest config files with complex inclusion/exclusion rules; unclear what is/isn't unit-testable | Merge into 2-3 configs (unit, integration, e2e); move auto-reply into unit config after extraction | Clarity on coverage; simpler CI; clearer expectations for new tests | **1 week** |
+
+---
+
+### **Long-Term Initiatives (Quarter 2+)**
+- **Full config hot-reload** (depends on consolidation)
+- **Multi-tenant auth with RBAC** (requires workspace + user identity)
+- **Observability stack** (depends on structured logging adoption)
+
+---
+
+### **Key Duplicates & Inconsistencies**
+
+| Category | Finding |
+|----------|---------|
+| **Duplicate Code** | `src/mcp/tools/` ≈ `src/mcp/serve/tools/` (identical structures, diverging `career.ts` validation) |
+| **Incomplete Migration** | Config types split across 8 files; test coverage split across 5 configs; migration code persists in `legacy*.ts` |
+| **Under-Tested Surfaces** | `src/auto-reply/reply/` (90 files, excluded from unit tests), `src/gateway/server-http.ts` (complex routing), `src/channels/adaptation/message-adapter.ts` (no test file) |
+| **Unused Infrastructure** | Structured logging investment not adopted; correlation context infrastructure built but zero production usage |
+| **Boundary Violations** | Plugin SDK re-exports Discord/Slack/Telegram, creating hard dependencies on named extensions |
+
+---
+
+### **Complexity Hotspots**
+
+| Subsystem | LOC / Files | Risk | Note |
+|-----------|------------|------|------|
+| `src/auto-reply/reply/` | 90+ files | 🔴 High | Largest subsystem; excluded from unit tests; mixed concerns (commands, directives, ACP) |
+| `src/agents/pi-embedded-runner.ts` | Large single file | 🟡 Medium | Substantial Pi-specific code path grown alongside main runtime |
+| `src/gateway/server-*.ts` | 13+ files | 🟡 Medium | Flat directory; no internal grouping beyond surface area (broadcast, browser, discovery, etc.) |
+| `src/career/` | ~15 files | 🟢 Low | Well-isolated; clean DI patterns; only weakness is singleton `_instance` |
+| `src/channels/orchestrator.ts` | Clean hierarchy | 🟢 Low | Health, failover, continuity, adaptation well-separated; pure functions throughout |
+
+---
+
+### **Timeline & Resource Estimate**
+
+- **Tier 1** (MCP + logging): 3 weeks, **one senior engineer**
+- **Tier 2** (SDK + config): 4 weeks, **one senior engineer** (or 1.5 engineers at normal pace)
+- **Tier 3** (subsystems): 5 weeks, **can run 3-4 in parallel** (auto-reply, HTTP routing, message adapter, career auth, test config)
+- **Total clean state**: ~8 weeks, **1-1.5 engineers**
+
+---
+
+### **How to Use This Plan**
+
+I've created two detailed documents in memory:
+1. **`ENHANCEMENT_PLAN.md`** — full strategic blueprint with:
+   - Detailed solution sketches for each theme
+   - Specific files affected
+   - Testing & validation checklist
+   - Risk assessment and mitigation
+   - Execution roadmap with week-by-week breakdown
+
+2. **`FINDINGS_SUMMARY.md`** — executive summary with:
+   - Key findings at a glance
+   - Hotspots & technical debt prioritized
+   - Success metrics & what NOT to do
+
+**Next Steps**:
+- Review the full `ENHANCEMENT_PLAN.md` to understand each theme in depth
+- Start with Tier 1 (MCP consolidation) — low risk, unblocks downstream work
+- Tier 2 should follow (SDK + config) to unblock product features
+- Tier 3 items can run in parallel in weeks 5-8
+
+All findings are evidence-based, traced to specific files in the codebase. No generic advice.

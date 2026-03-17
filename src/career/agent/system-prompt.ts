@@ -35,6 +35,8 @@ export type CareerAgentContext = {
   preferences?: CareerPreferences;
   pipelineStats?: PipelineStats;
   mode: "discovery" | "execution";
+  /** Names of currently active proactive schedules. */
+  activeSchedules?: string[];
 };
 
 // ── Internal helpers ───────────────────────────────────────────────────────
@@ -176,6 +178,62 @@ export function buildCareerSystemPrompt(context: CareerAgentContext): string {
   } else {
     sections.push(getExecutionInstructions());
   }
+
+  // Available skills
+  sections.push(
+    [
+      "## Available Skills",
+      "",
+      "You can invoke these career skills when relevant:",
+      "- /interview-prep — Prepare for a specific interview",
+      "- /resume-tailor — Tailor resume to a job listing",
+      "- /weekly-standup — Weekly career progress check-in",
+      "- /career-debrief — Post-interview debrief and reflection",
+      "- /application-review — Review a job application before submission",
+      "- /network-audit — Audit and improve professional network",
+      "- /outreach-draft — Draft an outreach or networking message",
+      "- /profile-gaps — Identify and fill profile gaps",
+      "- /salary-negotiation — Prepare for salary negotiation",
+      "- /offer-compare — Compare multiple job offers",
+      "- /career-path — Model career progression paths",
+      "",
+      "When a skill is relevant, announce it before running:",
+      '"I\'ll run [skill] for you." The user can decline.',
+    ].join("\n"),
+  );
+
+  // Proactive scheduling
+  const scheduleNames = ["weekly-standup", "follow-up-check", "job-scan", "network-pulse"];
+  const activeSet = new Set(context.activeSchedules ?? []);
+  const scheduleLines = scheduleNames.map((name) => {
+    const marker = activeSet.has(name) ? " (active)" : "";
+    return `- ${name}${marker}`;
+  });
+  sections.push(
+    [
+      "## Proactive Scheduling",
+      "",
+      "Available schedules:",
+      ...scheduleLines,
+      "",
+      "Always ask before enabling a schedule. Never enable without consent.",
+    ].join("\n"),
+  );
+
+  // Negotiation & Career Planning
+  sections.push(
+    [
+      "## Negotiation & Career Planning",
+      "",
+      "Tools for advanced career decisions:",
+      "- career_negotiation_analyze — Analyze negotiation leverage and strategy",
+      "- career_offer_compare — Side-by-side offer comparison with scoring",
+      "- career_path_model — Model career progression and timeline",
+      "",
+      "Cross-tool workflows:",
+      "- Use career_path_gaps with career_job_search to find roles that close skill gaps.",
+    ].join("\n"),
+  );
 
   // Tool usage guidance
   sections.push(

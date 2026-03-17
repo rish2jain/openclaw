@@ -73,7 +73,7 @@ describe("ChannelOrchestrator", () => {
 
       expect(deps.messageAdapter.adaptMessage).toHaveBeenCalledWith(baseParams.message, "telegram");
       expect(result.adaptedMessage).toBeDefined();
-      expect(result.adaptedMessage.text).toBe("hello");
+      expect(result.adaptedMessage.textChunks[0]).toBe("hello");
     });
 
     it("registers the thread in threadRegistry", () => {

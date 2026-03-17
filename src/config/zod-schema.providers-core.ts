@@ -71,6 +71,8 @@ export const TelegramTopicSchema = z
     enabled: z.boolean().optional(),
     allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
     systemPrompt: z.string().optional(),
+    disableAudioPreflight: z.boolean().optional(),
+    agentId: z.string().optional(),
   })
   .strict();
 
@@ -84,6 +86,7 @@ export const TelegramGroupSchema = z
     enabled: z.boolean().optional(),
     allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
     systemPrompt: z.string().optional(),
+    disableAudioPreflight: z.boolean().optional(),
     topics: z.record(z.string(), TelegramTopicSchema.optional()).optional(),
   })
   .strict();
@@ -150,6 +153,23 @@ export const TelegramAccountSchemaBase = z
     tokenFile: z.string().optional(),
     replyToMode: ReplyToModeSchema.optional(),
     groups: z.record(z.string(), TelegramGroupSchema.optional()).optional(),
+    direct: z
+      .record(
+        z.string(),
+        z
+          .object({
+            dmPolicy: DmPolicySchema.optional(),
+            skills: z.array(z.string()).optional(),
+            topics: z.record(z.string(), TelegramTopicSchema.optional()).optional(),
+            enabled: z.boolean().optional(),
+            requireTopic: z.boolean().optional(),
+            allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
+            systemPrompt: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+      )
+      .optional(),
     allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
     defaultTo: z.union([z.string(), z.number()]).optional(),
     groupAllowFrom: z.array(z.union([z.string(), z.number()])).optional(),

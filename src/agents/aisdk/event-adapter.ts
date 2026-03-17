@@ -400,7 +400,7 @@ export async function* streamWithPiAgentEvents(
     if (!stream) {
       // Skip usage extraction when stream was never created (e.g. error before streamText)
     } else {
-      const s = stream as {
+      const s = stream as unknown as {
         usage?: Promise<{
           inputTokens?: number;
           outputTokens?: number;

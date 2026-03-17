@@ -1,12 +1,9 @@
 import {
-  addWildcardAllowFrom,
   DEFAULT_ACCOUNT_ID,
-  formatDocsLink,
-  promptChannelAccessConfig,
   type ChannelOnboardingAdapter,
-  type ChannelOnboardingDmPolicy,
-  type DmPolicy,
+  type OpenClawConfig,
 } from "openclaw/plugin-sdk";
+import { listRocketChatAccountIds, resolveRocketChatAccount } from "./accounts.js";
 import { resolveRocketChatWebhookPath } from "./monitor.js";
 import type { CoreConfig, RocketChatAccountConfig, RocketChatMode } from "./types.js";
 
@@ -33,125 +30,134 @@ function patchAccount(
   };
 }
 
-function setDmPolicy(cfg: CoreConfig, dmPolicy: DmPolicy, accountId: string): CoreConfig {
-  const rc = cfg.channels?.rocketchat ?? {};
-  const current = accountId === DEFAULT_ACCOUNT_ID ? rc : (rc.accounts?.[accountId] ?? {});
-  const allowFrom =
-    dmPolicy === "open" ? addWildcardAllowFrom(current.allowFrom) : current.allowFrom;
-  return patchAccount(cfg, accountId, { dmPolicy, ...(allowFrom ? { allowFrom } : {}) });
-}
-
-export const rocketchatOnboardingAdapter: ChannelOnboardingAdapter<CoreConfig> = {
+export const rocketchatOnboardingAdapter: ChannelOnboardingAdapter = {
   channel: CHANNEL,
 
-  async setup({ prompter, config, accountId }) {
-    const aid = accountId ?? DEFAULT_ACCOUNT_ID;
-    let cfg = config as CoreConfig;
-    const rc = cfg.channels?.rocketchat ?? {};
-    const current = aid === DEFAULT_ACCOUNT_ID ? rc : (rc.accounts?.[aid] ?? {});
+  getStatus: async ({ cfg }) => {
+    const ids = listRocketChatAccountIds(cfg as CoreConfig);
+    const configured = ids.some((accountId) => {
+      const account = resolveRocketChatAccount({ cfg: cfg as CoreConfig, accountId });
+      return account.mode === "api"
+        ? Boolean(account.config.authToken?.trim() && account.config.userId?.trim())
+        : Boolean(account.config.webhookUrl?.trim());
+    });
+    return {
+      channel: CHANNEL,
+      configured,
+      statusLines: [`Rocket.Chat: ${configured ? "configured" : "needs setup"}`],
+      selectionHint: configured ? "configured" : "needs setup",
+      quickstartScore: configured ? 2 : 1,
+    };
+  },
 
-    prompter.log(
-      formatDocsLink(
-        "Rocket.Chat integration setup",
-        "/channels/rocketchat",
-        "https://developer.rocket.chat/docs/webhooks",
-      ),
-    );
+  configure: async ({ cfg, prompter }) => {
+    const aid = DEFAULT_ACCOUNT_ID;
+    let next = cfg as CoreConfig;
+    const rc = next.channels?.rocketchat ?? {};
+    const current = rc;
 
     // --- Server URL ---------------------------------------------------------
-    const serverUrl = await prompter.text({
-      message: "Rocket.Chat server URL (e.g. https://my.rocket.chat):",
-      initialValue: current.serverUrl ?? "",
-      validate: (v) => (v.trim() ? undefined : "Server URL is required"),
-    });
-    cfg = patchAccount(cfg, aid, { serverUrl: serverUrl.trim().replace(/\/+$/, "") });
+    const serverUrl = String(
+      await prompter.text({
+        message: "Rocket.Chat server URL (e.g. https://my.rocket.chat):",
+        initialValue: current.serverUrl ?? "",
+        validate: (v: string) => (v.trim() ? undefined : "Server URL is required"),
+      }),
+    );
+    next = patchAccount(next, aid, { serverUrl: serverUrl.trim().replace(/\/+$/, "") });
 
     // --- Mode ---------------------------------------------------------------
-    const mode = (await prompter.select<RocketChatMode>({
+    const modeResult = await prompter.select({
       message: "Connection mode:",
       options: [
         {
           value: "webhook",
           label: "Incoming webhook (simple, group bots)",
-          hint: "Requires an incoming webhook URL from Rocket.Chat Admin",
         },
         {
           value: "api",
           label: "REST API (full DM support)",
-          hint: "Requires an auth token and userId from your profile",
         },
       ],
       initialValue: current.mode ?? "webhook",
-    })) as RocketChatMode;
-    cfg = patchAccount(cfg, aid, { mode });
+    });
+    const mode = String(modeResult) as RocketChatMode;
+    next = patchAccount(next, aid, { mode });
 
     if (mode === "webhook") {
-      const webhookUrl = await prompter.text({
-        message: "Incoming webhook URL (from Rocket.Chat Admin > Integrations):",
-        initialValue: current.webhookUrl ?? "",
-        validate: (v) => (v.trim() ? undefined : "Webhook URL is required"),
-      });
-      cfg = patchAccount(cfg, aid, { webhookUrl: webhookUrl.trim() });
+      const webhookUrl = String(
+        await prompter.text({
+          message: "Incoming webhook URL (from Rocket.Chat Admin > Integrations):",
+          initialValue: current.webhookUrl ?? "",
+          validate: (v: string) => (v.trim() ? undefined : "Webhook URL is required"),
+        }),
+      );
+      next = patchAccount(next, aid, { webhookUrl: webhookUrl.trim() });
     } else {
-      const authToken = await prompter.text({
-        message: "Auth token (from your Rocket.Chat profile > Personal Access Tokens):",
-        initialValue: current.authToken ?? "",
-        validate: (v) => (v.trim() ? undefined : "Auth token is required"),
-      });
-      const userId = await prompter.text({
-        message: "User ID (shown next to auth token):",
-        initialValue: current.userId ?? "",
-        validate: (v) => (v.trim() ? undefined : "User ID is required"),
-      });
-      cfg = patchAccount(cfg, aid, { authToken: authToken.trim(), userId: userId.trim() });
+      const authToken = String(
+        await prompter.text({
+          message: "Auth token (from your Rocket.Chat profile > Personal Access Tokens):",
+          initialValue: current.authToken ?? "",
+          validate: (v: string) => (v.trim() ? undefined : "Auth token is required"),
+        }),
+      );
+      const userId = String(
+        await prompter.text({
+          message: "User ID (shown next to auth token):",
+          initialValue: current.userId ?? "",
+          validate: (v: string) => (v.trim() ? undefined : "User ID is required"),
+        }),
+      );
+      next = patchAccount(next, aid, { authToken: authToken.trim(), userId: userId.trim() });
     }
 
     // --- Outgoing token (for verification of inbound events) ----------------
-    const outgoingToken = await prompter.text({
-      message:
-        "Outgoing webhook token (optional — set in Rocket.Chat Admin > Integrations > Outgoing):",
-      initialValue: current.outgoingToken ?? "",
-    });
+    const outgoingToken = String(
+      await prompter.text({
+        message:
+          "Outgoing webhook token (optional — set in Rocket.Chat Admin > Integrations > Outgoing):",
+        initialValue: current.outgoingToken ?? "",
+      }),
+    );
     if (outgoingToken.trim()) {
-      cfg = patchAccount(cfg, aid, { outgoingToken: outgoingToken.trim() });
+      next = patchAccount(next, aid, { outgoingToken: outgoingToken.trim() });
     }
 
     // --- Inbound path -------------------------------------------------------
     const defaultPath = resolveRocketChatWebhookPath({ accountId: aid });
-    const inboundPath = await prompter.text({
-      message: "Inbound webhook path (configure in Rocket.Chat Admin > Outgoing webhook URL):",
-      initialValue: current.inboundPath ?? defaultPath,
-    });
-    cfg = patchAccount(cfg, aid, {
+    const inboundPath = String(
+      await prompter.text({
+        message: "Inbound webhook path (configure in Rocket.Chat Admin > Outgoing webhook URL):",
+        initialValue: current.inboundPath ?? defaultPath,
+      }),
+    );
+    next = patchAccount(next, aid, {
       inboundPath: inboundPath.trim() || defaultPath,
     });
 
     // --- Default room -------------------------------------------------------
-    const defaultRoom = await prompter.text({
-      message: "Default room to post to (e.g. #general) — used when no session context exists:",
-      initialValue: current.defaultRoom ?? "#general",
-    });
+    const defaultRoom = String(
+      await prompter.text({
+        message: "Default room to post to (e.g. #general):",
+        initialValue: current.defaultRoom ?? "#general",
+      }),
+    );
     if (defaultRoom.trim()) {
-      cfg = patchAccount(cfg, aid, { defaultRoom: defaultRoom.trim() });
+      next = patchAccount(next, aid, { defaultRoom: defaultRoom.trim() });
     }
 
-    // --- DM policy ----------------------------------------------------------
-    const dmPolicyResult = await promptChannelAccessConfig<CoreConfig>({
-      prompter,
-      channel: CHANNEL,
-      config: cfg,
-      accountId: aid,
-      setDmPolicy: (c, policy) => setDmPolicy(c, policy, aid),
-    });
-    cfg = dmPolicyResult.config;
-
-    return { config: cfg };
+    return { cfg: next as OpenClawConfig };
   },
 
-  resolveDmPolicy({ config, accountId }): ChannelOnboardingDmPolicy {
-    const rc = (config as CoreConfig).channels?.rocketchat;
-    if (!rc) return { dmPolicy: "pairing" };
-    const account = accountId === DEFAULT_ACCOUNT_ID ? rc : (rc.accounts?.[accountId] ?? rc);
-    return { dmPolicy: (account.dmPolicy as DmPolicy) ?? "pairing" };
+  disable: (cfg: OpenClawConfig) => {
+    const channels = cfg.channels as Record<string, unknown> | undefined;
+    const rocketchat = (channels?.rocketchat ?? {}) as Record<string, unknown>;
+    return {
+      ...cfg,
+      channels: {
+        ...cfg.channels,
+        rocketchat: { ...rocketchat, enabled: false },
+      },
+    };
   },
 };

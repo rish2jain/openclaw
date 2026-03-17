@@ -1894,7 +1894,11 @@ description: test skill
         channels: {
           discord: {
             enabled: true,
-            token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
+            token: {
+              source: "env",
+              provider: "default",
+              id: "DISCORD_BOT_TOKEN",
+            } as unknown as string,
             groupPolicy: "allowlist",
             guilds: {
               "123": {

@@ -90,6 +90,8 @@ export type CronPayload =
       channel?: CronMessageChannel;
       to?: string;
       bestEffortDeliver?: boolean;
+      /** Model fallback chain for this job (overrides agent-level fallbacks). */
+      fallbacks?: string[];
     };
 
 export type CronPayloadPatch =

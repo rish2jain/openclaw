@@ -80,7 +80,7 @@ export function createProfileStore(): ProfileStore {
 
     setProfile: (p) => {
       profile = { ...p };
-      log.info("Profile set for", p.name);
+      log.info("Profile set", { name: p.name });
     },
 
     updateProfile: (partial) => {
@@ -97,7 +97,7 @@ export function createProfileStore(): ProfileStore {
 
     addWorkEntry: (entry) => {
       workEntries.push({ ...entry });
-      log.info("Added work entry:", entry.title, "at", entry.company);
+      log.info("Added work entry", { title: entry.title, company: entry.company });
     },
 
     updateWorkEntry: (index, partial) => {
@@ -129,14 +129,14 @@ export function createProfileStore(): ProfileStore {
         if (skill.lastUsed) {
           existing.lastUsed = skill.lastUsed;
         }
-        log.info("Merged skill:", skill.name);
+        log.info("Merged skill", { name: skill.name });
         return;
       }
       skills.push({
         ...skill,
         proficiency: clampProficiency(skill.proficiency),
       });
-      log.info("Added skill:", skill.name);
+      log.info("Added skill", { name: skill.name });
     },
 
     findSkill: (name) => skills.find((s) => s.name.toLowerCase() === name.toLowerCase()),
@@ -147,7 +147,7 @@ export function createProfileStore(): ProfileStore {
         return false;
       }
       skill.proficiency = clampProficiency(proficiency);
-      log.info("Updated proficiency for", name, "to", skill.proficiency);
+      log.info("Updated proficiency", { name, proficiency: skill.proficiency });
       return true;
     },
 
@@ -165,7 +165,7 @@ export function createProfileStore(): ProfileStore {
 
     addProject: (project) => {
       projects.push({ ...project });
-      log.info("Added project:", project.name);
+      log.info("Added project", { name: project.name });
     },
 
     updateProject: (index, partial) => {
@@ -189,7 +189,7 @@ export function createProfileStore(): ProfileStore {
 
     addEducation: (entry) => {
       education.push({ ...entry });
-      log.info("Added education:", entry.degree, "from", entry.institution);
+      log.info("Added education", { degree: entry.degree, institution: entry.institution });
     },
 
     updateEducation: (index, partial) => {

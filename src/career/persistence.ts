@@ -5,12 +5,14 @@
  * All MCP career tool handlers share the same CareerContext instance.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { createModeManager, type ModeManager } from "./agent/mode.js";
+import { createCompanyTracker, type CompanyTracker } from "./intel/company-tracker.js";
 import { createJobStore, type JobStore } from "./jobs/store.js";
+import { createInteractionTracker, type InteractionTracker } from "./network/tracker.js";
 import { createNetworkGraph, type NetworkGraph } from "./network/types.js";
 import { createOutreachPipeline, type OutreachPipeline } from "./outreach/pipeline.js";
 import { createProfileStore, type ProfileStore } from "./profile/store.js";
@@ -22,34 +24,44 @@ export type CareerContext = {
   jobStore: JobStore;
   networkGraph: NetworkGraph;
   outreachPipeline: OutreachPipeline;
+  companyTracker: CompanyTracker;
+  interactionTracker: InteractionTracker;
   modeManager: ModeManager;
   save: () => Promise<void>;
 };
 
 const CAREER_DIR = join(homedir(), ".openclaw", "career");
 
-function ensureDir(): void {
-  if (!existsSync(CAREER_DIR)) {
-    mkdirSync(CAREER_DIR, { recursive: true });
+async function ensureDir(): Promise<void> {
+  try {
+    await access(CAREER_DIR);
+  } catch {
+    await mkdir(CAREER_DIR, { recursive: true });
   }
 }
 
-function readJsonFile<T>(filename: string): T | null {
+async function readJsonFile<T>(filename: string): Promise<T | null> {
   const filePath = join(CAREER_DIR, filename);
-  if (!existsSync(filePath)) {
+  try {
+    await access(filePath);
+  } catch {
     return null;
   }
   try {
-    return JSON.parse(readFileSync(filePath, "utf-8")) as T;
+    const raw = await readFile(filePath, "utf-8");
+    return JSON.parse(raw) as T;
   } catch (err) {
     log.warn(`failed to read ${filename}: ${String(err)}`);
     return null;
   }
 }
 
-function writeJsonFile(filename: string, data: unknown): void {
-  ensureDir();
-  writeFileSync(join(CAREER_DIR, filename), JSON.stringify(data, null, 2), "utf-8");
+async function writeJsonFile(filename: string, data: unknown): Promise<void> {
+  await ensureDir();
+  const filePath = join(CAREER_DIR, filename);
+  const tmpPath = `${filePath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+  await rename(tmpPath, filePath);
 }
 
 let _instance: CareerContext | undefined;
@@ -65,22 +77,29 @@ export async function getCareerContext(): Promise<CareerContext> {
     return _instance;
   }
 
-  ensureDir();
+  await ensureDir();
 
   const profileStore = createProfileStore();
   const jobStore = createJobStore();
   const networkGraph = createNetworkGraph();
   const outreachPipeline = createOutreachPipeline();
+  const companyTracker = createCompanyTracker();
+  const interactionTracker = createInteractionTracker();
   const modeManager = createModeManager();
 
-  // Load persisted data synchronously.
-  const profileData = readJsonFile("profile.json");
-  const jobData = readJsonFile<{ listings: unknown[]; searches: unknown[] }>("jobs.json");
-  const networkData = readJsonFile<{
-    persons: Array<{ id: string; [k: string]: unknown }>;
-    edges: unknown[];
-  }>("network.json");
-  const outreachData = readJsonFile<unknown[]>("outreach.json");
+  // Load persisted data from disk.
+  const [profileData, jobData, networkData, outreachData, intelData, interactionData] =
+    await Promise.all([
+      readJsonFile("profile.json"),
+      readJsonFile<{ listings: unknown[]; searches: unknown[] }>("jobs.json"),
+      readJsonFile<{
+        persons: Array<{ id: string; [k: string]: unknown }>;
+        edges: unknown[];
+      }>("network.json"),
+      readJsonFile<unknown[]>("outreach.json"),
+      readJsonFile<Parameters<CompanyTracker["fromJSON"]>[0]>("intel.json"),
+      readJsonFile<Parameters<InteractionTracker["fromJSON"]>[0]>("interactions.json"),
+    ]);
 
   if (profileData) {
     try {
@@ -123,6 +142,22 @@ export async function getCareerContext(): Promise<CareerContext> {
     }
   }
 
+  if (intelData) {
+    try {
+      companyTracker.fromJSON(intelData);
+    } catch (err) {
+      log.warn(`failed to restore company intel: ${String(err)}`);
+    }
+  }
+
+  if (interactionData) {
+    try {
+      interactionTracker.fromJSON(interactionData);
+    } catch (err) {
+      log.warn(`failed to restore interactions: ${String(err)}`);
+    }
+  }
+
   async function save(): Promise<void> {
     const previous = _saveLock;
     let release!: () => void;
@@ -131,13 +166,15 @@ export async function getCareerContext(): Promise<CareerContext> {
     });
     await previous;
     try {
-      writeJsonFile("profile.json", profileStore.toJSON());
-      writeJsonFile("jobs.json", jobStore.toJSON());
-      writeJsonFile("network.json", {
+      await writeJsonFile("profile.json", profileStore.toJSON());
+      await writeJsonFile("jobs.json", jobStore.toJSON());
+      await writeJsonFile("network.json", {
         persons: Array.from(networkGraph.persons.values()),
         edges: networkGraph.edges,
       });
-      writeJsonFile("outreach.json", outreachPipeline.toJSON());
+      await writeJsonFile("outreach.json", outreachPipeline.toJSON());
+      await writeJsonFile("intel.json", companyTracker.toJSON());
+      await writeJsonFile("interactions.json", interactionTracker.toJSON());
     } catch (err) {
       log.error(`failed to save career data: ${String(err)}`);
       throw err;
@@ -146,6 +183,15 @@ export async function getCareerContext(): Promise<CareerContext> {
     }
   }
 
-  _instance = { profileStore, jobStore, networkGraph, outreachPipeline, modeManager, save };
+  _instance = {
+    profileStore,
+    jobStore,
+    networkGraph,
+    outreachPipeline,
+    companyTracker,
+    interactionTracker,
+    modeManager,
+    save,
+  };
   return _instance;
 }

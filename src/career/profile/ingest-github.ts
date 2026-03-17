@@ -86,12 +86,12 @@ export function parseGitHubProfile(data: GitHubProfileData): {
   projects: Project[];
   skills: Skill[];
 } {
-  log.info("Parsing GitHub profile for", data.username, "with", data.repos.length, "repos");
+  log.info(`Parsing GitHub profile for ${data.username} with ${data.repos.length} repos`);
 
   const projects = mapReposToProjects(data);
   const skills = deriveSkills(data);
 
-  log.info("Derived", projects.length, "projects and", skills.length, "skills");
+  log.info(`Derived ${projects.length} projects and ${skills.length} skills`);
   return { projects, skills };
 }
 

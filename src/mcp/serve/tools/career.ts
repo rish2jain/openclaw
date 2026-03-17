@@ -472,11 +472,15 @@ function handleOutreachDraft(): McpToolHandler {
         }
 
         const profile = ctx.profileStore.getFullProfile();
-        const senderId = profile.profile?.id;
+        // Look up "self" node from the network graph to find the sender's person id
+        const selfNode = Array.from(ctx.networkGraph.persons.values()).find((p) =>
+          p.tags.includes("self"),
+        );
+        const senderId = selfNode?.id;
         if (senderId === undefined) {
           return textResult({
             error:
-              "Sender profile is incomplete (no profile id). Add or complete your career profile before drafting outreach.",
+              "No 'self' node found in the network graph. Add yourself first before drafting outreach.",
           });
         }
         const edges = ctx.networkGraph.edges.filter(

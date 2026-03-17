@@ -33,10 +33,11 @@ describe("agents helpers", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "work",
           match: { channel: "whatsapp", accountId: "biz" },
         },
-        { agentId: "main", match: { channel: "telegram" } },
+        { type: "route" as const, agentId: "main", match: { channel: "telegram" } },
       ],
     };
 
@@ -85,6 +86,7 @@ describe("agents helpers", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "main",
           match: { channel: "whatsapp", accountId: "default" },
         },
@@ -93,14 +95,17 @@ describe("agents helpers", () => {
 
     const result = applyAgentBindings(cfg, [
       {
+        type: "route" as const,
         agentId: "main",
         match: { channel: "whatsapp", accountId: "default" },
       },
       {
+        type: "route" as const,
         agentId: "work",
         match: { channel: "whatsapp", accountId: "default" },
       },
       {
+        type: "route" as const,
         agentId: "work",
         match: { channel: "telegram" },
       },
@@ -116,6 +121,7 @@ describe("agents helpers", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "main",
           match: { channel: "telegram" },
         },
@@ -124,6 +130,7 @@ describe("agents helpers", () => {
 
     const result = applyAgentBindings(cfg, [
       {
+        type: "route" as const,
         agentId: "main",
         match: { channel: "telegram", accountId: "work" },
       },
@@ -134,6 +141,7 @@ describe("agents helpers", () => {
     expect(result.conflicts).toHaveLength(0);
     expect(result.config.bindings).toEqual([
       {
+        type: "route" as const,
         agentId: "main",
         match: { channel: "telegram", accountId: "work" },
       },
@@ -144,6 +152,7 @@ describe("agents helpers", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "main",
           match: {
             channel: "discord",
@@ -157,6 +166,7 @@ describe("agents helpers", () => {
 
     const result = applyAgentBindings(cfg, [
       {
+        type: "route" as const,
         agentId: "work",
         match: {
           channel: "discord",
@@ -175,6 +185,7 @@ describe("agents helpers", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "main",
           match: {
             channel: "discord",
@@ -184,6 +195,7 @@ describe("agents helpers", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "main",
           match: {
             channel: "discord",
@@ -196,6 +208,7 @@ describe("agents helpers", () => {
 
     const result = removeAgentBindings(cfg, [
       {
+        type: "route" as const,
         agentId: "main",
         match: {
           channel: "discord",
@@ -209,6 +222,7 @@ describe("agents helpers", () => {
     expect(result.conflicts).toHaveLength(0);
     expect(result.config.bindings).toEqual([
       {
+        type: "route" as const,
         agentId: "main",
         match: {
           channel: "discord",
@@ -229,8 +243,8 @@ describe("agents helpers", () => {
         ],
       },
       bindings: [
-        { agentId: "work", match: { channel: "whatsapp" } },
-        { agentId: "home", match: { channel: "telegram" } },
+        { type: "route" as const, agentId: "work", match: { channel: "whatsapp" } },
+        { type: "route" as const, agentId: "home", match: { channel: "telegram" } },
       ],
       tools: {
         agentToAgent: { enabled: true, allow: ["work", "home"] },

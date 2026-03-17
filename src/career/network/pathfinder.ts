@@ -45,6 +45,13 @@ export function findIntroPaths(
   const queue: Entry[] = [{ path: [fromId], minStr: 1.0 }];
   const found: IntroPath[] = [];
 
+  // Track the best (highest) minStrength with which we've reached each node.
+  // If we arrive at a node with equal or worse minStrength, skip it — the
+  // earlier BFS entry already explores a path that is at least as strong.
+  // This prevents O(N!) queue growth in dense graphs while preserving optimal
+  // path discovery for sparse ones.
+  const bestMinStrength = new Map<string, number>([[fromId, 1.0]]);
+
   while (queue.length > 0) {
     const { path, minStr } = queue.shift()!;
     const current = path[path.length - 1];
@@ -59,6 +66,14 @@ export function findIntroPaths(
       } // no cycles
 
       const newMin = Math.min(minStr, strength);
+
+      // Prune: skip if we already reached this node with equal or better strength.
+      const prev = bestMinStrength.get(nId);
+      if (prev !== undefined && prev >= newMin) {
+        continue;
+      }
+      bestMinStrength.set(nId, newMin);
+
       const newPath = [...path, nId];
 
       if (targets.has(nId)) {

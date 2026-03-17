@@ -18,6 +18,7 @@ function buildWorkerBindingConfig(peer: {
     },
     bindings: [
       {
+        type: "route",
         agentId: "worker",
         match: {
           channel: "discord",

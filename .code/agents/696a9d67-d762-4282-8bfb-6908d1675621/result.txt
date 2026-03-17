@@ -1,0 +1,161 @@
+
+
+All five exploration agents have now completed. The gateway agent added the final piece — **89,506 lines across 355 files**, making the gateway by far the largest subsystem. Key additions:
+
+- **`GatewayRequestContext` has 40+ fields** — this is a god-object dependency bag that should be split into domain-specific contexts.
+- **Critical untested gateway files**: `server-chat.ts` (643 lines), `server-cron.ts` (512 lines), `control-ui.ts` (481 lines), `node-registry.ts` (209 lines), `config-reload-plan.ts` (225 lines).
+- **`message-handler.ts` has 6+ nesting levels** — a prime refactoring target.
+
+---
+
+Here's the complete, consolidated plan with all agent findings incorporated:
+
+# OpenClaw Strategic Enhancement Plan (Final)
+
+## Codebase Profile
+
+| Dimension | Metric |
+|-----------|--------|
+| Total source files | ~2,761 |
+| Total test files | ~1,959 |
+| Extensions | 50 (14 untested, 5 likely abandoned) |
+| Gateway LOC | 89,506 across 355 files |
+| Agents LOC | 93,423 across 450 files |
+| Config LOC | 27,511 across 138 files |
+| MCP LOC | 11,927 across 76 files |
+| Channels LOC | ~2,782 (core orchestration) + plugins |
+| Security LOC | 7,816 across 20 files (33% tested) |
+| Plugin-SDK | 858-line barrel, 86 source files |
+
+## Priority 0 — Structural Integrity
+
+### 0a. Consolidate MCP duplication
+- **What**: `src/mcp/serve/` and `src/mcp/` root contain parallel implementations of server, protocol, types, resources, and tool handlers (~5,164 duplicated tool lines alone).
+- **Why**: Active drift risk — `serve/resources.ts` has error resilience the root version lacks. Fixes must be applied twice.
+- **How**: Keep `src/mcp/tools/` (more tests), adopt `serve/`'s enhanced error handling patterns, delete `serve/tools/`.
+- **Validation**: `pnpm test:fast`, `pnpm test:e2e`, grep all `from "../serve/tools` imports.
+
+### 0b. Tame plugin-sdk barrel
+- **What**: `src/plugin-sdk/index.ts` — 858 lines re-exporting ~200 symbols from 50+ modules.
+- **Why**: Existing lint (`check-no-monolithic-plugin-sdk-entry-imports.ts`) proves the team knows this is a problem. The `tsconfig.plugin-sdk.dts.json` already curates only 56 of 111 files.
+- **How**: Enforce granular imports. Split barrel into domain files (`channel-api.ts`, `security.ts`, `runtime.ts`). Index imports from those.
+
+### 0c. Triage abandoned extensions
+- **What**: `open-prose` (5 LOC), `sglang` (81), `vllm` (81), `memory-core` (38), `talk-voice` (162) — all zero tests, no clear consumers.
+- **How**: Mark experimental or remove. Takes 30 minutes.
+
+## Priority 1 — Security & Reliability Test Gaps
+
+### 1a. Security module tests (33% coverage → target 70%)
+- **Critical files**: `audit-extra.sync.ts` (1,363 lines), `audit-extra.async.ts` (1,314 lines), `external-content.ts` (356 lines — prompt injection detection).
+- **Why**: Security code with 33% test coverage is the highest-risk gap in the codebase.
+
+### 1b. RBAC tests (0% → target 80%)
+- **Files**: `src/rbac/permissions.ts`, `config-filter.ts`, `resolve.ts` — no visible tests.
+- **Why**: Access control with zero test coverage.
+
+### 1c. Circuit breaker tests (0%)
+- **File**: `src/channels/reliability/circuit-breaker.ts` (230 lines) — core reliability primitive, zero tests.
+
+### 1d. Gateway untested hot paths
+- **Files**: `server-chat.ts` (643 lines), `server-cron.ts` (512 lines), `node-registry.ts` (209 lines), `config-reload-plan.ts` (225 lines).
+
+## Priority 2 — Gateway Complexity Reduction
+
+### 2a. Break up 6 mega-files (>1000 lines each)
+| File | Lines | Split Strategy |
+|------|-------|----------------|
+| `server-methods/chat.ts` | 1,567 | By operation: send, history, abort, attachments |
+| `server-methods/nodes.ts` | 1,179 | By flow: pairing, invoke, wake |
+| `server/ws-connection/message-handler.ts` | 1,163 | Reduce 6+ nesting levels; extract dispatch table |
+| `server.impl.ts` | 1,118 | Separate lifecycle from wiring |
+| `session-utils.ts` | 1,029 | Split by domain (already has `.fs.ts` companion) |
+| `server-http.ts` | 1,011 | Extract route handlers into dedicated files |
+
+### 2b. Split `GatewayRequestContext` (40+ fields)
+- Extract domain-specific context types: `ChatContext`, `NodeContext`, `SessionContext`, `CronContext`.
+
+### 2c. Narrow gateway public API
+- 20+ files outside `src/gateway/` import internals. Introduce a `src/gateway/public.ts` façade.
+
+## Priority 3 — Build & DX
+
+### 3a. Parallelize build steps
+- `pnpm build` chains 10+ sequential Node invocations. Independent steps (copy-hook-metadata, write-build-info, write-cli-compat) can run in parallel.
+
+### 3b. Document custom lint boundaries
+- 12 `scripts/check-*.{mjs,ts}` enforce architectural boundaries but lack documentation. Add a `scripts/README.md`.
+
+### 3c. Streamline vitest topology
+- 6 configs is reasonable but undocumented for contributors. Add a test architecture guide.
+
+## Priority 4 — Architecture Refinement
+
+### 4a. Complete channel state persistence
+- `channel-state-store.ts` has SQLite schema (SCHEMA_VERSION = 1) and `dbPath` option but docs say "in-memory only". Ship the SQLite path.
+
+### 4b. Extract shared extension base patterns
+- `accounts.ts` across extensions: 60-70% structural similarity → generic account resolver factory.
+- `channel.ts` outbound patterns: 40-50% → base class for chunking, format conversion, media processing.
+- **Estimated savings**: 20-30% LOC reduction across extensions.
+
+### 4c. Standardize extension packaging
+- 6 extensions lack `package.json`. All 50 should be proper workspace packages with consistent structure.
+
+### 4d. Career module test parity
+- New modules (`negotiation/`, `pathmodel/`, `infer-skill-category.ts`) have zero tests. `persistence.ts` (197 lines) needs coverage before the module grows further.
+
+## Priority 5 — Longer-term
+
+### 5a. Config system simplification
+- 27,511 LOC across 138 files. Zod schemas are dense with discriminated unions. Evaluate auto-generation.
+
+### 5b. Split oversized test files
+- `security/audit.test.ts` (3,697 lines), `secrets/runtime.test.ts` (2,387 lines), `plugins/loader.test.ts` (2,190 lines).
+
+### 5c. Documentation overhaul
+- Missing: gateway architecture guide, extension dev guide, plugin SDK API reference, RBAC guide, memory subsystem guide, deployment/ops guide.
+
+### 5d. Unify logging
+- `src/logging/subsystem.ts` (`createSubsystemLogger`) vs `src/infra/structured-logger.ts` — two logging approaches.
+
+### 5e. Memory subsystem test coverage (37% → 60%)
+- Graph knowledge store and tiered store are under-tested for data-persisting code.
+
+## Execution Sequence
+
+```
+Near-term (1-2 sprints)
+├── 0a. MCP consolidation (removes ~2,500 lines of duplication)
+├── 0c. Triage abandoned extensions
+├── 1a. Security module tests
+├── 1b. RBAC tests
+├── 1c. Circuit breaker tests
+└── 3b. Document custom lints
+
+Mid-term (3-5 sprints)
+├── 0b. Plugin-sdk granular imports
+├── 1d. Gateway untested hot paths
+├── 2a. Break up gateway mega-files (start with chat.ts)
+├── 2b. Split GatewayRequestContext
+├── 4a. Channel state persistence (SQLite)
+├── 4c. Standardize extension packaging
+└── 4d. Career module test parity
+
+Longer-term (6+ sprints)
+├── 2c. Gateway public API boundary
+├── 3a. Parallelize build
+├── 4b. Extract shared extension base patterns
+├── 5a-5e. Config, test splits, docs, logging, memory tests
+```
+
+## Risks & Validation
+
+| Action | Risk | Validation |
+|--------|------|------------|
+| MCP consolidation | Breaking downstream imports | `pnpm test && pnpm test:e2e`; grep `serve/tools` |
+| Plugin-sdk shrink | Extension build breaks | Existing lint; tighten gradually |
+| Gateway splits | Merge conflicts | Coordinate with active PRs; do on quiet branch |
+| Extension standardization | 50-extension migration scope | Template + scaffold script; batch by tier |
+| Channel persistence | SQLite failure modes | WAL mode; graceful fallback to in-memory |
+| Shared extension base | Behavioral regression | Run `pnpm test:extensions` before/after per extension |

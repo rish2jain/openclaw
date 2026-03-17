@@ -19,17 +19,12 @@ function expectMismatch(
   expect(result.code).toBe(code);
 }
 
-function expectV1BindingMatch(params: {
-  argv: string[];
-  requestCommand: string;
-  commandArgv?: string[];
-}) {
+function expectV1BindingMatch(params: { argv: string[]; requestCommand: string }) {
   const result = evaluateSystemRunApprovalMatch({
     argv: params.argv,
     request: {
       host: "node",
       command: params.requestCommand,
-      commandArgv: params.commandArgv,
       systemRunBinding: buildSystemRunApprovalBinding({
         argv: params.argv,
         cwd: null,
@@ -139,7 +134,6 @@ describe("evaluateSystemRunApprovalMatch", () => {
     expectV1BindingMatch({
       argv: ["echo", "SAFE"],
       requestCommand: "echo STALE",
-      commandArgv: ["echo STALE"],
     });
   });
 });

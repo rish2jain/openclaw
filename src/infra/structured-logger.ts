@@ -149,7 +149,9 @@ export function createStructuredLogger(component: string): StructuredLogger {
     if (entry.correlationId) {
       enrichedMeta.correlationId = entry.correlationId;
     }
-    sub[level](message, Object.keys(enrichedMeta).length > 0 ? enrichedMeta : undefined);
+    (sub as unknown as Record<string, (msg: string, meta?: Record<string, unknown>) => void>)[
+      level
+    ](message, Object.keys(enrichedMeta).length > 0 ? enrichedMeta : undefined);
   };
 
   const logger: StructuredLogger = {

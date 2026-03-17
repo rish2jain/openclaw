@@ -201,6 +201,16 @@ export function createFailoverRouter(deps: FailoverRouterDeps): FailoverRouter {
           failover.originalChannel,
         );
         if (preference.autoFailback) {
+          const elapsed = Date.now() - failover.failedOverAt;
+          if (elapsed < config.failbackGracePeriodMs) {
+            log.info("deferring failback: grace period not elapsed", {
+              originalChannel: failover.originalChannel,
+              targetChannel: failover.targetChannel,
+              elapsedMs: elapsed,
+              gracePeriodMs: config.failbackGracePeriodMs,
+            });
+            continue;
+          }
           actions.push({
             type: "failback",
             userKey: failover.userKey,

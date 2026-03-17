@@ -275,7 +275,7 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
 
     const tierPlaceholders = tiers.map(() => "?").join(", ");
     const conditions: string[] = [`${FTS_TABLE} MATCH ?`, `f.tier IN (${tierPlaceholders})`];
-    const params: unknown[] = [ftsQuery, ...tiers];
+    const params: (string | number | null)[] = [ftsQuery, ...tiers];
     // Always join tiered_memory so we can filter by expires_at (exclude expired entries).
     const joinClause = `JOIN tiered_memory m ON m.id = f.id`;
     conditions.push("(m.expires_at IS NULL OR m.expires_at > ?)");
@@ -356,7 +356,7 @@ export class SqliteTieredMemoryStore implements TieredMemoryStore {
       `(value LIKE ? ESCAPE '\\' OR key LIKE ? ESCAPE '\\')`,
       "(expires_at IS NULL OR expires_at > ?)",
     ];
-    const params: unknown[] = [...tiers, pattern, pattern, Date.now()];
+    const params: (string | number | null)[] = [...tiers, pattern, pattern, Date.now()];
     if (agentId != null) {
       conditions.push("agent_id = ?");
       params.push(agentId);

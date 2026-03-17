@@ -23,7 +23,7 @@ describe("channel_status tool", () => {
       const result = await tool.execute({});
 
       expect(result.isError).toBeUndefined();
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = JSON.parse(result.content[0].text!);
       expect(parsed).toHaveProperty("telegram");
       expect(parsed).toHaveProperty("discord");
     });
@@ -37,7 +37,7 @@ describe("channel_status tool", () => {
 
       const result = await tool.execute({ channel: "telegram" });
 
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = JSON.parse(result.content[0].text!);
       expect(parsed).toHaveProperty("Telegram");
     });
 
@@ -50,7 +50,7 @@ describe("channel_status tool", () => {
 
       const result = await tool.execute({ channel: "telegram" });
 
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = JSON.parse(result.content[0].text!);
       expect(parsed).toHaveProperty("telegram_bot");
     });
 

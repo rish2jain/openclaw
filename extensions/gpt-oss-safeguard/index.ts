@@ -184,7 +184,7 @@ async function callSafeguard(params: {
   try {
     tmpDir = await createGuardrailTempDir("safeguard");
     const sessionId = createGuardrailRunId("gpt-oss-safeguard");
-    const sessionFile = path.join(tmpDir, "session.json");
+    const sessionFile = path.join(tmpDir!, "session.json");
 
     const runEmbeddedPiAgent = await loadRunEmbeddedPiAgent();
 

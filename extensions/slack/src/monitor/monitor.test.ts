@@ -218,6 +218,7 @@ describe("resolveSlackSystemEventSessionKey", () => {
       cfg: {
         bindings: [
           {
+            type: "route" as const,
             agentId: "ops",
             match: {
               channel: "slack",
@@ -239,6 +240,7 @@ describe("resolveSlackSystemEventSessionKey", () => {
       cfg: {
         bindings: [
           {
+            type: "route" as const,
             agentId: "ops-dm",
             match: {
               channel: "slack",

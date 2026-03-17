@@ -39,7 +39,7 @@ describe("list_sessions tool", () => {
 
       const result = await tool.execute({});
 
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = JSON.parse(result.content[0].text!);
       expect(parsed.sessions).toHaveLength(1);
       expect(parsed.sessions[0].key).toBe("agent:main:main");
     });

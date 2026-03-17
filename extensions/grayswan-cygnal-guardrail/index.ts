@@ -269,6 +269,8 @@ function getGrayswanRole(stage: GuardrailStage): GrayswanMonitorMessage["role"] 
       return "assistant";
     case "after_tool_call":
       return "tool";
+    default:
+      return "user";
   }
 }
 

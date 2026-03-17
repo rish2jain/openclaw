@@ -17,7 +17,7 @@ function createDefaultSpawnConfig(): OpenClawConfig {
       discord: {
         threadBindings: {
           enabled: true,
-          spawnAcpSessions: true,
+          spawnSubagentSessions: true,
         },
       },
     },
@@ -521,7 +521,7 @@ describe("spawnAcpDirect", () => {
         discord: {
           threadBindings: {
             enabled: true,
-            spawnAcpSessions: false,
+            spawnSubagentSessions: false,
           },
         },
       },
@@ -542,7 +542,7 @@ describe("spawnAcpDirect", () => {
     );
 
     expect(result.status).toBe("error");
-    expect(result.error).toContain("spawnAcpSessions=true");
+    expect(result.error).toContain("spawnSubagentSessions=true");
   });
 
   it("forbids ACP spawn from sandboxed requester sessions", async () => {

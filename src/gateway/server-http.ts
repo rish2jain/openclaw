@@ -13,7 +13,7 @@ import { resolveAgentAvatar } from "../agents/identity-avatar.js";
 import { CANVAS_WS_PATH, handleA2uiHttpRequest } from "../canvas-host/a2ui.js";
 import type { CanvasHostHandler } from "../canvas-host/server.js";
 import { loadConfig } from "../config/config.js";
-import type { createSubsystemLogger } from "../logging/subsystem.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { safeEqualSecret } from "../security/secret-equal.js";
 import {
   AUTH_RATE_LIMIT_SCOPE_HOOK_AUTH,
@@ -74,6 +74,8 @@ import type { GatewayWsClient } from "./server/ws-types.js";
 import { handleToolsInvokeHttpRequest } from "./tools-invoke-http.js";
 
 type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
+
+const log = createSubsystemLogger("gateway/http");
 
 const HOOK_AUTH_FAILURE_LIMIT = 20;
 const HOOK_AUTH_FAILURE_WINDOW_MS = 60_000;
@@ -934,7 +936,11 @@ export function createGatewayHttpServer(opts: {
       res.statusCode = 404;
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.end("Not Found");
-    } catch {
+    } catch (err) {
+      log.warn("Unhandled error in HTTP request handler", {
+        path: req.url,
+        error: err instanceof Error ? err.message : String(err),
+      });
       res.statusCode = 500;
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.end("Internal Server Error");
@@ -994,7 +1000,11 @@ export function attachGatewayUpgradeHandler(opts: {
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit("connection", ws, req);
       });
-    })().catch(() => {
+    })().catch((err) => {
+      log.warn("Unhandled error in WebSocket upgrade handler", {
+        path: req.url,
+        error: err instanceof Error ? err.message : String(err),
+      });
       socket.destroy();
     });
   });

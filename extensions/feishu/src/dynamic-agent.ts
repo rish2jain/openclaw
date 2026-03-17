@@ -63,10 +63,11 @@ export async function maybeCreateDynamicAgent(params: {
       bindings: [
         ...existingBindings,
         {
+          type: "route" as const,
           agentId,
           match: {
             channel: "feishu",
-            peer: { kind: "direct", id: senderOpenId },
+            peer: { kind: "direct" as const, id: senderOpenId },
           },
         },
       ],
@@ -105,10 +106,11 @@ export async function maybeCreateDynamicAgent(params: {
     bindings: [
       ...existingBindings,
       {
+        type: "route" as const,
         agentId,
         match: {
           channel: "feishu",
-          peer: { kind: "direct", id: senderOpenId },
+          peer: { kind: "direct" as const, id: senderOpenId },
         },
       },
     ],

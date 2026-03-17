@@ -1,4 +1,3 @@
-import type { ChannelMonitorHandle } from "openclaw/plugin-sdk";
 import { verifyDingTalkSignature } from "./sign.js";
 import type { DingTalkInboundEvent } from "./types.js";
 
@@ -7,6 +6,8 @@ export type DingTalkMonitorOptions = {
   secret?: string;
   onMessage: (event: DingTalkInboundEvent) => Promise<void>;
 };
+
+type MonitorHandle = { stop: () => void } | void;
 
 /**
  * Compute the inbound webhook path for a given account.
@@ -34,10 +35,10 @@ export function monitorDingTalkProvider(params: {
     registerHttpHandler: (
       path: string,
       handler: (req: Request) => Promise<Response>,
-    ) => ChannelMonitorHandle;
+    ) => MonitorHandle;
   };
   onMessage: (event: DingTalkInboundEvent) => Promise<void>;
-}): ChannelMonitorHandle {
+}): MonitorHandle {
   const path = resolveDingTalkWebhookPath({
     accountId: params.accountId,
     configuredPath: params.inboundPath,

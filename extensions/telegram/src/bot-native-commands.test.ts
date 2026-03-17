@@ -106,6 +106,7 @@ describe("registerTelegramNativeCommands", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "butler",
           match: { channel: "telegram", accountId: "bot-a" },
         },
@@ -240,7 +241,13 @@ describe("registerTelegramNativeCommands", () => {
       agents: {
         list: [{ id: "main", default: true }, { id: "work" }],
       },
-      bindings: [{ agentId: "work", match: { channel: "telegram", accountId: "default" } }],
+      bindings: [
+        {
+          type: "route" as const,
+          agentId: "work",
+          match: { channel: "telegram", accountId: "default" },
+        },
+      ],
     };
 
     pluginCommandMocks.getPluginCommandSpecs.mockReturnValue([

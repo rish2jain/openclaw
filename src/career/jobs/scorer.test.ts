@@ -45,7 +45,6 @@ function makePreferences(overrides: Partial<CareerPreferences> = {}): CareerPref
   return {
     roleTypes: ["engineer"],
     industries: [],
-    locationPreferences: [],
     dealBreakers: [],
     workStyle: "remote",
     companyStage: [],
@@ -57,12 +56,14 @@ function makePreferences(overrides: Partial<CareerPreferences> = {}): CareerPref
 function makeProfile(
   skills: Skill[] = [],
   workHistory: WorkEntry[] = [],
-  preferences?: Partial<CareerPreferences>,
+  preferences?: Partial<CareerPreferences> & { locationPreferences?: string[] },
 ) {
+  const { locationPreferences, ...prefOverrides } = preferences ?? {};
   return {
     skills,
     workHistory,
-    preferences: makePreferences(preferences),
+    preferences: makePreferences(prefOverrides),
+    locationPreferences,
   };
 }
 

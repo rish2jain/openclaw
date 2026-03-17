@@ -44,7 +44,7 @@ describe("OutreachGenerator", () => {
 
     it("always sets recipientId to empty string", () => {
       const gen = createOutreachGenerator();
-      const record = gen.draftMessage(makeDraftParams({ recipientId: "person-42" }));
+      const record = gen.draftMessage(makeDraftParams());
       expect(record.recipientId).toBe("");
     });
 

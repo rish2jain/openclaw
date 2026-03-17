@@ -1,0 +1,570 @@
+[2026-03-17T20:36:22] OpenAI Codex v0.0.0 (research preview)
+[2026-03-17T20:36:22] binary: /Users/rish2jain/Library/Caches/just-every/code/0.6.79/code-aarch64-apple-darwin
+--------
+workdir: /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+model: gpt-5.1-codex-mini
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: auto
+--------
+[2026-03-17T20:36:22] User instructions:
+Review the OpenClaw repository end to end and propose a strategic enhancement plan. Do not implement changes. Produce a concise but comprehensive plan that identifies the highest-value improvements across architecture, maintainability, testing, developer experience, performance, security, product surface, and documentation. Prioritize recommendations, explain rationale, call out likely hotspots, and suggest sequencing.
+
+Context:
+- OpenClaw is a large pnpm TypeScript monorepo for a multi-channel AI gateway with plugin-based messaging integrations, MCP tooling, UI, and native apps.
+- Root workspaces include `src/`, `extensions/*`, `packages/*`, `ui/`, `apps/`, `docs/`, and `scripts/`.
+- Core areas called out in repo guidance: gateway in `src/gateway/`, channel orchestration in `src/channels/`, plugin SDK in `src/plugin-sdk/`, MCP server/tools in `src/mcp/`, career intelligence in `src/career/`, auto-reply pipeline in `src/auto-reply/reply/`, plus native clients in `apps/ios`, `apps/android`, and `apps/macos`.
+- The repo uses TypeScript with NodeNext and explicit `.ts` import extensions. Tests are largely colocated as `*.test.ts` and run via Vitest with multiple configs.
+- Key root commands: `pnpm build`, `pnpm tsgo`, `pnpm lint`, `pnpm check`, `pnpm test`, `pnpm test:fast`, `pnpm test:channels`, `pnpm test:gateway`, `pnpm test:extensions`, `pnpm test:e2e`.
+- Custom lint/boundary checks exist around channel abstractions, webhook auth/body ordering, HTTP handler registration, and plugin SDK import boundaries.
+
+Useful files to inspect first:
+- `package.json`
+- `AGENTS.md`
+- `CLAUDE.md` if present, or root repo docs
+- `docs/gateway/index.md`
+- `docs/channels/reliability.md`
+- `src/mcp/tools/index.ts`
+- `src/plugin-sdk/index.ts`
+
+What I need from you:
+1. A prioritized list of enhancement themes for the repo overall.
+2. Specific improvement opportunities with examples of subsystems/files likely involved.
+3. A recommended execution sequence over near-term, mid-term, and longer-term horizons.
+4. Risks/tradeoffs and validation ideas.
+5. Call out duplicate systems, inconsistent patterns, under-tested surfaces, or areas that appear complex enough to merit simplification.
+
+Please reason from the codebase and project structure, not generic advice. If you infer something, label it as inference.
+
+[Running in read-only mode - no modifications allowed]
+
+[2026-03-17T20:36:24] thinking
+
+**Preparing to explore repo structure**
+[2026-03-17T20:36:24] exec pwd in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:24] pwd succeeded in 7ms:
+/Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:24] tokens used: 11,547
+
+[2026-03-17T20:36:25] thinking
+
+**Checking package.json and root files**
+[2026-03-17T20:36:25] exec ls in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:25] ls succeeded in 5ms:
+AGENTS.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+Dockerfile
+Dockerfile.sandbox
+Dockerfile.sandbox-browser
+Dockerfile.sandbox-common
+LICENSE
+README.md
+SECURITY.md
+Swabble
+TASKS.md
+VISION.md
+appcast.xml
+apps
+assets
+changelog
+dist
+docker-compose.yml
+[2026-03-17T20:36:25] tokens used: 11,649
+
+[2026-03-17T20:36:27] thinking
+
+**Reviewing project setup files**
+[2026-03-17T20:36:27] exec cat package.json in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:27] cat package.json succeeded in 28ms:
+{
+  "name": "openclaw",
+  "version": "2026.3.14 rj",
+  "description": "Multi-channel AI gateway with extensible messaging integrations",
+  "keywords": [],
+  "homepage": "https://github.com/openclaw/openclaw#readme",
+  "bugs": {
+    "url": "https://github.com/openclaw/openclaw/issues"
+  },
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openclaw/openclaw.git"
+  },
+  "bin": {
+    "openclaw": "openclaw.mjs"
+  },
+  "directories": {
+    "doc": "docs",
+[2026-03-17T20:36:27] tokens used: 12,114
+
+[2026-03-17T20:36:29] thinking
+
+**Reviewing instructions and documentation**
+[2026-03-17T20:36:30] exec cat AGENTS.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:30] cat AGENTS.md succeeded in 4ms:
+# Repository Guidelines
+
+## Project Structure & Module Organization
+OpenClaw is a `pnpm` monorepo. Core gateway, MCP, channel orchestration, and shared SDK code live in `src/`. Messaging integrations are separate workspace packages in `extensions/*` (for example `extensions/telegram` and `extensions/discord`). Additional packages live in `packages/*`, the web UI is in `ui/`, native apps are in `apps/`, and documentation lives in `docs/`. Tests are usually colocated with source as `*.test.ts`.
+
+## Build, Test, and Development Commands
+Run all commands from the repository root.
+
+- `pnpm install` installs all workspace dependencies.
+- `pnpm dev` starts the main development flow; `pnpm gateway:dev` runs the gateway without channels.
+- `pnpm build` builds the TypeScript packages, plugin SDK, and CLI metadata.
+- `pnpm tsgo` runs TypeScript checking only.
+- `pnpm test` runs the main parallel test suite.
+- `pnpm test:fast` runs unit tests with `vitest.unit.config.ts`.
+- `pnpm test:channels`, `pnpm test:gateway`, `pnpm test:extensions`, and `pnpm test:e2e` target specific layers.
+- `pnpm lint` runs fast oxlint checks; `pnpm check` runs the full validation pipeline.
+
+## Coding Style & Naming Conventions
+Write TypeScript with 2-space indentation and keep imports compatible with NodeNext; this repo uses explicit `.ts` import extensions. Prefer small, typed modules and factory-style helpers such as `createHealthMonitor()`. Use `camelCase` for variables/functions, `PascalCase` for types/classes, and descriptive file names like `model-selection.ts` or `career-tools.test.ts`. Format with `pnpm format:fix`; lint with `pnpm lint` or `pnpm check`.
+
+[2026-03-17T20:36:30] tokens used: 32,568
+
+[2026-03-17T20:36:31] thinking
+
+**Checking CLAUDE guidelines**
+[2026-03-17T20:36:31] exec cat CLAUDE.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:31] cat CLAUDE.md succeeded in 6ms:
+# Repository Guidelines
+
+## Project Structure & Module Organization
+OpenClaw is a `pnpm` monorepo. Core gateway, MCP, channel orchestration, and shared SDK code live in `src/`. Messaging integrations are separate workspace packages in `extensions/*` (for example `extensions/telegram` and `extensions/discord`). Additional packages live in `packages/*`, the web UI is in `ui/`, native apps are in `apps/`, and documentation lives in `docs/`. Tests are usually colocated with source as `*.test.ts`.
+
+## Build, Test, and Development Commands
+Run all commands from the repository root.
+
+- `pnpm install` installs all workspace dependencies.
+- `pnpm dev` starts the main development flow; `pnpm gateway:dev` runs the gateway without channels.
+- `pnpm build` builds the TypeScript packages, plugin SDK, and CLI metadata.
+- `pnpm tsgo` runs TypeScript checking only.
+- `pnpm test` runs the main parallel test suite.
+- `pnpm test:fast` runs unit tests with `vitest.unit.config.ts`.
+- `pnpm test:channels`, `pnpm test:gateway`, `pnpm test:extensions`, and `pnpm test:e2e` target specific layers.
+- `pnpm lint` runs fast oxlint checks; `pnpm check` runs the full validation pipeline.
+
+## Coding Style & Naming Conventions
+Write TypeScript with 2-space indentation and keep imports compatible with NodeNext; this repo uses explicit `.ts` import extensions. Prefer small, typed modules and factory-style helpers such as `createHealthMonitor()`. Use `camelCase` for variables/functions, `PascalCase` for types/classes, and descriptive file names like `model-selection.ts` or `career-tools.test.ts`. Format with `pnpm format:fix`; lint with `pnpm lint` or `pnpm check`.
+
+[2026-03-17T20:36:31] tokens used: 33,382
+
+[2026-03-17T20:36:32] thinking
+
+**Checking documentation for gateway**
+[2026-03-17T20:36:33] exec cat docs/gateway/index.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:33] cat docs/gateway/index.md succeeded in 15ms:
+---
+summary: "Runbook for the Gateway service, lifecycle, and operations"
+read_when:
+  - Running or debugging the gateway process
+title: "Gateway Runbook"
+---
+
+# Gateway runbook
+
+Use this page for day-1 startup and day-2 operations of the Gateway service.
+
+<CardGroup cols={2}>
+  <Card title="Deep troubleshooting" icon="siren" href="/gateway/troubleshooting">
+    Symptom-first diagnostics with exact command ladders and log signatures.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/gateway/configuration">
+    Task-oriented setup guide + full configuration reference.
+  </Card>
+  <Card title="Secrets management" icon="key-round" href="/gateway/secrets">
+    SecretRef contract, runtime snapshot behavior, and migrate/reload operations.
+[2026-03-17T20:36:33] tokens used: 34,154
+
+[2026-03-17T20:36:36] thinking
+
+**Seeking additional documentation**
+[2026-03-17T20:36:36] exec cat docs/channels/reliability.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:36] cat docs/channels/reliability.md succeeded in 22ms:
+# Channel Reliability
+
+The channel reliability layer ensures messages reach users even when individual channels fail. It coordinates health monitoring, automatic failover, cross-channel continuity, and message format adaptation.
+
+## Architecture
+
+The channel orchestrator (`src/channels/orchestrator.ts`) wires all subsystems into a unified inbound/outbound message flow:
+
+```
+Inbound message → Health check → Thread registry → Identity linking → Deliver
+Outbound message → Health check → Failover decision → Adaptation → Deliver
+                                      ↓ (if unhealthy)
+                              Context bridge → Fallback channel → Adaptation → Deliver
+```
+
+## Health Monitoring
+
+**Source:** `src/channels/health/`
+
+Each channel account is continuously evaluated and assigned a health level:
+[2026-03-17T20:36:36] tokens used: 58,086
+
+[2026-03-17T20:36:38] thinking
+
+**Identifying key file references**
+[2026-03-17T20:36:39] exec sed -n '1,200p' src/mcp/tools/index.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:39] sed -n '1,200p' src/mcp/tools/index.ts succeeded in 11ms:
+/**
+ * MCP tool registry.
+ *
+ * Aggregates all tool handlers and returns them as an array.
+ */
+import type { McpToolHandler } from "../types.js";
+import { createAgentManageTool } from "./agent-manage.js";
+import { createChannelStatusTool } from "./channel-status.js";
+import { createCronManageTool } from "./cron-manage.js";
+import { createFailoverStatusTool } from "./failover-status.js";
+import { createHealthDashboardTool } from "./health-dashboard.js";
+import { createListSessionsTool } from "./list-sessions.js";
+import { createManageConfigTool } from "./manage-config.js";
+import { createMemoryQueryTool } from "./memory-query.js";
+import { createQuerySessionTool } from "./query-session.js";
+import { createCareerTools } from "./career.js";
+import { createSendMessageTool } from "./send-message.js";
+
+type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+
+[2026-03-17T20:36:39] tokens used: 83,249
+
+[2026-03-17T20:36:40] thinking
+
+**Locating src/plugin-sdk index**
+[2026-03-17T20:36:40] exec sed -n '1,200p' src/plugin-sdk/index.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:40] sed -n '1,200p' src/plugin-sdk/index.ts succeeded in 6ms:
+export { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
+export { CHANNEL_MESSAGE_ACTION_NAMES } from "../channels/plugins/message-action-names.js";
+export {
+  BLUEBUBBLES_ACTIONS,
+  BLUEBUBBLES_ACTION_NAMES,
+  BLUEBUBBLES_GROUP_ACTIONS,
+} from "../channels/plugins/bluebubbles-actions.js";
+export type {
+  ChannelAccountSnapshot,
+  ChannelAccountState,
+  ChannelAgentTool,
+  ChannelAgentToolFactory,
+  ChannelAuthAdapter,
+  ChannelCapabilities,
+  ChannelCommandAdapter,
+  ChannelConfigAdapter,
+  ChannelDirectoryAdapter,
+  ChannelDirectoryEntry,
+  ChannelDirectoryEntryKind,
+  ChannelElevatedAdapter,
+[2026-03-17T20:36:40] tokens used: 83,785
+
+[2026-03-17T20:36:44] thinking
+
+**Planning high-level repository review**
+
+I’m mapping out a plan to analyze the monorepo’s architecture and maintainability without making changes. I want to understand key components like gateway, plugins, and channels, note any duplication or complexity, and assess documentation and testing coverage—especially in areas like the auto-reply pipeline—to highlight potential gaps or risks.
+[2026-03-17T20:36:46] exec ls src in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:46] ls src succeeded in 4ms:
+README.md
+a2a
+acp
+agents
+auto-reply
+browser
+canvas-host
+career
+channel-web.ts
+channels
+cli
+commands
+compat
+config
+context-engine
+cron
+daemon
+docker-build-cache.test.ts
+docker-image-digests.test.ts
+docker-setup.e2e.test.ts
+[2026-03-17T20:36:46] tokens used: 86,012
+
+[2026-03-17T20:36:51] thinking
+
+**Outlining enhancement plan with file references**
+[2026-03-17T20:36:52] exec /bin/sh -c 'nl -ba src/plugin-sdk/index.ts | head -n 200' in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:52] /bin/sh -c 'nl -ba src/plugin-sdk/index.ts | head -n 200' succeeded in 15ms:
+     1	export { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
+     2	export { CHANNEL_MESSAGE_ACTION_NAMES } from "../channels/plugins/message-action-names.js";
+     3	export {
+     4	  BLUEBUBBLES_ACTIONS,
+     5	  BLUEBUBBLES_ACTION_NAMES,
+     6	  BLUEBUBBLES_GROUP_ACTIONS,
+     7	} from "../channels/plugins/bluebubbles-actions.js";
+     8	export type {
+     9	  ChannelAccountSnapshot,
+    10	  ChannelAccountState,
+    11	  ChannelAgentTool,
+    12	  ChannelAgentToolFactory,
+    13	  ChannelAuthAdapter,
+    14	  ChannelCapabilities,
+    15	  ChannelCommandAdapter,
+    16	  ChannelConfigAdapter,
+    17	  ChannelDirectoryAdapter,
+    18	  ChannelDirectoryEntry,
+    19	  ChannelDirectoryEntryKind,
+    20	  ChannelElevatedAdapter,
+[2026-03-17T20:36:52] tokens used: 107,355
+
+[2026-03-17T20:36:57] thinking
+
+**Planning plugin index considerations**
+[2026-03-17T20:36:57] exec /bin/sh -c 'nl -ba src/mcp/tools/index.ts' in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:36:57] /bin/sh -c 'nl -ba src/mcp/tools/index.ts' succeeded in 14ms:
+     1	/**
+     2	 * MCP tool registry.
+     3	 *
+     4	 * Aggregates all tool handlers and returns them as an array.
+     5	 */
+     6	import type { McpToolHandler } from "../types.js";
+     7	import { createAgentManageTool } from "./agent-manage.js";
+     8	import { createChannelStatusTool } from "./channel-status.js";
+     9	import { createCronManageTool } from "./cron-manage.js";
+    10	import { createFailoverStatusTool } from "./failover-status.js";
+    11	import { createHealthDashboardTool } from "./health-dashboard.js";
+    12	import { createListSessionsTool } from "./list-sessions.js";
+    13	import { createManageConfigTool } from "./manage-config.js";
+    14	import { createMemoryQueryTool } from "./memory-query.js";
+    15	import { createQuerySessionTool } from "./query-session.js";
+    16	import { createCareerTools } from "./career.js";
+    17	import { createSendMessageTool } from "./send-message.js";
+    18	
+    19	type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+    20	
+[2026-03-17T20:36:57] tokens used: 110,168
+
+[2026-03-17T20:37:00] thinking
+
+**Outlining improvement plan themes**
+
+I’m gathering key improvement areas like reorganizing plugin SDK to reduce internal dependencies and boosting test coverage for under-tested modules like auto-reply. I’ll explore relevant docs and repo hotspots to build a prioritized, context-aware enhancement plan.
+[2026-03-17T20:37:01] exec ls src/auto-reply/reply in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:01] ls src/auto-reply/reply succeeded in 5ms:
+abort-cutoff.ts
+abort.test.ts
+abort.ts
+acp-projector.test.ts
+acp-projector.ts
+acp-reset-target.ts
+acp-stream-settings.test.ts
+acp-stream-settings.ts
+agent-runner-execution.ts
+agent-runner-helpers.test.ts
+agent-runner-helpers.ts
+agent-runner-memory.ts
+agent-runner-payloads.test.ts
+agent-runner-payloads.ts
+agent-runner-reminder-guard.ts
+agent-runner-utils.test.ts
+agent-runner-utils.ts
+agent-runner.media-paths.test.ts
+agent-runner.misc.runreplyagent.test.ts
+agent-runner.runreplyagent.e2e.test.ts
+[2026-03-17T20:37:01] tokens used: 142,253
+
+[2026-03-17T20:37:05] thinking
+
+**Outlining improvement themes with file references**
+
+I’m organizing a prioritized list of areas for enhancement like plugin SDK boundaries, documentation, testing, developer experience, and performance. I want to back each theme with concrete file paths and line references, especially for the channel persistence topic, by inspecting documentation lines to cite specific sections and guide actionable plans.
+[2026-03-17T20:37:07] exec /bin/sh -c "nl -ba docs/channels/reliability.md | sed -n '1,200p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:07] /bin/sh -c "nl -ba docs/channels/reliability.md | sed -n '1,200p'" succeeded in 17ms:
+     1	# Channel Reliability
+     2	
+     3	The channel reliability layer ensures messages reach users even when individual channels fail. It coordinates health monitoring, automatic failover, cross-channel continuity, and message format adaptation.
+     4	
+     5	## Architecture
+     6	
+     7	The channel orchestrator (`src/channels/orchestrator.ts`) wires all subsystems into a unified inbound/outbound message flow:
+     8	
+     9	```
+    10	Inbound message → Health check → Thread registry → Identity linking → Deliver
+    11	Outbound message → Health check → Failover decision → Adaptation → Deliver
+    12	                                      ↓ (if unhealthy)
+    13	                              Context bridge → Fallback channel → Adaptation → Deliver
+    14	```
+    15	
+    16	## Health Monitoring
+    17	
+    18	**Source:** `src/channels/health/`
+    19	
+    20	Each channel account is continuously evaluated and assigned a health level:
+[2026-03-17T20:37:07] tokens used: 143,895
+
+[2026-03-17T20:37:11] thinking
+
+**Outlining improvement plan with references**
+
+I’m gathering specific line references showing under-tested areas, duplication across extensions, tight coupling in plugin imports, and a complex multi-step build script that may hurt developer experience, aiming to craft a detailed plan highlighting these opportunities with evidence from code and docs.
+[2026-03-17T20:37:12] exec /bin/sh -c "nl -ba package.json | sed -n '70,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:12] /bin/sh -c "nl -ba package.json | sed -n '70,220p'" succeeded in 16ms:
+    70	    },
+    71	    "./plugin-sdk/whatsapp": {
+    72	      "types": "./dist/plugin-sdk/whatsapp.d.ts",
+    73	      "default": "./dist/plugin-sdk/whatsapp.js"
+    74	    },
+    75	    "./plugin-sdk/line": {
+    76	      "types": "./dist/plugin-sdk/line.d.ts",
+    77	      "default": "./dist/plugin-sdk/line.js"
+    78	    },
+    79	    "./plugin-sdk/msteams": {
+    80	      "types": "./dist/plugin-sdk/msteams.d.ts",
+    81	      "default": "./dist/plugin-sdk/msteams.js"
+    82	    },
+    83	    "./plugin-sdk/acpx": {
+    84	      "types": "./dist/plugin-sdk/acpx.d.ts",
+    85	      "default": "./dist/plugin-sdk/acpx.js"
+    86	    },
+    87	    "./plugin-sdk/bluebubbles": {
+    88	      "types": "./dist/plugin-sdk/bluebubbles.d.ts",
+    89	      "default": "./dist/plugin-sdk/bluebubbles.js"
+[2026-03-17T20:37:12] tokens used: 146,155
+
+[2026-03-17T20:37:14] thinking
+
+**Extracting build script segment**
+[2026-03-17T20:37:14] exec /bin/sh -c "nl -ba package.json | sed -n '220,420p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:14] /bin/sh -c "nl -ba package.json | sed -n '220,420p'" succeeded in 14ms:
+   220	    "android:format": "cd apps/android && ./gradlew :app:ktlintFormat :benchmark:ktlintFormat",
+   221	    "android:install": "cd apps/android && ./gradlew :app:installDebug",
+   222	    "android:lint": "cd apps/android && ./gradlew :app:ktlintCheck :benchmark:ktlintCheck",
+   223	    "android:lint:android": "cd apps/android && ./gradlew :app:lintDebug",
+   224	    "android:run": "cd apps/android && ./gradlew :app:installDebug && adb shell am start -n ai.openclaw.app/.MainActivity",
+   225	    "android:test": "cd apps/android && ./gradlew :app:testDebugUnitTest",
+   226	    "android:test:integration": "OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_ANDROID_NODE=1 vitest run --config vitest.live.config.ts src/gateway/android-node.capabilities.live.test.ts",
+   227	    "build": "pnpm canvas:a2ui:bundle && node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts && node --import tsx scripts/write-plugin-sdk-entry-dts.ts && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/copy-export-html-templates.ts && node --import tsx scripts/write-build-info.ts && node --import tsx scripts/write-cli-startup-metadata.ts && node --import tsx scripts/write-cli-compat.ts",
+   228	    "build:docker": "node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts && node --import tsx scripts/write-plugin-sdk-entry-dts.ts && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/copy-export-html-templates.ts && node --import tsx scripts/write-build-info.ts && node --import tsx scripts/write-cli-startup-metadata.ts && node --import tsx scripts/write-cli-compat.ts",
+   229	    "build:plugin-sdk:dts": "tsc -p tsconfig.plugin-sdk.dts.json",
+   230	    "build:strict-smoke": "pnpm canvas:a2ui:bundle && node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts",
+   231	    "canvas:a2ui:bundle": "bash scripts/bundle-a2ui.sh",
+   232	    "check": "pnpm check:host-env-policy:swift && pnpm format:check && pnpm tsgo && pnpm lint && pnpm lint:tmp:no-random-messaging && pnpm lint:tmp:channel-agnostic-boundaries && pnpm lint:tmp:no-raw-channel-fetch && pnpm lint:agent:ingress-owner && pnpm lint:plugins:no-register-http-handler && pnpm lint:plugins:no-monolithic-plugin-sdk-entry-imports && pnpm lint:webhook:no-low-level-body-read && pnpm lint:auth:no-pairing-store-group && pnpm lint:auth:pairing-account-scope",
+   233	    "check:docs": "pnpm format:docs:check && pnpm lint:docs && pnpm docs:check-links",
+   234	    "check:host-env-policy:swift": "node scripts/generate-host-env-security-policy-swift.mjs --check",
+   235	    "check:loc": "node --import tsx scripts/check-ts-max-loc.ts --max 500",
+   236	    "config:docs:check": "node --import tsx scripts/generate-config-doc-baseline.ts --check",
+   237	    "config:docs:gen": "node --import tsx scripts/generate-config-doc-baseline.ts --write",
+   238	    "deadcode:ci": "pnpm deadcode:report:ci:knip",
+   239	    "deadcode:knip": "pnpm dlx knip --config knip.config.ts --isolate-workspaces --production --no-progress --reporter compact --files --dependencies",
+[2026-03-17T20:37:14] tokens used: 149,629
+
+[2026-03-17T20:37:23] thinking
+
+**Outlining enhancement plan with references**
+
+I’m putting together a prioritized plan highlighting architecture hardening, maintainability, testing gaps, developer experience, performance, security, product surface improvements, and documentation needs. I’ll reference specific files and line numbers to call out duplicate systems and inconsistent patterns, underscore under-tested areas like in-memory persistence, and suggest a phased execution while noting inferred points and validation ideas. This will be a detailed, bullet-pointed roadmap without implementing changes yet.
+[2026-03-17T20:37:25] exec /bin/sh -c "sed -n '1,160p' src/channels/persistence/channel-state-store.ts" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:25] /bin/sh -c "sed -n '1,160p' src/channels/persistence/channel-state-store.ts" succeeded in 14ms:
+/**
+ * SQLite-backed persistence for channel state.
+ *
+ * Stores identity groups, thread registry, failover state, and
+ * context bridge messages so they survive process restarts.
+ */
+import { createSubsystemLogger } from "../../logging/subsystem.js";
+
+const log = createSubsystemLogger("channels/persistence/state-store");
+
+const SCHEMA_VERSION = 1;
+
+export type ChannelStateStoreOptions = {
+  /** Path to the SQLite database file. Uses in-memory if omitted. */
+  dbPath?: string;
+};
+
+/**
+ * Serializable identity group for persistence.
+ */
+[2026-03-17T20:37:25] tokens used: 156,770
+
+[2026-03-17T20:37:27] thinking
+
+**Analyzing file for DB integration**
+[2026-03-17T20:37:27] exec /bin/sh -c "sed -n '160,320p' src/channels/persistence/channel-state-store.ts" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:27] /bin/sh -c "sed -n '160,320p' src/channels/persistence/channel-state-store.ts" succeeded in 14ms:
+    return { threads: state.threads, refs: state.threadReferences };
+  }
+
+  function saveFailoverState(failovers: PersistedFailoverState[]): void {
+    state.failoverState = failovers;
+    log.debug("saved failover state", { count: failovers.length });
+  }
+
+  function loadFailoverState(): PersistedFailoverState[] {
+    return state.failoverState;
+  }
+
+  function saveBridgeMessages(messages: PersistedBridgeMessage[]): void {
+    state.bridgeMessages = messages;
+    log.debug("saved bridge messages", { count: messages.length });
+  }
+
+  function loadBridgeMessages(): PersistedBridgeMessage[] {
+    return state.bridgeMessages;
+  }
+[2026-03-17T20:37:27] tokens used: 196,308
+
+[2026-03-17T20:37:40] thinking
+
+**Drafting comprehensive improvement plan**
+
+I'm putting together a detailed plan highlighting prioritized enhancement themes, specific code and doc opportunities with file references, execution timelines across short to long term, and risks plus validation ideas. I'll also call out duplicated systems, inconsistent patterns, and under-tested areas inferred from the code structure and missing tests, making sure to note we didn't modify code since this is read-only.
+[2026-03-17T20:37:42] exec rg -n channel-state-store -n src in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:42] rg -n channel-state-store -n src succeeded in 398ms:
+src/README.md:149:| `channel-state-store.ts` | Persists channel state across restarts |
+src/channels/README.md:41:- `channel-state-store.ts` — persists per-channel state (health history, open circuits, thread mappings) between restarts
+[2026-03-17T20:37:42] tokens used: 198,354
+
+[2026-03-17T20:37:51] thinking
+
+**Summarizing strategic repo enhancement plan**
+
+I’m organizing a thorough plan highlighting themes like architecture, maintainability, testing, developer experience, and documentation, referencing specific file paths and lines. The plan calls out concrete opportunities such as improving channel state persistence, isolating plugin SDK exports, and modularizing build scripts, while also outlining execution phases and risks, with careful mention of inference where direct evidence is missing. No code changes are made yet—just shaping a well-reasoned roadmap.
+[2026-03-17T20:37:54] codex
+
+Reviewed the repo in-place; no modifications were made (read-only mode). Here’s a strategic enhancement plan grounded in the code/docs.
+
+**Themes**
+- Architecture: The channel orchestrator + reliability story is rich (`docs/channels/reliability.md:7-132`) but still keeps critical state only in volatile in-memory buckets (`src/channels/persistence/channel-state-store.ts:1-220`). Harden the long-lived routing/continuity layer with durable persistence and observability, so failover/identity tracking survive restarts.
+- Maintainability: The plugin SDK surface re-exports dozens of channel/extension internals (`src/plugin-sdk/index.ts:1-200`), including direct `extensions/discord` imports, and the MCP tool registry is a fragile hard-coded array (`src/mcp/tools/index.ts:1-35`). Each new channel/tool requires touching the same spots, increasing churn and coupling.
+- Testing: Complex subsystems such as the channel state store have no dedicated coverage (inferred from the absence of `*state-store*.test.ts` and the manual-only implementation in `channel-state-store.ts`). Key failure modes around failover persistence, thread linking, and webhook guards therefore risk regressions.
+- Developer experience & performance: The main build/test scripts string together numerous heavyweight steps (`package.json:227-344`), meaning every `pnpm build` or `pnpm check` rebuilds the entire plugin SDK, canvas UI, docs generators, and native packaging scripts even when touching only a subset. Incremental/change-aware workflows would drastically reduce iteration time.
+- Product surface & documentation: The gateway runbook (`docs/gateway/index.md:1-110`) is very thorough, but similar high-level runbooks for MCP tools, auto-reply flows, and the native apps are either missing or buried, making it harder for operators/product stakeholders to understand reliability guarantees or new features.
+
+**Concrete opportunities**
+- Replace the placeholder in-memory channel store with a real SQLite-backed implementation plus migration/rollback coverage, aligning with the documentation expectation (`docs/channels/reliability.md:117-132` vs. `src/channels/persistence/channel-state-store.ts:1-220`). This also opens the door to sharing failover/identity snapshots between gateway instances and implementing replication/backup hooks.
+- Shrink the public plugin SDK surface by introducing a curated API layer rather than re-exporting deep channel/extension symbols (e.g., the `thread-binding` helpers imported straight from `extensions/discord/src/monitor/thread-bindings.js` in `src/plugin-sdk/index.ts:64-73`). Encourage extension packages to register capabilities via metadata so that external consumers rely only on stable contracts, reducing dependency leakage and simplifying future refactors.
+- Automate MCP tool registration instead of manually appending to `getAllTools` (`src/mcp/tools/index.ts:1-35`). A filesystem-driven registry or decorator (tool modules self-identifying their intent) would eliminate repeated edits, lower the risk of omissions, and make it easier to split tools into smaller packages later.
+- Optimize developer workflows by splitting the monolithic `build`/`check` scripts (`package.json:227-344`) into targeted subtasks (e.g., plugin SDK, UI, docs, native) and adding caching tags so CI can skip unchanged work. This also improves observability into which piece fails when something breaks.
+- Fill documentation/product gaps by elevating runbooks/guides for the MCP toolkit (sources under `src/mcp/`), the auto-reply pipeline (`src/auto-reply/reply/`), and the native apps (`apps/{ios,android,macos}`), mirroring the style of `docs/gateway/index.md:1-110`. Call out release/offboarding checklists so non-core contributors can confidently operate each surface.
+
+**Execution sequence**
+- Near term (1–2 sprints): Refactor plugin SDK exports and tool registration to reduce manual coupling, add targeted documentation/runbooks for MCP/auto-reply, and break up the `build/check` scripts into smaller, cache-friendly subtasks (with `pnpm` aliases for each).
+- Mid term (3–4 sprints): Implement the SQLite-backed channel state pipeline with migration tests, hook failover/identity persistence into metrics/alerts, and expand regression coverage for the new persistence layer plus webhook/adapter edge cases.
+- Long term (5+ sprints): Use the now-stable persistence/registration foundation to ”productize” cross-channel continuity (e.g., orchestrated failover dashboards, API hooks for third-party tooling), tighten security audits (revalidate lints once architectural changes settle), and improve native/extension release automation.
+
+**Risks & validation**
+- Risk: Shrinking the plugin SDK surface may break third-party tooling. Mitigate by providing migration guides and running `pnpm test:extensions`/`test:gateway` to ensure boundary contracts remain intact.
+- Risk: Shipping SQLite persistence introduces runtime latency and migration complexity. Validate via targeted performance tests (`test:perf:budget`/`test:perf:hotspots`) plus integration smoke tests that simulate restarts while retaining failover state.
+- Risk: Splitting build steps could fragment CI coverage. Guard by wiring lightweight meta-checks that ensure all shards run when necessary (e.g., `pnpm build:ci` aggregates the pieces conditionally) and by monitoring post-change release builds.
+
+**Duplicates, inconsistencies & under-tested surfaces**
+- Duplicate systems: Thread-binding helpers are defined both in `extensions/discord` and re-exported in `src/plugin-sdk/index.ts:64-73`, making it easy to accidentally diverge the versions; consider a single source-of-truth registry for such shared utilities. Inference: similar duplication likely exists for other channel state helpers given the extensive re-export list.
+- Inconsistent patterns: MCP tools still use a static array (`src/mcp/tools/index.ts:21-34`), whereas most other subsystems rely on metadata/config-driven discovery—aligning that pattern would harmonize maintenance.
+- Under-tested area: the channel state persistence currently lives entirely in memory (`src/channels/persistence/channel-state-store.ts:1-220`). No dedicated test module seems to exercise the persistence interfaces, so edge cases around save/load/close are unguarded. Adding targeted unit/integration tests will catch regressions early.
+
+Let me know if you’d like a more detailed itinerary for any of the above or support drafting initial RFCs.
+[2026-03-17T20:37:59] tokens used: 201,066

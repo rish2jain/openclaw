@@ -51,7 +51,7 @@ describe("before_tool_call syntheticResult injection", () => {
       hookMocks.runner.hasHooks.mockReturnValue(true);
       hookMocks.runner.runBeforeToolCall.mockResolvedValue({
         syntheticResult: { status: "cached", data: [1, 2, 3] },
-      });
+      } as unknown as undefined);
 
       const outcome = await runBeforeToolCallHook({ toolName: "read", params: { path: "/a" } });
 
@@ -68,7 +68,7 @@ describe("before_tool_call syntheticResult injection", () => {
       hookMocks.runner.runBeforeToolCall.mockResolvedValue({
         syntheticResult: "intercepted",
         block: true, // should be ignored when syntheticResult present
-      });
+      } as unknown as undefined);
 
       const outcome = await runBeforeToolCallHook({ toolName: "exec", params: {} });
       expect(outcome.blocked).toBe(false);
@@ -88,7 +88,7 @@ describe("before_tool_call syntheticResult injection", () => {
       hookMocks.runner.hasHooks.mockReturnValue(true);
       hookMocks.runner.runBeforeToolCall.mockResolvedValue({
         syntheticResult: { content: [{ type: "text", text: "cached result" }], details: {} },
-      });
+      } as unknown as undefined);
 
       const realExecute = vi.fn().mockResolvedValue({ content: [{ type: "text", text: "real" }] });
       const tool = {
@@ -98,7 +98,9 @@ describe("before_tool_call syntheticResult injection", () => {
         execute: realExecute,
       };
 
-      const wrapped = wrapToolWithBeforeToolCallHook(tool);
+      const wrapped = wrapToolWithBeforeToolCallHook(
+        tool as unknown as Parameters<typeof wrapToolWithBeforeToolCallHook>[0],
+      );
       const result = await wrapped.execute("call-1", { path: "/file" }, undefined, undefined);
 
       // Real execute should NOT have been called
@@ -112,7 +114,9 @@ describe("before_tool_call syntheticResult injection", () => {
 
     it("calls real tool when no syntheticResult", async () => {
       hookMocks.runner.hasHooks.mockReturnValue(true);
-      hookMocks.runner.runBeforeToolCall.mockResolvedValue({ params: { path: "/modified" } });
+      hookMocks.runner.runBeforeToolCall.mockResolvedValue({
+        params: { path: "/modified" },
+      } as unknown as undefined);
 
       const realExecute = vi
         .fn()
@@ -124,7 +128,9 @@ describe("before_tool_call syntheticResult injection", () => {
         execute: realExecute,
       };
 
-      const wrapped = wrapToolWithBeforeToolCallHook(tool);
+      const wrapped = wrapToolWithBeforeToolCallHook(
+        tool as unknown as Parameters<typeof wrapToolWithBeforeToolCallHook>[0],
+      );
       await wrapped.execute("call-2", { path: "/original" }, undefined, undefined);
 
       expect(realExecute).toHaveBeenCalledOnce();
@@ -135,7 +141,7 @@ describe("before_tool_call syntheticResult injection", () => {
       hookMocks.runner.runBeforeToolCall.mockResolvedValue({
         block: true,
         blockReason: "forbidden tool",
-      });
+      } as unknown as undefined);
 
       const realExecute = vi.fn();
       const tool = {
@@ -145,7 +151,9 @@ describe("before_tool_call syntheticResult injection", () => {
         execute: realExecute,
       };
 
-      const wrapped = wrapToolWithBeforeToolCallHook(tool);
+      const wrapped = wrapToolWithBeforeToolCallHook(
+        tool as unknown as Parameters<typeof wrapToolWithBeforeToolCallHook>[0],
+      );
       await expect(wrapped.execute("call-block", {}, undefined, undefined)).rejects.toThrow(
         "forbidden tool",
       );

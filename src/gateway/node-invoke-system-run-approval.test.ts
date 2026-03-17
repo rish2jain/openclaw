@@ -29,7 +29,6 @@ describe("sanitizeSystemRunParamsForForwarding", () => {
         host: "node",
         nodeId: "node-1",
         command,
-        commandArgv,
         systemRunBinding: buildSystemRunApprovalBinding({
           argv: effectiveBindingArgv,
           cwd: null,
@@ -371,7 +370,6 @@ describe("sanitizeSystemRunParamsForForwarding", () => {
         host: "node",
         nodeId: "node-1",
         command: "echo SAFE",
-        commandArgv: ["echo", "SAFE"],
         systemRunBinding: buildSystemRunApprovalBinding({
           argv: ["echo", "SAFE"],
           cwd: null,

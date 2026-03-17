@@ -52,7 +52,6 @@ function buildRequestPayload(entry: FixtureCase): ExecApprovalRequestPayload {
   const payload: ExecApprovalRequestPayload = {
     host: entry.request.host,
     command: entry.request.command,
-    commandArgv: entry.request.commandArgv,
     cwd: entry.request.cwd ?? null,
     agentId: entry.request.agentId ?? null,
     sessionKey: entry.request.sessionKey ?? null,

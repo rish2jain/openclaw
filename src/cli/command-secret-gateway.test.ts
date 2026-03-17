@@ -228,7 +228,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
               search: {
                 provider: "gemini",
                 gemini: {
-                  apiKey: { source: "env", provider: "default", id: envKey },
+                  apiKey: { source: "env", provider: "default", id: envKey } as unknown as string,
                 },
               },
             },
@@ -256,7 +256,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
             web: {
               fetch: {
                 firecrawl: {
-                  apiKey: { source: "env", provider: "default", id: envKey },
+                  apiKey: { source: "env", provider: "default", id: envKey } as unknown as string,
                 },
               },
             },
@@ -283,7 +283,11 @@ describe("resolveCommandSecretRefsViaGateway", () => {
             search: {
               enabled: false,
               gemini: {
-                apiKey: { source: "env", provider: "default", id: "WEB_SEARCH_DISABLED_KEY" },
+                apiKey: {
+                  source: "env",
+                  provider: "default",
+                  id: "WEB_SEARCH_DISABLED_KEY",
+                } as unknown as string,
               },
             },
           },

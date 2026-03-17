@@ -7,6 +7,10 @@ import type { InteractionRecord, NetworkPerson, RelationshipEdge } from "./types
 
 // ── Public types ──────────────────────────────────────────────────────
 
+export type SerializedInteractions = {
+  records: InteractionRecord[];
+};
+
 export type InteractionTracker = {
   /** Store a new interaction record. */
   logInteraction: (record: InteractionRecord) => void;
@@ -29,6 +33,12 @@ export type InteractionTracker = {
     edges: RelationshipEdge[],
     targetCompanies: string[],
   ) => NetworkPerson[];
+
+  /** Serialize all interaction records for persistence. */
+  toJSON: () => SerializedInteractions;
+
+  /** Restore interaction records from persisted data. */
+  fromJSON: (data: SerializedInteractions) => void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────
@@ -129,11 +139,28 @@ export function createInteractionTracker(): InteractionTracker {
     return candidates.map((c) => c.person);
   };
 
+  const toJSON = (): SerializedInteractions => {
+    const records: InteractionRecord[] = [];
+    for (const list of store.values()) {
+      records.push(...list);
+    }
+    return { records };
+  };
+
+  const fromJSON = (data: SerializedInteractions): void => {
+    store.clear();
+    for (const record of data.records) {
+      logInteraction(record);
+    }
+  };
+
   return {
     logInteraction,
     getInteractions,
     getStaleConnections,
     suggestReconnections,
+    toJSON,
+    fromJSON,
   };
 }
 

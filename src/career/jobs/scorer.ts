@@ -12,6 +12,7 @@ type ScoringProfile = {
   skills: Skill[];
   workHistory: WorkEntry[];
   preferences: CareerPreferences;
+  locationPreferences?: string[];
 };
 
 type ScoreResult = {
@@ -154,23 +155,33 @@ function scoreSeniority(listing: JobListing, workHistory: WorkEntry[]): number {
 }
 
 /** Compute preference match score (0-100). */
-function scorePreferences(listing: JobListing, preferences: CareerPreferences): number {
+function scorePreferences(
+  listing: JobListing,
+  preferences: CareerPreferences,
+  locationPreferences: string[] = [],
+): number {
   let points = 0;
   let factors = 0;
 
   // Location match (25 points).
   factors++;
-  if (preferences.roleTypes.length === 0) {
+  if (locationPreferences.length === 0) {
     points += 25;
   } else {
-    // Check if any preferred location matches.
     const listingLoc = listing.location.toLowerCase();
-    // Treat empty location as a pass.
+    // Treat empty listing location as partial credit.
     if (!listingLoc) {
       points += 15;
+    } else if (
+      locationPreferences.some((loc) => {
+        const prefLoc = loc.toLowerCase();
+        return listingLoc.includes(prefLoc) || prefLoc.includes(listingLoc);
+      })
+    ) {
+      points += 25;
     } else {
-      // No specific location preferences to check against listing, give base.
-      points += 15;
+      // No match — minimal credit.
+      points += 0;
     }
   }
 
@@ -257,7 +268,7 @@ export function createJobScorer(weights?: Partial<ScoreWeights>): JobScorer {
   ): ScoreResult {
     const skills = scoreSkillsOverlap(listing, profile.skills);
     const seniority = scoreSeniority(listing, profile.workHistory);
-    const preferences = scorePreferences(listing, profile.preferences);
+    const preferences = scorePreferences(listing, profile.preferences, profile.locationPreferences);
     const signals = scoreCompanySignals(companyIntel);
 
     const breakdown: Record<string, number> = {

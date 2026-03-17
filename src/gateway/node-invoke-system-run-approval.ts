@@ -256,9 +256,9 @@ export function sanitizeSystemRunParamsForForwarding(opts: {
     argv: runtimeContext.argv,
     request: snapshot.request,
     binding: {
-      cwd: runtimeContext.cwd,
-      agentId: runtimeContext.agentId,
-      sessionKey: runtimeContext.sessionKey,
+      cwd: runtimeContext.cwd ?? null,
+      agentId: runtimeContext.agentId ?? null,
+      sessionKey: runtimeContext.sessionKey ?? null,
       env: p.env,
     },
   });

@@ -1,5 +1,6 @@
-import type { ChannelMonitorHandle } from "openclaw/plugin-sdk";
 import type { RocketChatOutgoingWebhookEvent } from "./types.js";
+
+type MonitorHandle = { stop: () => void } | void;
 
 export function resolveRocketChatWebhookPath(params: {
   accountId: string;
@@ -23,10 +24,10 @@ export function monitorRocketChatProvider(params: {
     registerHttpHandler: (
       path: string,
       handler: (req: Request) => Promise<Response>,
-    ) => ChannelMonitorHandle;
+    ) => MonitorHandle;
   };
   onMessage: (event: RocketChatOutgoingWebhookEvent) => Promise<void>;
-}): ChannelMonitorHandle {
+}): MonitorHandle {
   const path = resolveRocketChatWebhookPath({
     accountId: params.accountId,
     configuredPath: params.inboundPath,

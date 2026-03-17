@@ -13,7 +13,7 @@ describe("collectMissingDefaultAccountBindingWarnings", () => {
           },
         },
       },
-      bindings: [{ agentId: "ops", match: { channel: "telegram" } }],
+      bindings: [{ type: "route" as const, agentId: "ops", match: { channel: "telegram" } }],
     };
 
     const warnings = collectMissingDefaultAccountBindingWarnings(cfg);
@@ -31,7 +31,13 @@ describe("collectMissingDefaultAccountBindingWarnings", () => {
           },
         },
       },
-      bindings: [{ agentId: "ops", match: { channel: "telegram", accountId: "alerts" } }],
+      bindings: [
+        {
+          type: "route" as const,
+          agentId: "ops",
+          match: { channel: "telegram", accountId: "alerts" },
+        },
+      ],
     };
 
     expect(collectMissingDefaultAccountBindingWarnings(cfg)).toEqual([]);
@@ -47,7 +53,13 @@ describe("collectMissingDefaultAccountBindingWarnings", () => {
           },
         },
       },
-      bindings: [{ agentId: "ops", match: { channel: "telegram", accountId: "alerts" } }],
+      bindings: [
+        {
+          type: "route" as const,
+          agentId: "ops",
+          match: { channel: "telegram", accountId: "alerts" },
+        },
+      ],
     };
 
     const warnings = collectMissingDefaultAccountBindingWarnings(cfg);
@@ -65,7 +77,9 @@ describe("collectMissingDefaultAccountBindingWarnings", () => {
           },
         },
       },
-      bindings: [{ agentId: "ops", match: { channel: "telegram", accountId: "*" } }],
+      bindings: [
+        { type: "route" as const, agentId: "ops", match: { channel: "telegram", accountId: "*" } },
+      ],
     };
 
     expect(collectMissingDefaultAccountBindingWarnings(cfg)).toEqual([]);
@@ -81,7 +95,7 @@ describe("collectMissingDefaultAccountBindingWarnings", () => {
           },
         },
       },
-      bindings: [{ agentId: "ops", match: { channel: "telegram" } }],
+      bindings: [{ type: "route" as const, agentId: "ops", match: { channel: "telegram" } }],
     };
 
     expect(collectMissingDefaultAccountBindingWarnings(cfg)).toEqual([]);

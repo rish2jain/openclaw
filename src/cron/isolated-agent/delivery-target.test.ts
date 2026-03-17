@@ -44,6 +44,7 @@ function makeTelegramBoundCfg(accountId = "account-b"): OpenClawConfig {
   return makeCfg({
     bindings: [
       {
+        type: "route" as const,
         agentId: AGENT_ID,
         match: { channel: "telegram", accountId },
       },
@@ -209,10 +210,12 @@ describe("resolveDeliveryTarget", () => {
     const cfg = makeCfg({
       bindings: [
         {
+          type: "route" as const,
           agentId: "agent-a",
           match: { channel: "telegram", accountId: "account-a" },
         },
         {
+          type: "route" as const,
           agentId: "agent-b",
           match: { channel: "telegram", accountId: "account-b" },
         },
@@ -230,6 +233,7 @@ describe("resolveDeliveryTarget", () => {
     const cfg = makeCfg({
       bindings: [
         {
+          type: "route" as const,
           agentId: "agent-b",
           match: { channel: "discord", accountId: "discord-account" },
         },
@@ -356,7 +360,13 @@ describe("resolveDeliveryTarget", () => {
   it("explicit delivery.accountId overrides bindings-derived accountId", async () => {
     setMainSessionEntry(undefined);
     const cfg = makeCfg({
-      bindings: [{ agentId: AGENT_ID, match: { channel: "telegram", accountId: "bound" } }],
+      bindings: [
+        {
+          type: "route" as const,
+          agentId: AGENT_ID,
+          match: { channel: "telegram", accountId: "bound" },
+        },
+      ],
     });
 
     const result = await resolveDeliveryTarget(cfg, AGENT_ID, {

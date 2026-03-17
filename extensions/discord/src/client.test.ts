@@ -17,7 +17,7 @@ describe("createDiscordRestClient", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
 
     const result = createDiscordRestClient(
       {
@@ -50,7 +50,7 @@ describe("createDiscordRestClient", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
 
     const result = createDiscordRestClient(
       {
@@ -77,7 +77,7 @@ describe("createDiscordRestClient", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
 
     expect(() =>
       createDiscordRestClient(

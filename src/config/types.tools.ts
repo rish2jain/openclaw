@@ -238,6 +238,16 @@ export type ExecToolConfig = {
   safeBins?: string[];
   /** Trusted directories for exec (paths allowed when security allows). */
   safeBinTrustedDirs?: string[];
+  /** Named safe-bin profiles (per-binary flag allowlists / denylists). */
+  safeBinProfiles?: Record<
+    string,
+    {
+      minPositional?: number;
+      maxPositional?: number;
+      allowedValueFlags?: readonly string[];
+      deniedFlags?: readonly string[];
+    }
+  >;
   /** Default time (ms) before an exec command auto-backgrounds. */
   backgroundMs?: number;
   /** Default timeout (seconds) before auto-killing exec commands. */
@@ -475,8 +485,8 @@ export type ToolsConfig = {
     search?: {
       /** Enable web search tool (default: true when API key is present). */
       enabled?: boolean;
-      /** Search provider ("brave", "perplexity", or "grok"). */
-      provider?: "brave" | "perplexity" | "grok";
+      /** Search provider. */
+      provider?: "brave" | "gemini" | "grok" | "kimi" | "perplexity";
       /** Brave Search API key (optional; defaults to BRAVE_API_KEY env var). */
       apiKey?: string;
       /** Default search results count (1-10). */
@@ -502,6 +512,20 @@ export type ToolsConfig = {
         model?: string;
         /** Include inline citations in response text as markdown links (default: false). */
         inlineCitations?: boolean;
+      };
+      /** Gemini-specific configuration (used when provider="gemini"). */
+      gemini?: {
+        /** API key for Gemini (defaults to GEMINI_API_KEY env var). */
+        apiKey?: string;
+      };
+      /** Kimi/Moonshot-specific configuration (used when provider="kimi"). */
+      kimi?: {
+        /** API key for Kimi/Moonshot (defaults to MOONSHOT_API_KEY env var). */
+        apiKey?: string;
+        /** Base URL for API requests. */
+        baseUrl?: string;
+        /** Model to use. */
+        model?: string;
       };
       /** Brave-specific configuration (used when provider="brave"). */
       brave?: {

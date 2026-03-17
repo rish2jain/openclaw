@@ -94,13 +94,10 @@ export abstract class McpClientBase {
 
   /** Initialize the MCP SDK client and discover tools */
   protected async initializeClient(
-    transport: { close?: () => Promise<void> } & Record<string, unknown>,
+    transport: import("@modelcontextprotocol/sdk/shared/transport.js").Transport,
   ): Promise<void> {
-    this.client = new Client(
-      { name: "openclaw-mcp", version: "1.0.0" },
-      { capabilities: { tools: {}, resources: {} } },
-    );
-    await this.client.connect(transport as Parameters<Client["connect"]>[0]);
+    this.client = new Client({ name: "openclaw-mcp", version: "1.0.0" }, { capabilities: {} });
+    await this.client.connect(transport);
 
     const toolsResult = await this.client.listTools();
     this.discoveredTools = toolsResult.tools.map((t) => ({

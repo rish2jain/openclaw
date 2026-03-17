@@ -134,7 +134,8 @@ describe("mock-mcp-server", () => {
 
     const result = await client.readResource({ uri: "file:///data.txt" });
     expect(result.contents).toHaveLength(1);
-    expect(result.contents[0].text).toBe("Resource content here");
+    const content = result.contents[0] as { text?: string };
+    expect(content.text).toBe("Resource content here");
   });
 
   it("returns injection payload when configured", async () => {

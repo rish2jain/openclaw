@@ -27,7 +27,7 @@ describe("send_message tool", () => {
       expect(gw).toHaveBeenCalledWith("send", { message: "hello" });
       expect(result.isError).toBeUndefined();
       expect(result.content[0]?.type).toBe("text");
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = JSON.parse(result.content[0].text!);
       expect(parsed.delivered).toBe(true);
     });
 

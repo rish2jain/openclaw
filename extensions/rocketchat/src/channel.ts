@@ -1,15 +1,13 @@
 import {
   buildBaseAccountStatusSnapshot,
-  buildBaseChannelStatusSummary,
-  buildChannelConfigSchema,
   DEFAULT_ACCOUNT_ID,
   deleteAccountFromConfigSection,
   formatPairingApproveHint,
-  getChatChannelMeta,
   PAIRING_APPROVED_MESSAGE,
   resolveDefaultGroupPolicy,
   setAccountEnabledInConfigSection,
   type ChannelPlugin,
+  type OpenClawConfig,
 } from "openclaw/plugin-sdk";
 import {
   listRocketChatAccountIds,
@@ -25,7 +23,18 @@ import { getRocketChatRuntime } from "./runtime.js";
 import { sendRocketChatApi, sendRocketChatWebhook, splitText } from "./send.js";
 import type { CoreConfig, RocketChatOutgoingWebhookEvent, RocketChatProbe } from "./types.js";
 
-const meta = getChatChannelMeta("rocketchat");
+const meta = {
+  id: "rocketchat",
+  label: "Rocket.Chat",
+  selectionLabel: "Rocket.Chat (plugin)",
+  detailLabel: "Rocket.Chat Bot",
+  docsPath: "/channels/rocketchat",
+  docsLabel: "rocketchat",
+  blurb: "Self-hosted Rocket.Chat integration.",
+  systemImage: "bubble.left.and.bubble.right",
+  order: 81,
+  quickstartAllowFrom: true,
+} as const;
 
 const DEFAULT_ALIAS = "OpenClaw";
 const DEFAULT_EMOJI = ":robot:";
@@ -40,10 +49,13 @@ export const rocketchatPlugin: ChannelPlugin<ResolvedRocketChatAccount, RocketCh
 
   pairing: {
     idLabel: "userId",
-    normalizeAllowEntry: (entry) => entry.trim(),
-    notifyApproval: async ({ id, accountId, config }) => {
-      const account = resolveRocketChatAccount({ cfg: config as CoreConfig, accountId });
-      const text = `${PAIRING_APPROVED_MESSAGE} ${formatPairingApproveHint({ id })}`;
+    normalizeAllowEntry: (entry: string) => entry.trim(),
+    notifyApproval: async ({ id, cfg }) => {
+      const account = resolveRocketChatAccount({
+        cfg: cfg as CoreConfig,
+        accountId: DEFAULT_ACCOUNT_ID,
+      });
+      const text = `${PAIRING_APPROVED_MESSAGE} ${formatPairingApproveHint(id)}`;
       await sendOutbound(account, account.config.defaultRoom ?? "#general", text);
     },
   },
@@ -55,16 +67,17 @@ export const rocketchatPlugin: ChannelPlugin<ResolvedRocketChatAccount, RocketCh
   },
 
   reload: { configPrefixes: ["channels.rocketchat"] },
-  configSchema: buildChannelConfigSchema({
-    type: "object",
-    additionalProperties: true,
-    properties: {},
-  }),
+  configSchema: {
+    schema: { type: "object", properties: {} },
+  },
 
   config: {
     listAccountIds: (cfg) => listRocketChatAccountIds(cfg as CoreConfig),
     resolveAccount: (cfg, accountId) =>
-      resolveRocketChatAccount({ cfg: cfg as CoreConfig, accountId }),
+      resolveRocketChatAccount({
+        cfg: cfg as CoreConfig,
+        accountId: accountId ?? DEFAULT_ACCOUNT_ID,
+      }),
     defaultAccountId: (cfg) => resolveDefaultRocketChatAccountId(cfg as CoreConfig),
     setAccountEnabled: ({ cfg, accountId, enabled }) =>
       setAccountEnabledInConfigSection({
@@ -79,37 +92,58 @@ export const rocketchatPlugin: ChannelPlugin<ResolvedRocketChatAccount, RocketCh
         sectionKey: "rocketchat",
         accountId,
       }),
-
-    resolveStatus: ({ account }) => {
-      const hasOutbound =
+    isConfigured: (account) => {
+      return account.mode === "api"
+        ? Boolean(account.config.authToken?.trim() && account.config.userId?.trim())
+        : Boolean(account.config.webhookUrl?.trim());
+    },
+    describeAccount: (account) => ({
+      accountId: account.accountId,
+      configured:
         account.mode === "api"
           ? Boolean(account.config.authToken?.trim() && account.config.userId?.trim())
-          : Boolean(account.config.webhookUrl?.trim());
-      const issues = hasOutbound
-        ? []
-        : [
-            {
-              kind: "warning" as const,
-              message:
-                account.mode === "api"
-                  ? "No auth token or userId configured — messages will fail"
-                  : "No incoming webhook URL configured — messages will fail",
-            },
-          ];
-      return buildBaseAccountStatusSnapshot({ accountId: account.accountId, issues });
-    },
-
-    resolveSummary: ({ cfg }) =>
-      buildBaseChannelStatusSummary({
-        channelId: "rocketchat",
-        accounts: listRocketChatAccountIds(cfg as CoreConfig),
-      }),
+          : Boolean(account.config.webhookUrl?.trim()),
+    }),
   },
 
-  // ---- Monitor (inbound outgoing-webhook) ----------------------------------
+  status: {
+    probeAccount: async ({ account }) => probeRocketChat({ serverUrl: account.serverUrl }),
+    buildAccountSnapshot: ({ account }) => {
+      return buildBaseAccountStatusSnapshot({
+        account: {
+          accountId: account.accountId,
+          configured:
+            account.mode === "api"
+              ? Boolean(account.config.authToken?.trim() && account.config.userId?.trim())
+              : Boolean(account.config.webhookUrl?.trim()),
+        },
+      });
+    },
+  },
 
-  monitor: {
-    start: ({ cfg, dispatch, accountId }) => {
+  // ---- Outbound ------------------------------------------------------------
+
+  outbound: {
+    deliveryMode: "direct",
+    sendText: async ({ cfg, text, accountId }) => {
+      const resolvedAccountId = accountId ?? DEFAULT_ACCOUNT_ID;
+      const account = resolveRocketChatAccount({
+        cfg: cfg as unknown as CoreConfig,
+        accountId: resolvedAccountId,
+      });
+      const room = account.config.defaultRoom ?? "#general";
+      for (const chunk of splitText(text, account.config.textChunkLimit)) {
+        await sendOutbound(account, room, chunk);
+      }
+      return { channel: "rocketchat", messageId: "" };
+    },
+  },
+
+  // ---- Gateway (inbound outgoing-webhook) ----------------------------------
+
+  gateway: {
+    startAccount: async (ctx) => {
+      const { cfg, accountId } = ctx;
       const account = resolveRocketChatAccount({ cfg: cfg as CoreConfig, accountId });
       const rt = getRocketChatRuntime();
       const inboundPath = resolveRocketChatWebhookPath({
@@ -121,7 +155,7 @@ export const rocketchatPlugin: ChannelPlugin<ResolvedRocketChatAccount, RocketCh
         accountId,
         inboundPath,
         outgoingToken: account.config.outgoingToken,
-        runtime: rt as Parameters<typeof monitorRocketChatProvider>[0]["runtime"],
+        runtime: rt as unknown as Parameters<typeof monitorRocketChatProvider>[0]["runtime"],
         onMessage: async (event: RocketChatOutgoingWebhookEvent) => {
           const userId = event.user_id ?? "";
           const userName = event.user_name ?? "";
@@ -135,43 +169,10 @@ export const rocketchatPlugin: ChannelPlugin<ResolvedRocketChatAccount, RocketCh
             const allowed = isRocketChatSenderAllowed({ userId, userName, allowFrom });
             if (!allowed) return;
           }
-
-          const roomId = event.room_id ?? event.channel_id ?? account.config.defaultRoom ?? "";
-
-          await dispatch({
-            channelId: "rocketchat",
-            accountId,
-            senderId: userId,
-            senderName: userName,
-            text,
-            reply: async (replyText: string) => {
-              for (const chunk of splitText(replyText, account.config.textChunkLimit)) {
-                await sendOutbound(account, roomId, chunk);
-              }
-            },
-            isGroup,
-            conversationId: event.room_id,
-            messageId: event.message_id,
-          });
         },
       });
     },
   },
-
-  // ---- Outbound ------------------------------------------------------------
-
-  outbound: {
-    send: async ({ account, text }) => {
-      const room = account.config.defaultRoom ?? "#general";
-      for (const chunk of splitText(text, account.config.textChunkLimit)) {
-        await sendOutbound(account, room, chunk);
-      }
-    },
-  },
-
-  // ---- Probe ---------------------------------------------------------------
-
-  probe: ({ account }) => probeRocketChat({ serverUrl: account.serverUrl }),
 };
 
 async function sendOutbound(

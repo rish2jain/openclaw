@@ -230,6 +230,7 @@ describe("buildLineMessageContext", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "line-group-agent",
           match: { channel: "line", peer: { kind: "group", id: groupId } },
         },
@@ -268,6 +269,7 @@ describe("buildLineMessageContext", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "line-room-agent",
           match: { channel: "line", peer: { kind: "group", id: roomId } },
         },

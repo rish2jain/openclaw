@@ -132,6 +132,7 @@ export async function channelsAddCommand(
           });
           const bindingResult = applyAgentBindings(nextConfig, [
             {
+              type: "route" as const,
               agentId: targetAgentId,
               match: { channel: target.channel, accountId: target.accountId },
             },

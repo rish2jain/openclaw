@@ -137,7 +137,7 @@ export class TaskManager {
     let peeked = "";
     let totalPeeked = 0;
     while (totalPeeked < maxPeek) {
-      let timerId: ReturnType<typeof setTimeout>;
+      let timerId: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timerId = setTimeout(
           () => reject(new Error(`A2A stream peek timed out after ${PEEK_READ_TIMEOUT_MS}ms`)),
@@ -161,7 +161,7 @@ export class TaskManager {
       }
       const chunk = decoder.decode(value, { stream: true });
       peeked += chunk;
-      totalPeeked += value.byteLength;
+      totalPeeked += value!.byteLength;
       if (peeked.includes("\n\n")) {
         break;
       }

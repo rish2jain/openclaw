@@ -69,6 +69,7 @@ describe("registerTelegramNativeCommands skill allowlist integration", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "alpha",
           match: { channel: "telegram", accountId: "bot-a" },
         },

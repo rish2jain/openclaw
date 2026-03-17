@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import type { AnyAgentTool } from "../../../src/agents/tools/common.js";
+import type { AnyAgentTool } from "openclaw/plugin-sdk";
 import type { ComposioClient } from "../client.js";
 import type { ComposioConfig } from "../types.js";
 
@@ -66,7 +66,7 @@ export function createComposioMultiExecuteTool(
       const normalizedExecutions = executions
         .slice(0, 50)
         .filter(
-          (exec): exec is { tool_slug: string } =>
+          (exec): exec is { tool_slug: string; arguments?: unknown } =>
             exec &&
             typeof exec === "object" &&
             typeof exec.tool_slug === "string" &&

@@ -19,7 +19,6 @@ function makePreferences(overrides: Partial<CareerPreferences> = {}): CareerPref
   return {
     roleTypes: ["Backend"],
     industries: ["Tech"],
-    locationPreferences: [],
     dealBreakers: [],
     workStyle: "remote",
     companyStage: [],

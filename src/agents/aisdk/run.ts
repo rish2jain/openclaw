@@ -57,6 +57,7 @@ export function mapThinkLevelToAnthropicOptions(
     medium: 8000,
     high: 16000,
     xhigh: 32000,
+    adaptive: 8000,
   };
 
   const budgetTokens = budgetMap[thinkLevel] ?? 4000;

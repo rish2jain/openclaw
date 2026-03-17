@@ -1,0 +1,1078 @@
+…sort | head -250" succeeded in 107ms:
+src/auto-reply/reply/abort-cutoff.ts
+src/auto-reply/reply/abort.test.ts
+src/auto-reply/reply/abort.ts
+src/auto-reply/reply/acp-projector.test.ts
+src/auto-reply/reply/acp-projector.ts
+src/auto-reply/reply/acp-reset-target.ts
+src/auto-reply/reply/acp-stream-settings.test.ts
+src/auto-reply/reply/acp-stream-settings.ts
+src/auto-reply/reply/agent-runner-execution.ts
+src/auto-reply/reply/agent-runner-helpers.test.ts
+src/auto-reply/reply/agent-runner-helpers.ts
+src/auto-reply/reply/agent-runner-memory.ts
+src/auto-reply/reply/agent-runner-payloads.test.ts
+src/auto-reply/reply/agent-runner-payloads.ts
+src/auto-reply/reply/agent-runner-reminder-guard.ts
+src/auto-reply/reply/agent-runner-utils.test.ts
+src/auto-reply/reply/agent-runner-utils.ts
+src/auto-reply/reply/agent-runner.media-paths.test.ts
+src/auto-reply/reply/agent-runner.misc.runreplyagent.test.ts
+src/auto-reply/reply/agent-runner.runreplyagent.e2e.test.ts
+[2026-03-17T20:37:32] tokens used: 170,921
+[2026-03-17T20:37:37] exec sh -lc 'wc -l src/plugin-sdk/index.ts src/mcp/tools/index.ts src/gateway/server-methods/chat.ts src/config/io.ts src/memory/qmd-manager.ts src/auto-reply/reply/commands.ts src/auto-reply/reply/directive-handling.ts src/channels/orchestrator.ts src/plugins/loader.ts 2>/dev/null' in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:37] sh -lc 'wc -l src/plugin-sdk/index.ts src/mcp/tools/index.ts src/gateway/server-methods/chat.ts src/config/io.ts src/memory/qmd-manager.ts src/auto-reply/reply/commands.ts src/auto-reply/reply/directive-handling.ts src/channels/orchestrator.ts src/plugins/loader.ts 2>/dev/null' succeeded in 60ms:
+     858 src/plugin-sdk/index.ts
+      35 src/mcp/tools/index.ts
+    1567 src/gateway/server-methods/chat.ts
+    1559 src/config/io.ts
+    2069 src/memory/qmd-manager.ts
+       8 src/auto-reply/reply/commands.ts
+       6 src/auto-reply/reply/directive-handling.ts
+     216 src/channels/orchestrator.ts
+     996 src/plugins/loader.ts
+    7314 total
+[2026-03-17T20:37:37] tokens used: 179,842
+[2026-03-17T20:37:41] exec sh -lc "rg -n 'from \"(\\.\\./)*src/|from \"\\.\\./\\.\\./src/|from \"\\.\\./\\.\\./\\.\\./src/' extensions -g '"'!**/*.test.ts'"' | head -120" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:41] sh -lc "rg -n 'from \"(\\.\\./)*src/|from \"\\.\\./\\.\\./src/|from \"\\.\\./\\.\\./\\.\\./src/' extensions -g '"'!**/*.test.ts'"' | head -120" succeeded in 82ms:
+extensions/telegram/src/bot.create-telegram-bot.test-harness.ts:2:import { resetInboundDedupe } from "../../../src/auto-reply/reply/inbound-dedupe.js";
+extensions/telegram/src/bot.create-telegram-bot.test-harness.ts:3:import type { MsgContext } from "../../../src/auto-reply/templating.js";
+extensions/telegram/src/bot.create-telegram-bot.test-harness.ts:4:import type { GetReplyOptions, ReplyPayload } from "../../../src/auto-reply/types.js";
+extensions/telegram/src/bot.create-telegram-bot.test-harness.ts:5:import type { OpenClawConfig } from "../../../src/config/config.js";
+extensions/telegram/src/bot.create-telegram-bot.test-harness.ts:6:import type { MockFn } from "../../../src/test-utils/vitest-mock-fn.js";
+extensions/telegram/src/fetch.ts:3:import type { TelegramNetworkConfig } from "../../../src/config/types.telegram.js";
+extensions/telegram/src/fetch.ts:4:import { resolveFetch } from "../../../src/infra/fetch.js";
+extensions/telegram/src/fetch.ts:5:import { hasEnvHttpProxyConfigured } from "../../../src/infra/net/proxy-env.js";
+extensions/telegram/src/fetch.ts:6:import type { PinnedDispatcherPolicy } from "../../../src/infra/net/ssrf.js";
+extensions/telegram/src/fetch.ts:7:import { createSubsystemLogger } from "../../../src/logging/subsystem.js";
+extensions/telegram/src/draft-chunking.ts:1:import { resolveTextChunkLimit } from "../../../src/auto-reply/chunk.js";
+extensions/telegram/src/draft-chunking.ts:2:import { getChannelDock } from "../../../src/channels/dock.js";
+extensions/telegram/src/draft-chunking.ts:3:import type { OpenClawConfig } from "../../../src/config/config.js";
+extensions/telegram/src/draft-chunking.ts:4:import { resolveAccountEntry } from "../../../src/routing/account-lookup.js";
+extensions/telegram/src/draft-chunking.ts:5:import { normalizeAccountId } from "../../../src/routing/session-key.js";
+extensions/telegram/src/api-logging.ts:1:import { danger } from "../../../src/globals.js";
+extensions/telegram/src/api-logging.ts:2:import { formatErrorMessage } from "../../../src/infra/errors.js";
+extensions/telegram/src/api-logging.ts:3:import { createSubsystemLogger } from "../../../src/logging/subsystem.js";
+extensions/telegram/src/api-logging.ts:4:import type { RuntimeEnv } from "../../../src/runtime.js";
+extensions/telegram/src/bot.media.test-utils.ts:2:import * as ssrf from "../../../src/infra/net/ssrf.js";
+[2026-03-17T20:37:41] tokens used: 181,208
+[2026-03-17T20:37:43] exec sh -lc "rg -l 'from \"(\\.\\./)+src/' extensions | awk -F/ '{print "'$2}'"' | sort | uniq -c | sort -nr | head -30" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:44] sh -lc "rg -l 'from \"(\\.\\./)+src/' extensions | awk -F/ '{print "'$2}'"' | sort | uniq -c | sort -nr | head -30" succeeded in 186ms:
+ 108 discord
+  95 telegram
+  65 slack
+  60 whatsapp
+  20 signal
+  18 imessage
+   5 feishu
+   3 zalo
+   3 acpx
+   2 test-utils
+   2 msteams
+   2 diffs
+   1 zalouser
+   1 matrix
+   1 llm-task
+   1 irc
+   1 googlechat
+   1 composio
+   1 bluebubbles
+[2026-03-17T20:37:44] tokens used: 185,166
+[2026-03-17T20:37:46] exec sed -n '1,220p' src/plugins/loader.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:46] sed -n '1,220p' src/plugins/loader.ts succeeded in 8ms:
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createJiti } from "jiti";
+import type { OpenClawConfig } from "../config/config.js";
+import type { PluginInstallRecord } from "../config/types.plugins.js";
+import type { GatewayRequestHandler } from "../gateway/server-methods/types.js";
+import { openBoundaryFileSync } from "../infra/boundary-file-read.js";
+import { resolveOpenClawPackageRootSync } from "../infra/openclaw-root.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+import { resolveUserPath } from "../utils.js";
+import { clearPluginCommands } from "./commands.js";
+import {
+  applyTestPluginDefaults,
+  normalizePluginsConfig,
+  resolveEffectiveEnableState,
+  resolveMemorySlotDecision,
+  type NormalizedPluginsConfig,
+} from "./config-state.js";
+import { discoverOpenClawPlugins } from "./discovery.js";
+[2026-03-17T20:37:46] tokens used: 185,521
+[2026-03-17T20:37:49] exec jq -r ".scripts | to_entries[] | \"\\(.key): \\(.value)\"" package.json in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:49] jq -r ".scripts | to_entries[] | \"\\(.key): \\(.value)\"" package.json succeeded in 19ms:
+android:assemble: cd apps/android && ./gradlew :app:assembleDebug
+android:bundle:release: bun apps/android/scripts/build-release-aab.ts
+android:format: cd apps/android && ./gradlew :app:ktlintFormat :benchmark:ktlintFormat
+android:install: cd apps/android && ./gradlew :app:installDebug
+android:lint: cd apps/android && ./gradlew :app:ktlintCheck :benchmark:ktlintCheck
+android:lint:android: cd apps/android && ./gradlew :app:lintDebug
+android:run: cd apps/android && ./gradlew :app:installDebug && adb shell am start -n ai.openclaw.app/.MainActivity
+android:test: cd apps/android && ./gradlew :app:testDebugUnitTest
+android:test:integration: OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_ANDROID_NODE=1 vitest run --config vitest.live.config.ts src/gateway/android-node.capabilities.live.test.ts
+build: pnpm canvas:a2ui:bundle && node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts && node --import tsx scripts/write-plugin-sdk-entry-dts.ts && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/copy-export-html-templates.ts && node --import tsx scripts/write-build-info.ts && node --import tsx scripts/write-cli-startup-metadata.ts && node --import tsx scripts/write-cli-compat.ts
+build:docker: node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts && node --import tsx scripts/write-plugin-sdk-entry-dts.ts && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/copy-export-html-templates.ts && node --import tsx scripts/write-build-info.ts && node --import tsx scripts/write-cli-startup-metadata.ts && node --import tsx scripts/write-cli-compat.ts
+build:plugin-sdk:dts: tsc -p tsconfig.plugin-sdk.dts.json
+build:strict-smoke: pnpm canvas:a2ui:bundle && node scripts/tsdown-build.mjs && node scripts/copy-plugin-sdk-root-alias.mjs && pnpm build:plugin-sdk:dts
+canvas:a2ui:bundle: bash scripts/bundle-a2ui.sh
+check: pnpm check:host-env-policy:swift && pnpm format:check && pnpm tsgo && pnpm lint && pnpm lint:tmp:no-random-messaging && pnpm lint:tmp:channel-agnostic-boundaries && pnpm lint:tmp:no-raw-channel-fetch && pnpm lint:agent:ingress-owner && pnpm lint:plugins:no-register-http-handler && pnpm lint:plugins:no-monolithic-plugin-sdk-entry-imports && pnpm lint:webhook:no-low-level-body-read && pnpm lint:auth:no-pairing-store-group && pnpm lint:auth:pairing-account-scope
+check:docs: pnpm format:docs:check && pnpm lint:docs && pnpm docs:check-links
+check:host-env-policy:swift: node scripts/generate-host-env-security-policy-swift.mjs --check
+check:loc: node --import tsx scripts/check-ts-max-loc.ts --max 500
+config:docs:check: node --import tsx scripts/generate-config-doc-baseline.ts --check
+config:docs:gen: node --import tsx scripts/generate-config-doc-baseline.ts --write
+[2026-03-17T20:37:49] tokens used: 187,842
+[2026-03-17T20:37:52] exec sed -n '1,220p' docs/help/testing.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:52] sed -n '1,220p' docs/help/testing.md succeeded in 4ms:
+---
+summary: "Testing kit: unit/e2e/live suites, Docker runners, and what each test covers"
+read_when:
+  - Running tests locally or in CI
+  - Adding regressions for model/provider bugs
+  - Debugging gateway + agent behavior
+title: "Testing"
+---
+
+# Testing
+
+OpenClaw has three Vitest suites (unit/integration, e2e, live) and a small set of Docker runners.
+
+This doc is a “how we test” guide:
+
+- What each suite covers (and what it deliberately does _not_ cover)
+- Which commands to run for common workflows (local, pre-push, debugging)
+- How live tests discover credentials and select models/providers
+- How to add regressions for real-world model/provider issues
+
+[2026-03-17T20:37:52] tokens used: 191,628
+[2026-03-17T20:37:54] exec sed -n '1,220p' docs/gateway/security/index.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:54] sed -n '1,220p' docs/gateway/security/index.md succeeded in 5ms:
+---
+summary: "Security considerations and threat model for running an AI gateway with shell access"
+read_when:
+  - Adding features that widen access or automation
+title: "Security"
+---
+
+# Security 🔒
+
+> [!WARNING]
+> **Personal assistant trust model:** this guidance assumes one trusted operator boundary per gateway (single-user/personal assistant model).
+> OpenClaw is **not** a hostile multi-tenant security boundary for multiple adversarial users sharing one agent/gateway.
+> If you need mixed-trust or adversarial-user operation, split trust boundaries (separate gateway + credentials, ideally separate OS users/hosts).
+
+## Scope first: personal assistant security model
+
+OpenClaw security guidance assumes a **personal assistant** deployment: one trusted operator boundary, potentially many agents.
+
+- Supported security posture: one user/trust boundary per gateway (prefer one OS user/host/VPS per boundary).
+- Not a supported security boundary: one shared gateway/agent used by mutually untrusted or adversarial users.
+[2026-03-17T20:37:54] tokens used: 194,935
+[2026-03-17T20:37:57] exec sed -n '1,240p' src/mcp/tools/career.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:37:57] sed -n '1,240p' src/mcp/tools/career.ts succeeded in 4ms:
+/**
+ * MCP tool handlers for the career intelligence module.
+ *
+ * Wraps the 10 career tool definitions with local execution handlers
+ * that operate on the persisted career stores (no gateway RPC needed).
+ */
+
+import type { McpToolHandler, McpToolCallResult, McpToolDefinition } from "../types.js";
+import { getCareerToolDefinitions } from "../../career/agent/tools.js";
+import { getCareerContext } from "../../career/persistence.js";
+import type { NetworkPerson, RelationshipEdge } from "../../career/network/types.js";
+import { findIntroPaths } from "../../career/network/pathfinder.js";
+import {
+  parseStringArg,
+  parseEnumArg,
+  parseNumberArg,
+  parseBooleanArg,
+  ArgError,
+  argErrorResult,
+} from "./arg-utils.js";
+[2026-03-17T20:37:57] tokens used: 198,091
+[2026-03-17T20:38:00] exec sed -n '1,220p' src/career/persistence.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:00] sed -n '1,220p' src/career/persistence.ts succeeded in 4ms:
+/**
+ * Career data persistence — lazy singleton that loads from / saves to
+ * ~/.openclaw/career/ JSON files.
+ *
+ * All MCP career tool handlers share the same CareerContext instance.
+ */
+
+import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+import { createModeManager, type ModeManager } from "./agent/mode.js";
+import { createCompanyTracker, type CompanyTracker } from "./intel/company-tracker.js";
+import { createJobStore, type JobStore } from "./jobs/store.js";
+import { createInteractionTracker, type InteractionTracker } from "./network/tracker.js";
+import { createNetworkGraph, type NetworkGraph } from "./network/types.js";
+import { createOutreachPipeline, type OutreachPipeline } from "./outreach/pipeline.js";
+import { createProfileStore, type ProfileStore } from "./profile/store.js";
+
+const log = createSubsystemLogger("career/persistence");
+[2026-03-17T20:38:00] tokens used: 200,301
+[2026-03-17T20:38:03] exec sed -n '1,220p' ui/package.json in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:03] sed -n '1,220p' ui/package.json succeeded in 4ms:
+{
+  "name": "openclaw-control-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@lit-labs/signals": "^0.2.0",
+    "@lit/context": "^1.1.6",
+    "@noble/ed25519": "3.0.0",
+    "dompurify": "^3.3.3",
+    "lit": "^3.3.2",
+    "marked": "^17.0.4",
+    "signal-polyfill": "^0.2.2",
+    "signal-utils": "^0.21.1",
+    "vite": "8.0.0"
+[2026-03-17T20:38:03] tokens used: 202,356
+[2026-03-17T20:38:05] exec sed -n '1,220p' docs/web/dashboard.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:05] sed -n '1,220p' docs/web/dashboard.md succeeded in 5ms:
+---
+summary: "Gateway dashboard (Control UI) access and auth"
+read_when:
+  - Changing dashboard authentication or exposure modes
+title: "Dashboard"
+---
+
+# Dashboard (Control UI)
+
+The Gateway dashboard is the browser Control UI served at `/` by default
+(override with `gateway.controlUi.basePath`).
+
+Quick open (local Gateway):
+
+- [http://127.0.0.1:18789/](http://127.0.0.1:18789/) (or [http://localhost:18789/](http://localhost:18789/))
+
+Key references:
+
+- [Control UI](/web/control-ui) for usage and UI capabilities.
+- [Tailscale](/gateway/tailscale) for Serve/Funnel automation.
+[2026-03-17T20:38:05] tokens used: 202,870
+[2026-03-17T20:38:07] exec sed -n '1,220p' docs/web/control-ui.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:07] sed -n '1,220p' docs/web/control-ui.md succeeded in 4ms:
+---
+summary: "Browser-based control UI for the Gateway (chat, nodes, config)"
+read_when:
+  - You want to operate the Gateway from a browser
+  - You want Tailnet access without SSH tunnels
+title: "Control UI"
+---
+
+# Control UI (browser)
+
+The Control UI is a small **Vite + Lit** single-page app served by the Gateway:
+
+- default: `http://<host>:18789/`
+- optional prefix: set `gateway.controlUi.basePath` (e.g. `/openclaw`)
+
+It speaks **directly to the Gateway WebSocket** on the same port.
+
+## Quick open (local)
+
+If the Gateway is running on the same computer, open:
+[2026-03-17T20:38:07] tokens used: 204,015
+[2026-03-17T20:38:11] exec sh -lc 'find docs/zh-CN -type f | wc -l && find docs/ja-JP -type f | wc -l && find docs/gateway -type f | wc -l && find docs/channels -type f | wc -l' in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:11] sh -lc 'find docs/zh-CN -type f | wc -l && find docs/ja-JP -type f | wc -l && find docs/gateway -type f | wc -l && find docs/channels -type f | wc -l' succeeded in 70ms:
+     310
+       3
+      34
+      30
+[2026-03-17T20:38:11] tokens used: 206,730
+[2026-03-17T20:38:16] exec sh -lc "for d in src extensions ui apps packages; do printf '%s ' \""'$d"; find "$d" -type f '"\\( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.e2e.test.ts' -o -name '*.live.test.ts' -o -name '*.test.kt' -o -name '*Tests.swift' \\) | wc -l; done" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:16] sh -lc "for d in src extensions ui apps packages; do printf '%s ' \""'$d"; find "$d" -type f '"\\( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.e2e.test.ts' -o -name '*.live.test.ts' -o -name '*.test.kt' -o -name '*Tests.swift' \\) | wc -l; done" succeeded in 123ms:
+src     1959
+extensions      551
+ui       56
+apps      152
+packages        0
+[2026-03-17T20:38:16] tokens used: 207,162
+[2026-03-17T20:38:19] exec sed -n '1,220p' src/mcp/server.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:19] sed -n '1,220p' src/mcp/server.ts succeeded in 4ms:
+/**
+ * MCP server core.
+ *
+ * Handles MCP lifecycle (initialize, tools/list, tools/call, resources/list,
+ * resources/read) and dispatches to registered tool/resource handlers.
+ * Communicates with the OpenClaw gateway via the existing callGateway() RPC.
+ */
+import { loadConfig } from "../config/config.js";
+import { buildGatewayConnectionDetails, callGateway } from "../gateway/call.js";
+import { resolveGatewayConnectionAuth } from "../gateway/connection-auth.js";
+import { logDebug, logError } from "../logger.js";
+import { VERSION } from "../version.js";
+import {
+  createJsonRpcErrorResponse,
+  createJsonRpcResponse,
+  createSseTransport,
+  createStdioTransport,
+  type SseTransport,
+  type StdioTransport,
+} from "./protocol.js";
+[2026-03-17T20:38:19] tokens used: 207,541
+[2026-03-17T20:38:22] exec sed -n '1,220p' scripts/check-no-monolithic-plugin-sdk-entry-imports.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:22] sed -n '1,220p' scripts/check-no-monolithic-plugin-sdk-entry-imports.ts succeeded in 4ms:
+import fs from "node:fs";
+import path from "node:path";
+import { discoverOpenClawPlugins } from "../src/plugins/discovery.js";
+
+// Match exact monolithic-root specifier in any code path:
+// imports/exports, require/dynamic import, and test mocks (vi.mock/jest.mock).
+const ROOT_IMPORT_PATTERN = /["']openclaw\/plugin-sdk["']/;
+
+function hasMonolithicRootImport(content: string): boolean {
+  return ROOT_IMPORT_PATTERN.test(content);
+}
+
+function isSourceFile(filePath: string): boolean {
+  if (filePath.endsWith(".d.ts")) {
+    return false;
+  }
+  return /\.(?:[cm]?ts|[cm]?js|tsx|jsx)$/u.test(filePath);
+}
+
+function collectPluginSourceFiles(rootDir: string): string[] {
+[2026-03-17T20:38:22] tokens used: 209,610
+[2026-03-17T20:38:26] exec sed -n '1,220p' src/config/io.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:26] sed -n '1,220p' src/config/io.ts succeeded in 4ms:
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import JSON5 from "json5";
+import { ensureOwnerDisplaySecret } from "../agents/owner-display.js";
+import { loadDotEnv } from "../infra/dotenv.js";
+import { resolveRequiredHomeDir } from "../infra/home-dir.js";
+import {
+  loadShellEnvFallback,
+  resolveShellEnvFallbackTimeoutMs,
+  shouldDeferShellEnvFallback,
+  shouldEnableShellEnvFallback,
+} from "../infra/shell-env.js";
+import { sanitizeTerminalText } from "../terminal/safe-text.js";
+import { VERSION } from "../version.js";
+import { DuplicateAgentDirError, findDuplicateAgentDirs } from "./agent-dirs.js";
+import { maintainConfigBackups } from "./backup-rotation.js";
+import {
+[2026-03-17T20:38:26] tokens used: 210,763
+[2026-03-17T20:38:29] exec sh -lc "find src -path '*/persistence*' -o -name '*store.ts' | sed 's#"'^./##'"' | sort | head -250" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:29] sh -lc "find src -path '*/persistence*' -o -name '*store.ts' | sed 's#"'^./##'"' | sort | head -250" succeeded in 75ms:
+src/agents/auth-profiles/store.ts
+src/agents/subagent-registry.store.ts
+src/auto-reply/reply/commands-session-store.ts
+src/career/jobs/store.ts
+src/career/persistence.test.ts
+src/career/persistence.ts
+src/career/profile/store.ts
+src/channels/persistence
+src/channels/persistence/channel-state-store.ts
+src/commands/agent/session-store.ts
+src/config/sessions/store.ts
+src/cron/service/store.ts
+src/cron/store.ts
+src/infra/device-auth-store.ts
+src/media/store.ts
+src/memory/graph/graph-store.ts
+src/memory/tiered/tiered-store.ts
+src/pairing/pairing-store.ts
+src/plugin-sdk/json-store.ts
+src/plugin-sdk/runtime-store.ts
+[2026-03-17T20:38:29] tokens used: 213,191
+[2026-03-17T20:38:32] exec sed -n '1,220p' src/channels/persistence/channel-state-store.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:32] sed -n '1,220p' src/channels/persistence/channel-state-store.ts succeeded in 4ms:
+/**
+ * SQLite-backed persistence for channel state.
+ *
+ * Stores identity groups, thread registry, failover state, and
+ * context bridge messages so they survive process restarts.
+ */
+import { createSubsystemLogger } from "../../logging/subsystem.js";
+
+const log = createSubsystemLogger("channels/persistence/state-store");
+
+const SCHEMA_VERSION = 1;
+
+export type ChannelStateStoreOptions = {
+  /** Path to the SQLite database file. Uses in-memory if omitted. */
+  dbPath?: string;
+};
+
+/**
+ * Serializable identity group for persistence.
+ */
+[2026-03-17T20:38:32] tokens used: 213,607
+[2026-03-17T20:38:35] exec sed -n '1,240p' src/channels/orchestrator.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:35] sed -n '1,240p' src/channels/orchestrator.ts succeeded in 3ms:
+/**
+ * Channel orchestrator — coordinates subsystems for message send/receive.
+ *
+ * Wires together: health monitor, failover router, message adapter,
+ * context bridge, identity linker, and thread registry into a unified
+ * inbound/outbound message flow.
+ */
+import { createSubsystemLogger } from "../logging/subsystem.js";
+import type {
+  MessageAdapter,
+  AdaptableMessage,
+  AdaptedMessage,
+} from "./adaptation/message-adapter.js";
+import type { ChatType } from "./chat-type.js";
+import type { ContextBridge, BridgeReason } from "./continuity/context-bridge.js";
+import type { IdentityLinker } from "./continuity/identity-linker.js";
+import type { ThreadRegistry } from "./continuity/thread-registry.js";
+import type { FailoverRouter, FailoverDecision } from "./failover/failover-router.js";
+import type { HealthMonitor } from "./health/health-monitor.js";
+import type { ChannelId } from "./plugins/types.js";
+[2026-03-17T20:38:35] tokens used: 215,555
+[2026-03-17T20:38:38] exec rg -n 'createChannelOrchestrator|channel-state-store|createChannelStateStore' src extensions in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:39] rg -n 'createChannelOrchestrator|channel-state-store|createChannelStateStore' src extensions succeeded in 525ms:
+src/channels/orchestrator.test.ts:4:  createChannelOrchestrator,
+src/channels/orchestrator.test.ts:70:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:80:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:96:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:114:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:123:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:141:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:174:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:185:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:193:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:207:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:220:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/orchestrator.test.ts:239:      const orchestrator = createChannelOrchestrator(deps);
+src/channels/persistence/channel-state-store.ts:117:export function createChannelStateStore(options?: ChannelStateStoreOptions): ChannelStateStore {
+src/channels/README.md:41:- `channel-state-store.ts` — persists per-channel state (health history, open circuits, thread mappings) between restarts
+src/channels/orchestrator.ts:95:export function createChannelOrchestrator(deps: ChannelOrchestratorDeps): ChannelOrchestrator {
+src/README.md:149:| `channel-state-store.ts` | Persists channel state across restarts |
+src/gateway/server-startup-channels-orchestrator.ts:28:  createChannelOrchestrator,
+src/gateway/server-startup-channels-orchestrator.ts:113:  const channelOrchestrator = createChannelOrchestrator({
+[2026-03-17T20:38:39] tokens used: 217,666
+[2026-03-17T20:38:41] exec sed -n '1,220p' src/gateway/server-startup-channels-orchestrator.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:41] sed -n '1,220p' src/gateway/server-startup-channels-orchestrator.ts succeeded in 9ms:
+/**
+ * Initialize the channel orchestrator subsystem for the gateway.
+ *
+ * Creates and wires: MetricsExporter, delivery HealthMonitor,
+ * IdentityLinker, ThreadRegistry, ContextBridge, MessageAdapter,
+ * FailoverRouter, and ChannelOrchestrator.
+ *
+ * Returns all instances for attachment to GatewayRequestContext.
+ */
+
+import {
+  createMessageAdapter,
+  type MessageAdapter,
+} from "../channels/adaptation/message-adapter.js";
+import { createContextBridge, type ContextBridge } from "../channels/continuity/context-bridge.js";
+import {
+  createIdentityLinker,
+  type IdentityLinker,
+} from "../channels/continuity/identity-linker.js";
+import {
+[2026-03-17T20:38:41] tokens used: 218,455
+[2026-03-17T20:38:44] exec sed -n '1,180p' ui/src/ui/app-render.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:44] sed -n '1,180p' ui/src/ui/app-render.ts succeeded in 5ms:
+import { html, nothing } from "lit";
+import {
+  buildAgentMainSessionKey,
+  parseAgentSessionKey,
+} from "../../../src/routing/session-key.js";
+import { t } from "../i18n/index.ts";
+import { refreshChatAvatar } from "./app-chat.ts";
+import { renderUsageTab } from "./app-render-usage-tab.ts";
+import {
+  renderChatControls,
+  renderChatMobileToggle,
+  renderChatSessionSelect,
+  renderTab,
+  renderSidebarConnectionStatus,
+  renderTopbarThemeModeToggle,
+} from "./app-render.helpers.ts";
+import type { AppViewState } from "./app-view-state.ts";
+import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
+import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
+import { loadAgentSkills } from "./controllers/agent-skills.ts";
+[2026-03-17T20:38:45] tokens used: 219,909
+[2026-03-17T20:38:48] exec sh -lc "rg -l 'from \"\\.\\./\\.\\./\\.\\./src/|from \"\\.\\./\\.\\./src/' ui apps | awk -F/ '{print "'$1"/"$2}'"' | sort | uniq -c | sort -nr" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:48] sh -lc "rg -l 'from \"\\.\\./\\.\\./\\.\\./src/|from \"\\.\\./\\.\\./src/' ui apps | awk -F/ '{print "'$1"/"$2}'"' | sort | uniq -c | sort -nr" succeeded in 136ms:
+  14 ui/src
+[2026-03-17T20:38:48] tokens used: 221,947
+[2026-03-17T20:38:52] exec rg -n "from \"(\\.\\./)+src/" ui/src apps in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:52] rg -n "from \"(\\.\\./)+src/" ui/src apps succeeded in 70ms:
+ui/src/ui/usage-types.ts:4:} from "../../../src/shared/session-usage-timeseries-types.js";
+ui/src/ui/usage-types.ts:5:import type { SessionsUsageResult as SharedSessionsUsageResult } from "../../../src/shared/usage-types.js";
+ui/src/ui/device-auth.ts:6:} from "../../../src/shared/device-auth-store.js";
+ui/src/ui/device-auth.ts:7:import type { DeviceAuthStore } from "../../../src/shared/device-auth.js";
+ui/src/ui/app-chat.ts:1:import { parseAgentSessionKey } from "../../../src/sessions/session-key-utils.js";
+ui/src/ui/gateway.ts:1:import { buildDeviceAuthPayload } from "../../../src/gateway/device-auth.js";
+ui/src/ui/gateway.ts:7:} from "../../../src/gateway/protocol/client-info.js";
+ui/src/ui/gateway.ts:12:} from "../../../src/gateway/protocol/connect-error-details.js";
+ui/src/ui/chat/slash-command-executor.ts:6:import type { ModelCatalogEntry } from "../../../../src/agents/model-catalog.js";
+ui/src/ui/chat/slash-command-executor.ts:12:} from "../../../../src/auto-reply/thinking.js";
+ui/src/ui/chat/slash-command-executor.ts:18:} from "../../../../src/routing/session-key.js";
+ui/src/ui/views/agents-utils.ts:6:} from "../../../../src/agents/tool-policy-shared.js";
+ui/src/ui/views/overview.node.test.ts:2:import { ConnectErrorDetailCodes } from "../../../../src/gateway/protocol/connect-error-details.js";
+ui/src/ui/views/agents-panels-tools-skills.ts:2:import { normalizeToolName } from "../../../../src/agents/tool-policy-shared.js";
+ui/src/ui/chat/message-extract.ts:1:import { stripInboundMetadata } from "../../../../src/auto-reply/reply/strip-inbound-meta.js";
+ui/src/ui/chat/message-extract.ts:2:import { stripEnvelope } from "../../../../src/shared/chat-envelope.js";
+ui/src/ui/chat/message-normalizer.ts:5:import { stripInboundMetadata } from "../../../../src/auto-reply/reply/strip-inbound-meta.js";
+ui/src/ui/views/usage-render-overview.ts:2:import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
+ui/src/ui/app-render.ts:5:} from "../../../src/routing/session-key.js";
+ui/src/ui/app-settings.ts:1:import { roleScopesAllow } from "../../../src/shared/operator-scope-compat.js";
+[2026-03-17T20:38:52] tokens used: 222,175
+[2026-03-17T20:38:57] exec sed -n '1,220p' docs/refactor/strict-config.md in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:38:57] sed -n '1,220p' docs/refactor/strict-config.md succeeded in 6ms:
+---
+summary: "Strict config validation + doctor-only migrations"
+read_when:
+  - Designing or implementing config validation behavior
+  - Working on config migrations or doctor workflows
+  - Handling plugin config schemas or plugin load gating
+title: "Strict Config Validation"
+---
+
+# Strict config validation (doctor-only migrations)
+
+## Goals
+
+- **Reject unknown config keys everywhere** (root + nested), except root `$schema` metadata.
+- **Reject plugin config without a schema**; don’t load that plugin.
+- **Remove legacy auto-migration on load**; migrations run via doctor only.
+- **Auto-run doctor (dry-run) on startup**; if invalid, block non-diagnostic commands.
+
+## Non-goals
+
+[2026-03-17T20:38:57] tokens used: 223,682
+[2026-03-17T20:39:06] exec sh -lc "find src/memory -maxdepth 2 -type f | sed 's#"'^./##'"' | sort | head -120" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:06] sh -lc "find src/memory -maxdepth 2 -type f | sed 's#"'^./##'"' | sort | head -120" succeeded in 61ms:
+src/memory/backend-config.test.ts
+src/memory/backend-config.ts
+src/memory/batch-embedding-common.ts
+src/memory/batch-error-utils.test.ts
+src/memory/batch-error-utils.ts
+src/memory/batch-gemini.test.ts
+src/memory/batch-gemini.ts
+src/memory/batch-http.test.ts
+src/memory/batch-http.ts
+src/memory/batch-openai.ts
+src/memory/batch-output.test.ts
+src/memory/batch-output.ts
+src/memory/batch-provider-common.ts
+src/memory/batch-runner.ts
+src/memory/batch-status.test.ts
+src/memory/batch-status.ts
+src/memory/batch-upload.ts
+src/memory/batch-utils.ts
+src/memory/batch-voyage.test.ts
+src/memory/batch-voyage.ts
+[2026-03-17T20:39:06] tokens used: 225,128
+[2026-03-17T20:39:12] exec sed -n '1,220p' src/gateway/server-methods-list.ts in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:12] sed -n '1,220p' src/gateway/server-methods-list.ts succeeded in 4ms:
+import { listChannelPlugins } from "../channels/plugins/index.js";
+import { GATEWAY_EVENT_UPDATE_AVAILABLE } from "./events.js";
+
+const BASE_METHODS = [
+  "health",
+  "doctor.memory.status",
+  "logs.tail",
+  "channels.status",
+  "channels.logout",
+  "status",
+  "usage.status",
+  "usage.cost",
+  "tts.status",
+  "tts.providers",
+  "tts.enable",
+  "tts.disable",
+  "tts.convert",
+  "tts.setProvider",
+  "config.get",
+  "config.set",
+[2026-03-17T20:39:12] tokens used: 226,742
+[2026-03-17T20:39:16] exec sh -lc "node -e \"const fs=require('fs');const s=fs.readFileSync('src/gateway/server-methods-list.ts','utf8');const m=[...s.matchAll(/\\\"(["'^'"\\\"]+)\\\"/g)].map(x=>x[1]); console.log(new Set(m.slice(0,m.indexOf('connect.challenge')>=0?m.indexOf('connect.challenge'):m.length)).size)\"" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:16] sh -lc "node -e \"const fs=require('fs');const s=fs.readFileSync('src/gateway/server-methods-list.ts','utf8');const m=[...s.matchAll(/\\\"(["'^'"\\\"]+)\\\"/g)].map(x=>x[1]); console.log(new Set(m.slice(0,m.indexOf('connect.challenge')>=0?m.indexOf('connect.challenge'):m.length)).size)\"" succeeded in 196ms:
+105
+[2026-03-17T20:39:16] tokens used: 227,973
+[2026-03-17T20:39:19] exec sh -lc 'find extensions -mindepth 1 -maxdepth 1 -type d | wc -l && find apps -mindepth 1 -maxdepth 1 -type d | wc -l' in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:19] sh -lc 'find extensions -mindepth 1 -maxdepth 1 -type d | wc -l && find apps -mindepth 1 -maxdepth 1 -type d | wc -l' succeeded in 69ms:
+      50
+       4
+[2026-03-17T20:39:19] tokens used: 228,202
+[2026-03-17T20:39:22] exec sh -lc "find scripts -type f \\( -name '*.test.ts' -o -name '*.test.js' -o -name '*.test.mjs' \\) | wc -l" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:22] sh -lc "find scripts -type f \\( -name '*.test.ts' -o -name '*.test.js' -o -name '*.test.mjs' \\) | wc -l" succeeded in 64ms:
+       0
+[2026-03-17T20:39:22] tokens used: 228,500
+[2026-03-17T20:39:29] codex
+
+I’ve identified a few concrete hotspots that are stronger than broad “clean up the monorepo” advice: boundary leaks between core and plugins/UI, config and persistence sprawl, and some docs that are already drifting from the implementation. I’m pulling exact references now so the final plan can be prioritized and sequenced cleanly.
+[2026-03-17T20:39:31] exec sh -lc "nl -ba src/plugin-sdk/index.ts | sed -n '1,120p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:31] sh -lc "nl -ba src/plugin-sdk/index.ts | sed -n '1,120p'" succeeded in 62ms:
+     1	export { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
+     2	export { CHANNEL_MESSAGE_ACTION_NAMES } from "../channels/plugins/message-action-names.js";
+     3	export {
+     4	  BLUEBUBBLES_ACTIONS,
+     5	  BLUEBUBBLES_ACTION_NAMES,
+     6	  BLUEBUBBLES_GROUP_ACTIONS,
+     7	} from "../channels/plugins/bluebubbles-actions.js";
+     8	export type {
+     9	  ChannelAccountSnapshot,
+    10	  ChannelAccountState,
+    11	  ChannelAgentTool,
+    12	  ChannelAgentToolFactory,
+    13	  ChannelAuthAdapter,
+    14	  ChannelCapabilities,
+    15	  ChannelCommandAdapter,
+    16	  ChannelConfigAdapter,
+    17	  ChannelDirectoryAdapter,
+    18	  ChannelDirectoryEntry,
+    19	  ChannelDirectoryEntryKind,
+    20	  ChannelElevatedAdapter,
+[2026-03-17T20:39:31] tokens used: 229,150
+[2026-03-17T20:39:34] exec sh -lc "nl -ba docs/refactor/plugin-sdk.md | sed -n '1,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:34] sh -lc "nl -ba docs/refactor/plugin-sdk.md | sed -n '1,220p'" succeeded in 61ms:
+     1	---
+     2	summary: "Plan: one clean plugin SDK + runtime for all messaging connectors"
+     3	read_when:
+     4	  - Defining or refactoring the plugin architecture
+     5	  - Migrating channel connectors to the plugin SDK/runtime
+     6	title: "Plugin SDK Refactor"
+     7	---
+     8	
+     9	# Plugin SDK + Runtime Refactor Plan
+    10	
+    11	Goal: every messaging connector is a plugin (bundled or external) using one stable API.
+    12	No plugin imports from `src/**` directly. All dependencies go through the SDK or runtime.
+    13	
+    14	## Why now
+    15	
+    16	- Current connectors mix patterns: direct core imports, dist-only bridges, and custom helpers.
+    17	- This makes upgrades brittle and blocks a clean external plugin surface.
+    18	
+    19	## Target architecture (two layers)
+    20	
+[2026-03-17T20:39:34] tokens used: 230,806
+[2026-03-17T20:39:36] exec sh -lc "nl -ba src/plugins/loader.ts | sed -n '1,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:37] sh -lc "nl -ba src/plugins/loader.ts | sed -n '1,220p'" succeeded in 63ms:
+     1	import fs from "node:fs";
+     2	import path from "node:path";
+     3	import { fileURLToPath } from "node:url";
+     4	import { createJiti } from "jiti";
+     5	import type { OpenClawConfig } from "../config/config.js";
+     6	import type { PluginInstallRecord } from "../config/types.plugins.js";
+     7	import type { GatewayRequestHandler } from "../gateway/server-methods/types.js";
+     8	import { openBoundaryFileSync } from "../infra/boundary-file-read.js";
+     9	import { resolveOpenClawPackageRootSync } from "../infra/openclaw-root.js";
+    10	import { createSubsystemLogger } from "../logging/subsystem.js";
+    11	import { resolveUserPath } from "../utils.js";
+    12	import { clearPluginCommands } from "./commands.js";
+    13	import {
+    14	  applyTestPluginDefaults,
+    15	  normalizePluginsConfig,
+    16	  resolveEffectiveEnableState,
+    17	  resolveMemorySlotDecision,
+    18	  type NormalizedPluginsConfig,
+    19	} from "./config-state.js";
+    20	import { discoverOpenClawPlugins } from "./discovery.js";
+[2026-03-17T20:39:37] tokens used: 233,803
+[2026-03-17T20:39:40] exec sh -lc "nl -ba src/config/io.ts | sed -n '1,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:40] sh -lc "nl -ba src/config/io.ts | sed -n '1,220p'" succeeded in 60ms:
+     1	import crypto from "node:crypto";
+     2	import fs from "node:fs";
+     3	import os from "node:os";
+     4	import path from "node:path";
+     5	import { isDeepStrictEqual } from "node:util";
+     6	import JSON5 from "json5";
+     7	import { ensureOwnerDisplaySecret } from "../agents/owner-display.js";
+     8	import { loadDotEnv } from "../infra/dotenv.js";
+     9	import { resolveRequiredHomeDir } from "../infra/home-dir.js";
+    10	import {
+    11	  loadShellEnvFallback,
+    12	  resolveShellEnvFallbackTimeoutMs,
+    13	  shouldDeferShellEnvFallback,
+    14	  shouldEnableShellEnvFallback,
+    15	} from "../infra/shell-env.js";
+    16	import { sanitizeTerminalText } from "../terminal/safe-text.js";
+    17	import { VERSION } from "../version.js";
+    18	import { DuplicateAgentDirError, findDuplicateAgentDirs } from "./agent-dirs.js";
+    19	import { maintainConfigBackups } from "./backup-rotation.js";
+    20	import {
+[2026-03-17T20:39:40] tokens used: 237,000
+[2026-03-17T20:39:44] exec sh -lc "nl -ba docs/refactor/strict-config.md | sed -n '1,200p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:44] sh -lc "nl -ba docs/refactor/strict-config.md | sed -n '1,200p'" succeeded in 62ms:
+     1	---
+     2	summary: "Strict config validation + doctor-only migrations"
+     3	read_when:
+     4	  - Designing or implementing config validation behavior
+     5	  - Working on config migrations or doctor workflows
+     6	  - Handling plugin config schemas or plugin load gating
+     7	title: "Strict Config Validation"
+     8	---
+     9	
+    10	# Strict config validation (doctor-only migrations)
+    11	
+    12	## Goals
+    13	
+    14	- **Reject unknown config keys everywhere** (root + nested), except root `$schema` metadata.
+    15	- **Reject plugin config without a schema**; don’t load that plugin.
+    16	- **Remove legacy auto-migration on load**; migrations run via doctor only.
+    17	- **Auto-run doctor (dry-run) on startup**; if invalid, block non-diagnostic commands.
+    18	
+    19	## Non-goals
+    20	
+[2026-03-17T20:39:44] tokens used: 240,212
+[2026-03-17T20:39:47] exec sh -lc "nl -ba src/channels/persistence/channel-state-store.ts | sed -n '1,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:47] sh -lc "nl -ba src/channels/persistence/channel-state-store.ts | sed -n '1,220p'" succeeded in 61ms:
+     1	/**
+     2	 * SQLite-backed persistence for channel state.
+     3	 *
+     4	 * Stores identity groups, thread registry, failover state, and
+     5	 * context bridge messages so they survive process restarts.
+     6	 */
+     7	import { createSubsystemLogger } from "../../logging/subsystem.js";
+     8	
+     9	const log = createSubsystemLogger("channels/persistence/state-store");
+    10	
+    11	const SCHEMA_VERSION = 1;
+    12	
+    13	export type ChannelStateStoreOptions = {
+    14	  /** Path to the SQLite database file. Uses in-memory if omitted. */
+    15	  dbPath?: string;
+    16	};
+    17	
+    18	/**
+    19	 * Serializable identity group for persistence.
+    20	 */
+[2026-03-17T20:39:47] tokens used: 241,671
+[2026-03-17T20:39:50] exec sh -lc "nl -ba src/gateway/server-startup-channels-orchestrator.ts | sed -n '1,180p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:50] sh -lc "nl -ba src/gateway/server-startup-channels-orchestrator.ts | sed -n '1,180p'" succeeded in 59ms:
+     1	/**
+     2	 * Initialize the channel orchestrator subsystem for the gateway.
+     3	 *
+     4	 * Creates and wires: MetricsExporter, delivery HealthMonitor,
+     5	 * IdentityLinker, ThreadRegistry, ContextBridge, MessageAdapter,
+     6	 * FailoverRouter, and ChannelOrchestrator.
+     7	 *
+     8	 * Returns all instances for attachment to GatewayRequestContext.
+     9	 */
+    10	
+    11	import {
+    12	  createMessageAdapter,
+    13	  type MessageAdapter,
+    14	} from "../channels/adaptation/message-adapter.js";
+    15	import { createContextBridge, type ContextBridge } from "../channels/continuity/context-bridge.js";
+    16	import {
+    17	  createIdentityLinker,
+    18	  type IdentityLinker,
+    19	} from "../channels/continuity/identity-linker.js";
+    20	import {
+[2026-03-17T20:39:50] tokens used: 244,467
+[2026-03-17T20:39:52] exec sh -lc "nl -ba src/README.md | sed -n '130,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:52] sh -lc "nl -ba src/README.md | sed -n '130,220p'" succeeded in 59ms:
+   130	
+   131	| File | Responsibility |
+   132	|---|---|
+   133	| `message-adapter.ts` | Translates messages to/from channel-native formats |
+   134	| `index.ts` | Public re-exports |
+   135	
+   136	### channels/reliability/
+   137	
+   138	Delivery reliability primitives.
+   139	
+   140	| File | Responsibility |
+   141	|---|---|
+   142	| `circuit-breaker.ts` | Prevents cascading failures when a channel is unstable |
+   143	| `delivery-retry.ts` | Configurable retry with backoff |
+   144	
+   145	### channels/persistence/
+   146	
+   147	| File | Responsibility |
+   148	|---|---|
+   149	| `channel-state-store.ts` | Persists channel state across restarts |
+[2026-03-17T20:39:52] tokens used: 246,375
+[2026-03-17T20:39:54] exec sh -lc "nl -ba src/memory/qmd-manager.ts | sed -n '1,80p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:54] sh -lc "nl -ba src/memory/qmd-manager.ts | sed -n '1,80p'" succeeded in 62ms:
+     1	import fs from "node:fs/promises";
+     2	import os from "node:os";
+     3	import path from "node:path";
+     4	import readline from "node:readline";
+     5	import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
+     6	import type { OpenClawConfig } from "../config/config.js";
+     7	import { resolveStateDir } from "../config/paths.js";
+     8	import { writeFileWithinRoot } from "../infra/fs-safe.js";
+     9	import { createSubsystemLogger } from "../logging/subsystem.js";
+    10	import { isFileMissingError, statRegularFile } from "./fs-utils.js";
+    11	import { resolveCliSpawnInvocation, runCliCommand } from "./qmd-process.js";
+    12	import { deriveQmdScopeChannel, deriveQmdScopeChatType, isQmdScopeAllowed } from "./qmd-scope.js";
+    13	import {
+    14	  listSessionFilesForAgent,
+    15	  buildSessionEntry,
+    16	  type SessionFileEntry,
+    17	} from "./session-files.js";
+    18	import { requireNodeSqlite } from "./sqlite.js";
+    19	import type {
+    20	  MemoryEmbeddingProbeResult,
+[2026-03-17T20:39:54] tokens used: 247,559
+[2026-03-17T20:39:57] exec sh -lc "nl -ba src/career/persistence.ts | sed -n '1,220p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:57] sh -lc "nl -ba src/career/persistence.ts | sed -n '1,220p'" succeeded in 60ms:
+     1	/**
+     2	 * Career data persistence — lazy singleton that loads from / saves to
+     3	 * ~/.openclaw/career/ JSON files.
+     4	 *
+     5	 * All MCP career tool handlers share the same CareerContext instance.
+     6	 */
+     7	
+     8	import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+     9	import { homedir } from "node:os";
+    10	import { join } from "node:path";
+    11	import { createSubsystemLogger } from "../logging/subsystem.js";
+    12	import { createModeManager, type ModeManager } from "./agent/mode.js";
+    13	import { createCompanyTracker, type CompanyTracker } from "./intel/company-tracker.js";
+    14	import { createJobStore, type JobStore } from "./jobs/store.js";
+    15	import { createInteractionTracker, type InteractionTracker } from "./network/tracker.js";
+    16	import { createNetworkGraph, type NetworkGraph } from "./network/types.js";
+    17	import { createOutreachPipeline, type OutreachPipeline } from "./outreach/pipeline.js";
+    18	import { createProfileStore, type ProfileStore } from "./profile/store.js";
+    19	
+    20	const log = createSubsystemLogger("career/persistence");
+[2026-03-17T20:39:57] tokens used: 248,978
+[2026-03-17T20:39:59] exec sh -lc "nl -ba src/mcp/tools/index.ts | sed -n '1,120p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:39:59] sh -lc "nl -ba src/mcp/tools/index.ts | sed -n '1,120p'" succeeded in 64ms:
+     1	/**
+     2	 * MCP tool registry.
+     3	 *
+     4	 * Aggregates all tool handlers and returns them as an array.
+     5	 */
+     6	import type { McpToolHandler } from "../types.js";
+     7	import { createAgentManageTool } from "./agent-manage.js";
+     8	import { createChannelStatusTool } from "./channel-status.js";
+     9	import { createCronManageTool } from "./cron-manage.js";
+    10	import { createFailoverStatusTool } from "./failover-status.js";
+    11	import { createHealthDashboardTool } from "./health-dashboard.js";
+    12	import { createListSessionsTool } from "./list-sessions.js";
+    13	import { createManageConfigTool } from "./manage-config.js";
+    14	import { createMemoryQueryTool } from "./memory-query.js";
+    15	import { createQuerySessionTool } from "./query-session.js";
+    16	import { createCareerTools } from "./career.js";
+    17	import { createSendMessageTool } from "./send-message.js";
+    18	
+    19	type GatewayRpc = <T = Record<string, unknown>>(method: string, params?: unknown) => Promise<T>;
+    20	
+[2026-03-17T20:39:59] tokens used: 251,748
+[2026-03-17T20:40:02] exec sh -lc "nl -ba src/gateway/server-methods-list.ts | sed -n '1,180p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:40:02] sh -lc "nl -ba src/gateway/server-methods-list.ts | sed -n '1,180p'" succeeded in 61ms:
+     1	import { listChannelPlugins } from "../channels/plugins/index.js";
+     2	import { GATEWAY_EVENT_UPDATE_AVAILABLE } from "./events.js";
+     3	
+     4	const BASE_METHODS = [
+     5	  "health",
+     6	  "doctor.memory.status",
+     7	  "logs.tail",
+     8	  "channels.status",
+     9	  "channels.logout",
+    10	  "status",
+    11	  "usage.status",
+    12	  "usage.cost",
+    13	  "tts.status",
+    14	  "tts.providers",
+    15	  "tts.enable",
+    16	  "tts.disable",
+    17	  "tts.convert",
+    18	  "tts.setProvider",
+    19	  "config.get",
+    20	  "config.set",
+[2026-03-17T20:40:02] tokens used: 252,459
+[2026-03-17T20:40:04] exec sh -lc "nl -ba ui/src/ui/app-render.ts | sed -n '1,80p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:40:04] sh -lc "nl -ba ui/src/ui/app-render.ts | sed -n '1,80p'" succeeded in 66ms:
+     1	import { html, nothing } from "lit";
+     2	import {
+     3	  buildAgentMainSessionKey,
+     4	  parseAgentSessionKey,
+     5	} from "../../../src/routing/session-key.js";
+     6	import { t } from "../i18n/index.ts";
+     7	import { refreshChatAvatar } from "./app-chat.ts";
+     8	import { renderUsageTab } from "./app-render-usage-tab.ts";
+     9	import {
+    10	  renderChatControls,
+    11	  renderChatMobileToggle,
+    12	  renderChatSessionSelect,
+    13	  renderTab,
+    14	  renderSidebarConnectionStatus,
+    15	  renderTopbarThemeModeToggle,
+    16	} from "./app-render.helpers.ts";
+    17	import type { AppViewState } from "./app-view-state.ts";
+    18	import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
+    19	import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
+    20	import { loadAgentSkills } from "./controllers/agent-skills.ts";
+[2026-03-17T20:40:04] tokens used: 254,250
+[2026-03-17T20:40:08] exec sh -lc "nl -ba src/gateway/server-methods/chat.ts | sed -n '1,80p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:40:08] sh -lc "nl -ba src/gateway/server-methods/chat.ts | sed -n '1,80p'" succeeded in 61ms:
+     1	import fs from "node:fs";
+     2	import path from "node:path";
+     3	import { CURRENT_SESSION_VERSION } from "@mariozechner/pi-coding-agent";
+     4	import { resolveSessionAgentId } from "../../agents/agent-scope.js";
+     5	import { resolveThinkingDefault } from "../../agents/model-selection.js";
+     6	import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
+     7	import { dispatchInboundMessage } from "../../auto-reply/dispatch.js";
+     8	import { createReplyDispatcher } from "../../auto-reply/reply/reply-dispatcher.js";
+     9	import type { MsgContext } from "../../auto-reply/templating.js";
+    10	import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../../auto-reply/tokens.js";
+    11	import type { ReplyPayload } from "../../auto-reply/types.js";
+    12	import { createReplyPrefixOptions } from "../../channels/reply-prefix.js";
+    13	import { resolveSessionFilePath } from "../../config/sessions.js";
+    14	import { jsonUtf8Bytes } from "../../infra/json-utf8-bytes.js";
+    15	import { normalizeInputProvenance, type InputProvenance } from "../../sessions/input-provenance.js";
+    16	import { resolveSendPolicy } from "../../sessions/send-policy.js";
+    17	import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
+    18	import {
+    19	  stripInlineDirectiveTagsForDisplay,
+    20	  stripInlineDirectiveTagsFromMessageForDisplay,
+[2026-03-17T20:40:08] tokens used: 255,523
+[2026-03-17T20:40:10] exec sh -lc "nl -ba package.json | sed -n '180,320p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:40:10] sh -lc "nl -ba package.json | sed -n '180,320p'" succeeded in 63ms:
+   180	      "types": "./dist/plugin-sdk/test-utils.d.ts",
+   181	      "default": "./dist/plugin-sdk/test-utils.js"
+   182	    },
+   183	    "./plugin-sdk/thread-ownership": {
+   184	      "types": "./dist/plugin-sdk/thread-ownership.d.ts",
+   185	      "default": "./dist/plugin-sdk/thread-ownership.js"
+   186	    },
+   187	    "./plugin-sdk/tlon": {
+   188	      "types": "./dist/plugin-sdk/tlon.d.ts",
+   189	      "default": "./dist/plugin-sdk/tlon.js"
+   190	    },
+   191	    "./plugin-sdk/twitch": {
+   192	      "types": "./dist/plugin-sdk/twitch.d.ts",
+   193	      "default": "./dist/plugin-sdk/twitch.js"
+   194	    },
+   195	    "./plugin-sdk/voice-call": {
+   196	      "types": "./dist/plugin-sdk/voice-call.d.ts",
+   197	      "default": "./dist/plugin-sdk/voice-call.js"
+   198	    },
+   199	    "./plugin-sdk/zalo": {
+[2026-03-17T20:40:10] tokens used: 256,946
+[2026-03-17T20:40:14] exec sh -lc "nl -ba scripts/check-no-monolithic-plugin-sdk-entry-imports.ts | sed -n '1,160p'" in /Users/rish2jain/Documents/Documents - Mac Studio/Openclaw
+[2026-03-17T20:40:14] sh -lc "nl -ba scripts/check-no-monolithic-plugin-sdk-entry-imports.ts | sed -n '1,160p'" succeeded in 68ms:
+     1	import fs from "node:fs";
+     2	import path from "node:path";
+     3	import { discoverOpenClawPlugins } from "../src/plugins/discovery.js";
+     4	
+     5	// Match exact monolithic-root specifier in any code path:
+     6	// imports/exports, require/dynamic import, and test mocks (vi.mock/jest.mock).
+     7	const ROOT_IMPORT_PATTERN = /["']openclaw\/plugin-sdk["']/;
+     8	
+     9	function hasMonolithicRootImport(content: string): boolean {
+    10	  return ROOT_IMPORT_PATTERN.test(content);
+    11	}
+    12	
+    13	function isSourceFile(filePath: string): boolean {
+    14	  if (filePath.endsWith(".d.ts")) {
+    15	    return false;
+    16	  }
+    17	  return /\.(?:[cm]?ts|[cm]?js|tsx|jsx)$/u.test(filePath);
+    18	}
+    19	
+    20	function collectPluginSourceFiles(rootDir: string): string[] {
+[2026-03-17T20:40:14] tokens used: 261,553
+[2026-03-17T20:40:24] codex
+
+# Plan
+
+OpenClaw already has impressive breadth: roughly 50 extension packages, 4 app surfaces, a large `src/` core, and a very heavy automated validation footprint. The highest-value strategy is not “add more features everywhere,” but to reduce architectural coupling, consolidate state/config patterns, and increase confidence at the seams between gateway, plugins, UI, and native clients.
+
+## Priorities
+
+1. **Finish the plugin boundary cleanup and make it the repo’s primary architecture program.**  
+The strongest hotspot is boundary leakage between core and plugins/UI. The plugin SDK entrypoint is very broad and even re-exports Discord extension internals, which is a layering smell rather than a stable SDK surface.  
+Likely hotspots: [src/plugin-sdk/index.ts#L1](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/plugin-sdk/index.ts#L1), [src/plugin-sdk/index.ts#L64](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/plugin-sdk/index.ts#L64), [docs/refactor/plugin-sdk.md#L11](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/docs/refactor/plugin-sdk.md#L11), [src/plugins/loader.ts#L63](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/plugins/loader.ts#L63), [scripts/check-no-monolithic-plugin-sdk-entry-imports.ts#L62](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/scripts/check-no-monolithic-plugin-sdk-entry-imports.ts#L62)  
+Why first: this unlocks maintainability, external pluginability, cleaner testing, and lower upgrade risk across the whole monorepo.  
+Concrete signal: I found large numbers of `extensions/** -> src/**` imports, especially in Discord, Telegram, Slack, and WhatsApp, so the refactor plan in docs appears directionally correct but incomplete.
+
+2. **Split config/state management into smaller subsystems with one canonical persistence model.**  
+`config/io.ts` has accumulated defaults, env handling, migrations, validation, write safety, and audit responsibilities in one place. Separately, state persistence is fragmented: channel reliability state is still effectively in-memory, career data uses its own JSON singleton store, and memory has its own substantial storage stack.  
+Likely hotspots: [src/config/io.ts#L1](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/config/io.ts#L1), [docs/refactor/strict-config.md#L12](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/docs/refactor/strict-config.md#L12), [src/channels/persistence/channel-state-store.ts#L110](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/channels/persistence/channel-state-store.ts#L110), [src/gateway/server-startup-channels-orchestrator.ts#L63](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/gateway/server-startup-channels-orchestrator.ts#L63), [src/career/persistence.ts#L33](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/career/persistence.ts#L33)  
+Highest-value move: define one durable state strategy for gateway-adjacent systems and keep module-local stores thin adapters over it.
+
+3. **Rationalize the control-plane surface and introduce contract generation where possible.**  
+The gateway method list is already very large and manually curated, while MCP tools, UI controllers, CLI commands, and native clients appear to evolve in parallel. That raises drift risk and makes adding features expensive.  
+Likely hotspots: [src/gateway/server-methods-list.ts#L4](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/gateway/server-methods-list.ts#L4), [src/mcp/tools/index.ts#L21](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/mcp/tools/index.ts#L21), [ui/src/ui/app-render.ts#L1](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/ui/src/ui/app-render.ts#L1)  
+Inference: a portion of current complexity comes from maintaining the same capabilities across multiple surfaces rather than from the capabilities themselves.  
+Recommendation: promote a single capability catalog and generate as much metadata, typing, docs stubs, and UI affordance shape as possible from that source.
+
+4. **Shift testing investment from unit density to seam confidence.**  
+The repo already has very high test volume, so the next gains likely come from cross-surface contract tests and fewer brittle ad hoc paths. The biggest code files are often tests, which suggests good coverage but also maintenance weight. Scripts and packaging flows appear much less directly tested.  
+Likely hotspots: [docs/help/testing.md#L10](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/docs/help/testing.md#L10), [package.json#L227](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/package.json#L227), [package.json#L306](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/package.json#L306)  
+Priority focus:
+- plugin runtime compatibility tests
+- gateway/UI/native protocol parity tests
+- config migration and doctor golden tests
+- release/install/script smoke tests  
+Under-tested surface callout: `scripts/` has many critical release/build/test helpers but no colocated tests.
+
+5. **Reduce build and DX friction by turning custom checks into first-class architecture tooling.**  
+The root `package.json` contains a very large custom build/check matrix. That’s powerful, but it also means repo knowledge is encoded in shellable scripts rather than discoverable architecture primitives.  
+Likely hotspots: [package.json#L217](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/package.json#L217), [package.json#L232](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/package.json#L232), [package.json#L275](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/package.json#L275)  
+Recommendation: keep the checks, but group them into explicit profiles such as `core-boundaries`, `plugin-contracts`, `gateway-protocol`, `docs-integrity`, and `release-smoke`, with fast local defaults and slower CI tiers.
+
+6. **Prune or tier the product surface instead of treating every subsystem equally.**  
+OpenClaw spans gateway, channels, MCP, memory, career intelligence, UI, and three native platforms. That breadth is exciting, but it creates uneven maturity.  
+Likely hotspots: [README.md](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/README.md), [src/career/persistence.ts#L1](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/career/persistence.ts#L1), [docs/web/control-ui.md](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/docs/web/control-ui.md), [apps/ios/README.md](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/apps/ios/README.md), [apps/macos/README.md](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/apps/macos/README.md)  
+Inference: the repo would benefit from explicit maturity tiers such as `core platform`, `supported extensions`, and `experimental surfaces`, especially for career and some specialized extensions.
+
+7. **Treat documentation drift as an engineering issue, not just a docs issue.**  
+There is enough evidence of doc/code mismatch that this should be part of the platform plan. For example, `src/README.md` still says `memory/` is empty even though `src/memory/` is now substantial, and the channel persistence story is described more strongly than the implementation currently supports.  
+Likely hotspots: [src/README.md#L213](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/README.md#L213), [src/memory/qmd-manager.ts#L1](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/memory/qmd-manager.ts#L1), [src/channels/persistence/channel-state-store.ts#L117](/Users/rish2jain/Documents/Documents%20-%20Mac%20Studio/Openclaw/src/channels/persistence/channel-state-store.ts#L117)  
+Recommendation: add “living architecture docs” ownership and verify selected docs in CI against code-owned inventories.
+
+## Sequence
+
+**Near-term, 0-6 weeks**
+- Complete a repo-wide boundary audit and publish a target layering map for `src`, `extensions`, `ui`, and `apps`.
+- Start the plugin-runtime migration with the worst offenders first: Discord, Telegram, Slack, WhatsApp.
+- Split `config/io.ts` into read, validate, migrate, and write modules without changing behavior yet.
+- Add contract tests around gateway methods, plugin SDK/runtime compatibility, and Control UI protocol assumptions.
+- Introduce maturity labels for extensions and major product surfaces.
+
+**Mid-term, 1-3 months**
+- Make plugin runtime the only supported path for connector access to core behavior.
+- Implement real durable channel reliability persistence and unify transient state ownership.
+- Generate capability metadata for at least gateway methods, MCP tools, and UI navigation from a shared source.
+- Convert the root validation pipeline into named profiles with clear developer guidance and CI staging.
+- Reduce large hotspot files by extracting cohesive modules from chat handling, config IO, plugin loading, and UI render orchestration.
+
+**Longer-term, 1-2 quarters**
+- Decide whether career intelligence remains a first-class platform pillar or moves behind an experimental boundary.
+- Consolidate persistence around a small number of storage patterns instead of subsystem-specific stores.
+- Move docs toward generated inventories for commands, methods, config schema, plugin manifests, and supported channels.
+- Define a formal support matrix for extensions, apps, and install modes to focus maintenance effort.
+
+## Risks and Validation
+
+Main tradeoff: boundary cleanup and state consolidation will slow short-term feature work, especially for channels that currently rely on direct core imports. That is still worth it because the current shape pushes complexity into every future change.
+
+Validation ideas:
+- Track direct `extensions/** -> src/**` import count and make it trend to zero.
+- Track hotspot file size and ownership for files like config IO, plugin SDK, plugin loader, chat handlers, and UI render.
+- Add golden tests for plugin behavior parity before and after runtime migration.
+- Add doc integrity checks for architecture inventories and config/method catalogs.
+- Measure developer-loop impact with “fast local” versus “full CI” validation profiles.
+
+Biggest simplification candidates:
+- plugin SDK/runtime boundary
+- config IO and doctor/migration flow
+- manual control-plane registries
+- fragmented persistence patterns
+- oversized orchestration files in gateway and UI
+[2026-03-17T20:40:59] tokens used: 265,922

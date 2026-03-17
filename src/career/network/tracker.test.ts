@@ -26,7 +26,7 @@ function makeRecord(
   daysAgo: number,
   channel: InteractionRecord["channel"] = "dm",
 ): InteractionRecord {
-  return { personId, channel, date: Date.now() - daysAgo * DAY_MS };
+  return { personId, channel, date: Date.now() - daysAgo * DAY_MS, type: channel };
 }
 
 // ── Tests ────────────────────────────────────────────────────────────

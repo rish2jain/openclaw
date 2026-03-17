@@ -835,3 +835,24 @@ export {
 
 // Security utilities
 export { redactSensitiveText } from "../logging/redact.js";
+
+// Guardrail utilities
+export type {
+  BaseStageConfig,
+  EmbeddedAgentResult,
+  GuardrailBaseConfig,
+  GuardrailEvaluation,
+  GuardrailEvaluationContext,
+  GuardrailStage,
+} from "../plugins/guardrails-utils.js";
+export {
+  cleanupTempDir,
+  collectText,
+  createGuardrailPlugin,
+  createGuardrailRunId,
+  createGuardrailTempDir,
+  extractMessagesContent,
+  extractTextFromContent,
+  loadRunEmbeddedPiAgent,
+  resolveStageConfig,
+} from "../plugins/guardrails-utils.js";

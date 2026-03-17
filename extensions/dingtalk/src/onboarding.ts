@@ -1,46 +1,13 @@
 import {
-  addWildcardAllowFrom,
   DEFAULT_ACCOUNT_ID,
-  formatDocsLink,
-  promptChannelAccessConfig,
   type ChannelOnboardingAdapter,
-  type ChannelOnboardingDmPolicy,
-  type DmPolicy,
+  type OpenClawConfig,
 } from "openclaw/plugin-sdk";
+import { listDingTalkAccountIds, resolveDingTalkAccount } from "./accounts.js";
 import { resolveDingTalkWebhookPath } from "./monitor.js";
 import type { CoreConfig, DingTalkAccountConfig } from "./types.js";
 
 const CHANNEL = "dingtalk" as const;
-
-function setDingTalkDmPolicy(cfg: CoreConfig, dmPolicy: DmPolicy, accountId: string): CoreConfig {
-  const dt = cfg.channels?.dingtalk ?? {};
-  const current = accountId === DEFAULT_ACCOUNT_ID ? dt : (dt.accounts?.[accountId] ?? {});
-  const allowFrom =
-    dmPolicy === "open" ? addWildcardAllowFrom(current.allowFrom) : current.allowFrom;
-
-  if (accountId === DEFAULT_ACCOUNT_ID) {
-    return {
-      ...cfg,
-      channels: {
-        ...cfg.channels,
-        dingtalk: { ...dt, dmPolicy, ...(allowFrom ? { allowFrom } : {}) },
-      },
-    };
-  }
-  return {
-    ...cfg,
-    channels: {
-      ...cfg.channels,
-      dingtalk: {
-        ...dt,
-        accounts: {
-          ...dt.accounts,
-          [accountId]: { ...current, dmPolicy, ...(allowFrom ? { allowFrom } : {}) },
-        },
-      },
-    },
-  };
-}
 
 function patchDingTalkAccount(
   cfg: CoreConfig,
@@ -66,73 +33,76 @@ function patchDingTalkAccount(
   };
 }
 
-export const dingtalkOnboardingAdapter: ChannelOnboardingAdapter<CoreConfig> = {
+export const dingtalkOnboardingAdapter: ChannelOnboardingAdapter = {
   channel: CHANNEL,
 
-  async setup({ prompter, config, accountId }) {
-    const aid = accountId ?? DEFAULT_ACCOUNT_ID;
-    let cfg = config as CoreConfig;
-    const existing = cfg.channels?.dingtalk ?? {};
-    const accountCfg = aid === DEFAULT_ACCOUNT_ID ? existing : (existing.accounts?.[aid] ?? {});
+  getStatus: async ({ cfg }) => {
+    const ids = listDingTalkAccountIds(cfg as CoreConfig);
+    const configured = ids.some((accountId) => {
+      const account = resolveDingTalkAccount({ cfg: cfg as CoreConfig, accountId });
+      return Boolean(account.config.accessToken?.trim() || account.webhookUrl);
+    });
+    return {
+      channel: CHANNEL,
+      configured,
+      statusLines: [`DingTalk: ${configured ? "configured" : "needs access token"}`],
+      selectionHint: configured ? "configured" : "needs setup",
+      quickstartScore: configured ? 2 : 1,
+    };
+  },
 
-    prompter.log(
-      formatDocsLink(
-        "DingTalk custom robot setup",
-        "/channels/dingtalk",
-        "https://open.dingtalk.com/document/robots/custom-robot-access",
-      ),
-    );
+  configure: async ({ cfg, prompter }) => {
+    const aid = DEFAULT_ACCOUNT_ID;
+    let next = cfg as CoreConfig;
+    const existing = next.channels?.dingtalk ?? {};
+    const accountCfg = existing;
 
     // --- Access token -------------------------------------------------------
-    const accessToken = await prompter.text({
-      message: "DingTalk robot access token (from the 'Custom Robot' settings):",
-      initialValue: accountCfg.accessToken ?? "",
-      validate: (v) => (v.trim() ? undefined : "Access token is required"),
-    });
+    const accessToken = String(
+      await prompter.text({
+        message: "DingTalk robot access token (from the 'Custom Robot' settings):",
+        initialValue: accountCfg.accessToken ?? "",
+        validate: (v: string) => (v.trim() ? undefined : "Access token is required"),
+      }),
+    );
 
-    cfg = patchDingTalkAccount(cfg, aid, { accessToken: accessToken.trim() });
+    next = patchDingTalkAccount(next, aid, { accessToken: accessToken.trim() });
 
     // --- Signing secret (optional but recommended) ---------------------------
-    const secret = await prompter.text({
-      message: "DingTalk signing secret (optional but strongly recommended):",
-      initialValue: accountCfg.secret ?? "",
-    });
+    const secret = String(
+      await prompter.text({
+        message: "DingTalk signing secret (optional but strongly recommended):",
+        initialValue: accountCfg.secret ?? "",
+      }),
+    );
     if (secret.trim()) {
-      cfg = patchDingTalkAccount(cfg, aid, { secret: secret.trim() });
+      next = patchDingTalkAccount(next, aid, { secret: secret.trim() });
     }
 
     // --- Inbound path -------------------------------------------------------
     const defaultInboundPath = resolveDingTalkWebhookPath({ accountId: aid });
-    prompter.log(
-      `Inbound webhook path (configure this URL in DingTalk bot settings: <gateway>/<path>):`,
+    const inboundPath = String(
+      await prompter.text({
+        message: "Inbound webhook path:",
+        initialValue: accountCfg.inboundPath ?? defaultInboundPath,
+      }),
     );
-    const inboundPath = await prompter.text({
-      message: "Inbound webhook path:",
-      initialValue: accountCfg.inboundPath ?? defaultInboundPath,
-    });
-    cfg = patchDingTalkAccount(cfg, aid, {
+    next = patchDingTalkAccount(next, aid, {
       inboundPath: inboundPath.trim() || defaultInboundPath,
     });
 
-    // --- DM policy ----------------------------------------------------------
-    const dmPolicyResult = await promptChannelAccessConfig<CoreConfig>({
-      prompter,
-      channel: CHANNEL,
-      config: cfg,
-      accountId: aid,
-      setDmPolicy: (c, policy) => setDingTalkDmPolicy(c, policy, aid),
-    });
-    cfg = dmPolicyResult.config;
-
-    return { config: cfg };
+    return { cfg: next as OpenClawConfig };
   },
 
-  resolveDmPolicy({ config, accountId }): ChannelOnboardingDmPolicy {
-    const dt = (config as CoreConfig).channels?.dingtalk;
-    if (!dt) {
-      return { dmPolicy: "pairing" };
-    }
-    const account = accountId === DEFAULT_ACCOUNT_ID ? dt : (dt.accounts?.[accountId] ?? dt);
-    return { dmPolicy: (account.dmPolicy as DmPolicy) ?? "pairing" };
+  disable: (cfg: OpenClawConfig) => {
+    const channels = cfg.channels as Record<string, unknown> | undefined;
+    const dingtalk = (channels?.dingtalk ?? {}) as Record<string, unknown>;
+    return {
+      ...cfg,
+      channels: {
+        ...cfg.channels,
+        dingtalk: { ...dingtalk, enabled: false },
+      },
+    };
   },
 };

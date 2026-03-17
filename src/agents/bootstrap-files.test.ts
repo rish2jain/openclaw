@@ -155,7 +155,7 @@ describe("resolveContextForRun", () => {
       workspaceDir,
       config: {
         agents: { defaults: { context: { mode: "raw" } } },
-      } as import("../config/config.js").OpenClawConfig,
+      } as unknown as import("../config/config.js").OpenClawConfig,
     });
     expect(viaContextUnset.contextFiles.length).toBe(raw.contextFiles.length);
     expect(viaContextRaw.contextFiles.length).toBe(raw.contextFiles.length);
@@ -170,7 +170,7 @@ describe("resolveContextForRun", () => {
       workspaceDir,
       config: {
         agents: { defaults: { context: { mode: "index-rank-compact" } } },
-      } as import("../config/config.js").OpenClawConfig,
+      } as unknown as import("../config/config.js").OpenClawConfig,
     });
     expect(viaCompact.bootstrapFiles.length).toBe(raw.bootstrapFiles.length);
     expect(viaCompact.contextFiles.length).toBe(raw.contextFiles.length);

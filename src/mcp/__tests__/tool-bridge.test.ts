@@ -252,11 +252,13 @@ describe("bridgeMcpTool", () => {
 
     const tool = bridgeMcpTool(mockClient, baseTool, "myserver");
     const result = await tool.execute("call-1", { query: "test" });
-    expect(result.details).toBeDefined();
-    expect(result.details.externalContent).toBeDefined();
-    expect(result.details.externalContent.source).toBe("mcp_server");
-    expect(result.details.externalContent.server).toBe("myserver");
-    expect(result.details.externalContent.tool).toBe("get_data");
+    const details = result.details as Record<string, unknown>;
+    expect(details).toBeDefined();
+    const ec = details.externalContent as Record<string, unknown>;
+    expect(ec).toBeDefined();
+    expect(ec.source).toBe("mcp_server");
+    expect(ec.server).toBe("myserver");
+    expect(ec.tool).toBe("get_data");
   });
 
   it("handles missing description in MCP tool", () => {

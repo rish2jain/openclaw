@@ -256,6 +256,7 @@ describe("Discord native plugin command dispatch", () => {
       },
       bindings: [
         {
+          type: "route" as const,
           agentId: "qwen",
           match: {
             channel: "discord",

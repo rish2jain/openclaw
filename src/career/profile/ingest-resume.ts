@@ -13,7 +13,8 @@
  */
 
 import { createSubsystemLogger } from "../../logging/subsystem.js";
-import type { WorkEntry, Skill, SkillCategory, Education, ResumeParseResult } from "./types.js";
+import { inferSkillCategory } from "./infer-skill-category.js";
+import type { WorkEntry, Skill, Education, ResumeParseResult } from "./types.js";
 
 const log = createSubsystemLogger("career/profile/ingest-resume");
 
@@ -65,7 +66,7 @@ type SectionMap = Record<string, string[]>;
  * PDF text extraction is the caller's responsibility.
  */
 export async function parseResume(text: string): Promise<ResumeParseResult> {
-  log.info("Parsing resume text,", text.length, "characters");
+  log.info(`Parsing resume text, ${text.length} characters`);
 
   const lines = text.split(/\n/).map((l) => l.trimEnd());
   const sections = identifySections(lines);
@@ -76,13 +77,7 @@ export async function parseResume(text: string): Promise<ResumeParseResult> {
   const education = extractEducation(sections);
 
   log.info(
-    "Extracted:",
-    workEntries.length,
-    "work entries,",
-    skills.length,
-    "skills,",
-    education.length,
-    "education entries",
+    `Extracted: ${workEntries.length} work entries, ${skills.length} skills, ${education.length} education entries`,
   );
 
   return { workEntries, skills, education, summary };
@@ -298,7 +293,7 @@ function extractSkills(sections: SectionMap): Skill[] {
 
   return [...skillNames].map((name) => ({
     name,
-    category: inferCategory(name),
+    category: inferSkillCategory(name),
     proficiency: 0.5, // Default; enricher can adjust later
     sources: ["resume"],
   }));
@@ -395,82 +390,4 @@ function formatDate(month: string | undefined, year: string): string {
     }
   }
   return year;
-}
-
-/** Infer skill category from name. */
-function inferCategory(name: string): SkillCategory {
-  const lower = name.toLowerCase();
-
-  const langs = [
-    "javascript",
-    "typescript",
-    "python",
-    "java",
-    "c++",
-    "c#",
-    "ruby",
-    "go",
-    "rust",
-    "swift",
-    "kotlin",
-    "php",
-    "scala",
-    "r",
-    "sql",
-  ];
-  if (langs.includes(lower)) {
-    return "language";
-  }
-
-  const frameworks = [
-    "react",
-    "angular",
-    "vue",
-    "django",
-    "flask",
-    "spring",
-    "express",
-    "next.js",
-    "node.js",
-    "rails",
-    "laravel",
-    "fastapi",
-  ];
-  if (frameworks.some((f) => lower.includes(f))) {
-    return "framework";
-  }
-
-  const tools = [
-    "git",
-    "docker",
-    "kubernetes",
-    "aws",
-    "azure",
-    "gcp",
-    "jenkins",
-    "terraform",
-    "ansible",
-    "webpack",
-    "jira",
-    "figma",
-  ];
-  if (tools.some((t) => lower.includes(t))) {
-    return "tool";
-  }
-
-  const soft = [
-    "leadership",
-    "communication",
-    "teamwork",
-    "management",
-    "agile",
-    "scrum",
-    "problem solving",
-    "project management",
-  ];
-  if (soft.some((s) => lower.includes(s))) {
-    return "soft";
-  }
-
-  return "domain";
 }

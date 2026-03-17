@@ -329,9 +329,9 @@ export function safeJsonStringify(value: unknown): string | null {
 import type {
   OpenClawPluginApi,
   OpenClawPluginDefinition,
-  PluginHookAfterResponseEvent,
+  PluginHookLlmOutputEvent,
   PluginHookAfterToolCallEvent,
-  PluginHookBeforeRequestEvent,
+  PluginHookLlmInputEvent,
   PluginHookBeforeToolCallEvent,
 } from "./types.js";
 
@@ -482,12 +482,12 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
         return { safe: false, reason: `${definition.name} evaluation failed` };
       };
 
-      // before_request hook
+      // before_request hook (mapped to llm_input)
       const beforeRequestCfg = resolveStageConfig(config.stages, "before_request");
       if (isStageEnabled(beforeRequestCfg)) {
         api.on(
-          "before_request",
-          async (event: PluginHookBeforeRequestEvent) => {
+          "llm_input",
+          async (event: PluginHookLlmInputEvent) => {
             const content = event.prompt.trim();
             if (!content) {
               return;
@@ -497,7 +497,7 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
             const ctx: GuardrailEvaluationContext = {
               stage: "before_request",
               content,
-              history: includeHistory ? event.messages : [],
+              history: includeHistory ? (event.historyMessages as AgentMessage[]) : [],
               metadata: {},
             };
 
@@ -522,11 +522,8 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
               return;
             }
 
-            const message = definition.formatViolationMessage(
-              evaluation,
-              STAGE_LOCATIONS.before_request,
-            );
-            return { block: true, blockResponse: message };
+            definition.formatViolationMessage(evaluation, STAGE_LOCATIONS.before_request);
+            // llm_input hook is fire-and-forget; blocking is not supported at this stage.
           },
           { priority: guardrailPriority },
         );
@@ -538,12 +535,15 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
         api.on(
           "before_tool_call",
           async (event: PluginHookBeforeToolCallEvent) => {
-            const content = buildToolCallSummary(event.toolName, event.toolCallId, event.params);
-            const includeHistory = beforeToolCallCfg?.includeHistory !== false;
+            const content = buildToolCallSummary(
+              event.toolName,
+              event.toolCallId ?? "",
+              event.params,
+            );
             const ctx: GuardrailEvaluationContext = {
               stage: "before_tool_call",
               content,
-              history: includeHistory ? event.messages : [],
+              history: [],
               metadata: {
                 toolName: event.toolName,
                 toolCallId: event.toolCallId,
@@ -592,21 +592,21 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
         api.on(
           "after_tool_call",
           async (event: PluginHookAfterToolCallEvent) => {
-            const content = extractToolResultText(event.result).trim();
+            const toolResult = event.result as AgentToolResult<unknown>;
+            const content = extractToolResultText(toolResult).trim();
             if (!content) {
               return;
             }
 
-            const includeHistory = afterToolCallCfg?.includeHistory !== false;
             const ctx: GuardrailEvaluationContext = {
               stage: "after_tool_call",
               content,
-              history: includeHistory ? event.messages : [],
+              history: [],
               metadata: {
                 toolName: event.toolName,
                 toolCallId: event.toolCallId,
                 toolParams: event.params,
-                toolResult: event.result,
+                toolResult,
               },
             };
 
@@ -636,38 +636,39 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
               STAGE_LOCATIONS.after_tool_call,
             );
             const blockMode = resolveBlockMode("after_tool_call", afterToolCallCfg);
-            return {
+            void {
               block: true,
               result:
                 blockMode === "append"
-                  ? appendWarningToToolResult(event.result, message)
-                  : replaceToolResultWithWarning(event.result, message),
+                  ? appendWarningToToolResult(toolResult, message)
+                  : replaceToolResultWithWarning(toolResult, message),
             };
           },
           { priority: guardrailPriority },
         );
       }
 
-      // after_response hook
+      // after_response hook (mapped to llm_output)
       const afterResponseCfg = resolveStageConfig(config.stages, "after_response");
       if (isStageEnabled(afterResponseCfg)) {
         api.on(
-          "after_response",
-          async (event: PluginHookAfterResponseEvent) => {
+          "llm_output",
+          async (event: PluginHookLlmOutputEvent) => {
             const content =
               event.assistantTexts.join("\n").trim() ||
               (event.lastAssistant
-                ? extractTextFromContent(event.lastAssistant.content).trim()
+                ? extractTextFromContent(
+                    (event.lastAssistant as { content?: unknown }).content,
+                  ).trim()
                 : "");
             if (!content) {
               return;
             }
 
-            const includeHistory = afterResponseCfg?.includeHistory !== false;
             const ctx: GuardrailEvaluationContext = {
               stage: "after_response",
               content,
-              history: includeHistory ? event.messages : [],
+              history: [],
               metadata: {},
             };
 
@@ -692,15 +693,7 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
               return;
             }
 
-            const message = definition.formatViolationMessage(
-              evaluation,
-              STAGE_LOCATIONS.after_response,
-            );
-            const blockMode = resolveBlockMode("after_response", afterResponseCfg);
-            if (blockMode === "append") {
-              return { assistantTexts: [...event.assistantTexts, message] };
-            }
-            return { block: true, blockResponse: message };
+            definition.formatViolationMessage(evaluation, STAGE_LOCATIONS.after_response);
           },
           { priority: guardrailPriority },
         );

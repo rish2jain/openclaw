@@ -5,13 +5,8 @@
  */
 
 import { createSubsystemLogger } from "../../logging/subsystem.js";
-import type {
-  CareerProfile,
-  WorkEntry,
-  Skill,
-  SkillCategory,
-  LinkedInConnection,
-} from "./types.js";
+import { inferSkillCategory } from "./infer-skill-category.js";
+import type { CareerProfile, WorkEntry, Skill, LinkedInConnection } from "./types.js";
 
 const log = createSubsystemLogger("career/profile/ingest-linkedin");
 
@@ -80,140 +75,10 @@ function parseCsv(content: string): Record<string, string>[] {
   });
 }
 
-/**
- * Infer a skill category from its name using keyword heuristics.
- */
-function inferSkillCategory(name: string): SkillCategory {
-  const lower = name.toLowerCase();
-
-  const languages = [
-    "javascript",
-    "typescript",
-    "python",
-    "java",
-    "c++",
-    "c#",
-    "ruby",
-    "go",
-    "rust",
-    "swift",
-    "kotlin",
-    "php",
-    "scala",
-    "r",
-    "sql",
-    "html",
-    "css",
-    "shell",
-    "bash",
-    "perl",
-    "lua",
-    "dart",
-    "elixir",
-    "haskell",
-    "objective-c",
-    "matlab",
-    "groovy",
-    "assembly",
-  ];
-  if (languages.some((l) => lower === l)) {
-    return "language";
-  }
-
-  const frameworks = [
-    "react",
-    "angular",
-    "vue",
-    "django",
-    "flask",
-    "spring",
-    "express",
-    "next.js",
-    "nuxt",
-    "svelte",
-    "rails",
-    "laravel",
-    "fastapi",
-    "tensorflow",
-    "pytorch",
-    "node.js",
-    "nest.js",
-    "bootstrap",
-    "tailwind",
-    "jquery",
-    ".net",
-    "asp.net",
-    "ember",
-    "gatsby",
-    "remix",
-  ];
-  if (frameworks.some((f) => lower.includes(f))) {
-    return "framework";
-  }
-
-  const tools = [
-    "git",
-    "docker",
-    "kubernetes",
-    "aws",
-    "azure",
-    "gcp",
-    "jenkins",
-    "terraform",
-    "ansible",
-    "webpack",
-    "jira",
-    "figma",
-    "postman",
-    "grafana",
-    "prometheus",
-    "nginx",
-    "redis",
-    "mongodb",
-    "postgresql",
-    "mysql",
-    "elasticsearch",
-    "kafka",
-    "rabbitmq",
-    "ci/cd",
-    "linux",
-    "vim",
-    "vscode",
-  ];
-  if (tools.some((t) => lower.includes(t))) {
-    return "tool";
-  }
-
-  const softSkills = [
-    "leadership",
-    "communication",
-    "teamwork",
-    "management",
-    "mentoring",
-    "agile",
-    "scrum",
-    "problem solving",
-    "project management",
-    "strategic planning",
-    "negotiation",
-    "public speaking",
-    "coaching",
-    "collaboration",
-    "critical thinking",
-    "time management",
-  ];
-  if (softSkills.some((s) => lower.includes(s))) {
-    return "soft";
-  }
-
-  // Default to domain knowledge
-  return "domain";
-}
-
 /** Parse LinkedIn Positions.csv content into WorkEntry[]. */
 export function parsePositions(csvContent: string): WorkEntry[] {
   const rows = parseCsv(csvContent);
-  log.info("Parsing", rows.length, "position rows");
+  log.info(`Parsing ${rows.length} position rows`);
 
   return rows.map((row) => ({
     company: row["Company Name"] ?? row["company"] ?? "",
@@ -232,7 +97,7 @@ export function parsePositions(csvContent: string): WorkEntry[] {
 /** Parse LinkedIn Skills.csv content into Skill[]. */
 export function parseSkills(csvContent: string): Skill[] {
   const rows = parseCsv(csvContent);
-  log.info("Parsing", rows.length, "skill rows");
+  log.info(`Parsing ${rows.length} skill rows`);
 
   return rows.map((row) => {
     const name = row["Name"] ?? row["name"] ?? "";
@@ -272,7 +137,7 @@ export function parseProfile(csvContent: string): Partial<CareerProfile> {
 /** Parse LinkedIn Connections.csv into raw connection records. */
 export function parseConnections(csvContent: string): LinkedInConnection[] {
   const rows = parseCsv(csvContent);
-  log.info("Parsing", rows.length, "connection rows");
+  log.info(`Parsing ${rows.length} connection rows`);
 
   return rows.map((row) => ({
     firstName: row["First Name"] ?? row["firstName"] ?? "",

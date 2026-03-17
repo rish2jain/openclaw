@@ -88,7 +88,7 @@ export type McpToolDefinition = {
 };
 
 export type McpToolPropertySchema = {
-  type: string;
+  type: string | string[];
   description?: string;
   enum?: string[];
   items?: McpToolPropertySchema;
@@ -114,6 +114,8 @@ export type McpTextContent = {
 
 export type McpResourceContent = {
   type: "resource";
+  /** Top-level text is absent on resource items; use resource.text instead. */
+  text?: undefined;
   resource: {
     uri: string;
     mimeType?: string;

@@ -5,8 +5,9 @@
  */
 
 import { createSubsystemLogger } from "../../logging/subsystem.js";
+import { inferSkillCategory } from "./infer-skill-category.js";
 import type { ProfileStore } from "./store.js";
-import type { ProfileUpdateSuggestion, SkillCategory } from "./types.js";
+import type { ProfileUpdateSuggestion } from "./types.js";
 
 const log = createSubsystemLogger("career/profile/enricher");
 
@@ -165,7 +166,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
         });
       }
 
-      log.info("Detected", suggestions.length, "profile update suggestions");
+      log.info(`Detected ${suggestions.length} profile update suggestions`);
       return suggestions;
     },
 
@@ -181,7 +182,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
           skills: [],
           achievements: [],
         });
-        log.info("Applied work entry update:", suggestedValue.company);
+        log.info("Applied work entry update", { company: suggestedValue.company });
         return;
       }
 
@@ -195,7 +196,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
           store.updateWorkEntry(idx, {
             endDate: new Date().toISOString().slice(0, 7),
           });
-          log.info("Marked end date for:", suggestedValue.company);
+          log.info("Marked end date", { company: suggestedValue.company });
         }
         return;
       }
@@ -219,7 +220,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
             });
           }
         }
-        log.info("Applied skill updates:", suggestedValue);
+        log.info("Applied skill updates", { skills: suggestedValue });
         return;
       }
 
@@ -238,7 +239,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
             updatedAt: new Date(),
           });
         }
-        log.info("Applied work style preference:", workStyle);
+        log.info("Applied work style preference", { workStyle });
         return;
       }
 
@@ -258,7 +259,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
             updatedAt: new Date(),
           });
         }
-        log.info("Applied role type preferences:", roleTypes);
+        log.info("Applied role type preferences", { roleTypes });
         return;
       }
 
@@ -278,7 +279,7 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
             updatedAt: new Date(),
           });
         }
-        log.info("Applied deal breaker preferences:", dealBreakers);
+        log.info("Applied deal breaker preferences", { dealBreakers });
         return;
       }
 
@@ -289,11 +290,11 @@ export function createProfileEnricher(store: ProfileStore): ProfileEnricher {
           const merged = [...new Set([...profile.locationPreferences, ...locations])];
           store.updateProfile({ locationPreferences: merged });
         }
-        log.info("Applied location preferences:", locations);
+        log.info("Applied location preferences", { locations });
         return;
       }
 
-      log.warn("Unhandled update field:", field);
+      log.warn("Unhandled update field", { field });
     },
 
     getGaps(): string[] {
@@ -429,63 +430,4 @@ function isJobMention(value: unknown): value is { company: string; title?: strin
 
 function isCompanyRef(value: unknown): value is { company: string } {
   return isJobMention(value);
-}
-
-function inferSkillCategory(name: string): SkillCategory {
-  const lower = name.toLowerCase();
-
-  const langs = [
-    "javascript",
-    "typescript",
-    "python",
-    "java",
-    "c++",
-    "c#",
-    "ruby",
-    "go",
-    "rust",
-    "swift",
-    "kotlin",
-    "php",
-    "scala",
-    "sql",
-  ];
-  if (langs.includes(lower)) {
-    return "language";
-  }
-
-  const frameworks = [
-    "react",
-    "angular",
-    "vue",
-    "django",
-    "flask",
-    "spring",
-    "express",
-    "next.js",
-    "node.js",
-    "rails",
-    "laravel",
-  ];
-  if (frameworks.some((f) => lower.includes(f))) {
-    return "framework";
-  }
-
-  const tools = [
-    "git",
-    "docker",
-    "kubernetes",
-    "aws",
-    "azure",
-    "gcp",
-    "jenkins",
-    "terraform",
-    "webpack",
-    "jira",
-  ];
-  if (tools.some((t) => lower.includes(t))) {
-    return "tool";
-  }
-
-  return "domain";
 }

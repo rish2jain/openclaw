@@ -169,20 +169,16 @@ describe("log-level-watcher", () => {
 
     beforeEach(() => {
       watchCallbackRef.current = null;
-      watchFileSpy = vi
-        .spyOn(fs, "watchFile")
-        .mockImplementation(
-          (
-            _path: fs.PathLike,
-            optsOrListener: fs.WatchFileOptions | ((curr: fs.Stats, prev: fs.Stats) => void),
-            listener?: (curr: fs.Stats, prev: fs.Stats) => void,
-          ) => {
-            const resolved = typeof optsOrListener === "function" ? optsOrListener : listener;
-            if (resolved) {
-              watchCallbackRef.current = resolved;
-            }
-          },
-        );
+      watchFileSpy = vi.spyOn(fs, "watchFile").mockImplementation(((
+        _path: fs.PathLike,
+        optsOrListener: fs.WatchFileOptions | ((curr: fs.Stats, prev: fs.Stats) => void),
+        listener?: (curr: fs.Stats, prev: fs.Stats) => void,
+      ) => {
+        const resolved = typeof optsOrListener === "function" ? optsOrListener : listener;
+        if (resolved) {
+          watchCallbackRef.current = resolved;
+        }
+      }) as typeof fs.watchFile);
       unwatchFileSpy = vi.spyOn(fs, "unwatchFile").mockImplementation(() => {});
     });
 

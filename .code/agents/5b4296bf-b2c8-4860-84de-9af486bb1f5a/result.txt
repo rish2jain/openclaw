@@ -1,0 +1,282 @@
+Now I have a thorough picture of the codebase. Let me produce the strategic plan.
+
+---
+
+# OpenClaw: Strategic Enhancement Plan
+
+## Executive Summary
+
+OpenClaw is a genuinely ambitious multi-channel AI gateway that has grown quickly. The core architecture is well-conceived (dependency injection, capability-based channel adaptation, factory-style modules, colocated tests), but the codebase shows signs of organic expansion pressure: three HTTP frameworks coexisting, a 160-file auto-reply pipeline directory, a custom MCP implementation alongside the official SDK, and a very large surface of unstaged work on the current branch. The highest-value improvements are (a) tightening the architectural boundaries already documented in `pnpm check`, (b) stabilising the nascent career/MCP/agent-registry features before they accumulate test debt, and (c) making the build and observability infrastructure production-grade.
+
+---
+
+## 1. Prioritised Enhancement Themes
+
+### Priority 1 — Architecture & Boundary Integrity
+
+**1a. Fix the gateway-to-extension import leak (Critical)**
+
+`src/gateway/server-http.ts:11` directly imports `../../extensions/slack/src/http/index.js`. This is precisely what `pnpm lint:tmp:channel-agnostic-boundaries` is designed to block, yet the file exists and is currently modified. Every boundary lint in `pnpm check` is meant to prevent exactly this coupling; one direct import defeats all of them. This is the single highest-risk file in the codebase.
+
+*Files involved*: `src/gateway/server-http.ts`, `scripts/check-channel-agnostic-boundaries.mjs`, `extensions/slack/src/http/`
+
+*Remediation*: The Slack HTTP handler should register itself through the channel plugin mechanism (likely `registerHttpHandler`) so the gateway calls the abstraction, not the concrete extension. Until fixed, adding Slack semantics to the gateway violates the boundary for every other channel.
+
+---
+
+**1b. Consolidate MCP implementations (High)**
+
+The codebase simultaneously ships:
+- A hand-rolled MCP stack (`src/mcp/types.ts`, `src/mcp/protocol.ts`, `src/mcp/server.ts`, `src/mcp/resources.ts`) — all currently **untracked** (`??` in git status).
+- `@modelcontextprotocol/sdk@1.27.1` as a production dependency.
+- The existing `src/mcp/tool-bridge.ts`, `src/mcp/client-base.ts`, `src/mcp/client-stdio.ts`, `src/mcp/client-sse.ts` — already committed.
+
+This is a duplication risk. The custom implementation will drift from the SDK as the MCP spec evolves. The official SDK already handles initialize/capabilities negotiation, stdio/SSE transport, and JSON-RPC framing — all reimplemented in the new files.
+
+*Inference*: The `??` files appear to be a newer layer added on top of the existing SDK-based layer, perhaps to support additional transport patterns. The duplicate `src/mcp/__tests__ 2/` directory (directory with a trailing space — almost certainly an accidental copy) should be deleted before it is committed.
+
+*Recommendation*: Audit which MCP server path is the production one. Consolidate on the official SDK; remove the custom protocol implementation or document why a custom layer is necessary. Delete `src/mcp/__tests__ 2/`.
+
+---
+
+**1c. Rationalise HTTP framework usage (High)**
+
+Three HTTP frameworks are simultaneously in use:
+- Raw Node.js `http`/`https` (`createServer`) — used in `server-http.ts`
+- Express v5 (`"express": "^5.2.1"`)
+- Hono v4 (`"hono": "4.12.7"` — locked via workspace override)
+
+This creates inconsistent middleware chains, security headers, error handling, and request parsing. `setDefaultSecurityHeaders` in `http-common.ts` is only applied in the raw-Node path; Express and Hono middleware stacks may differ.
+
+*Recommendation (near-term)*: Audit which framework owns each HTTP surface (gateway API, control UI, webhooks, OpenAI-compat routes) and document the split. *(Medium-term)*: Consolidate to Hono (it is already being pinned as an override, suggesting intentional adoption) as it natively supports Node.js adapters, has strong typing, and covers all three surfaces.
+
+---
+
+### Priority 2 — Stabilise the Current Branch
+
+**2a. Land or separate the un-staged career and MCP features (High)**
+
+The git status shows a large set of `??` (untracked) files covering:
+- Entire `src/career/` subdirectories: `negotiation/`, `pathmodel/`, new agent files, skills
+- Entire `src/mcp/` server/types/protocol/resources layer
+- `src/agents/registry.ts`, `src/agents/registry.test.ts`
+- New docs and README files
+- New channel READMEs
+
+These features are partially tested but not yet committed, which means they cannot be CI-gated. Until they are committed, the linting, type-checking, and test coverage infrastructure does not apply to them.
+
+*Recommendation*: Either commit these as a `feat:` branch (reviewed with the full check pipeline) or extract them to a separate feature branch. Running the codebase with uncommitted-but-loadable modules is a risk surface.
+
+---
+
+**2b. Career data persistence model (Medium)**
+
+Career data is stored as flat JSON files under `~/.openclaw/career/` (`persistence.ts`). The memory module already ships a SQLite-backed tiered store (`src/memory/tiered/tiered-store.ts`) with FTS5 and proper indexing. Storing network graphs and scored job listings as flat JSON will have correctness issues (no transactions) and performance problems as data grows.
+
+*Recommendation*: Migrate career persistence to the tiered SQLite store, using dedicated tiers for `profile`, `jobs`, `network`, and `outreach`. This also allows `memory-query` MCP tool to cover career data naturally.
+
+---
+
+### Priority 3 — Build System & DX
+
+**3a. Break the build script into composable tasks (High)**
+
+The `build` script is a single 9-step `&&` chain. Any failure stops the chain with no context about which step failed. `build:docker` repeats six of those same steps verbatim (DRY violation). The scripts use mixed runners (`node scripts/`, `node --import tsx scripts/`, `bash scripts/`).
+
+*Recommendation*: Move to a task runner (Turborepo or `nx`) that models the dependency graph, caches outputs, and reports failures by step. At minimum, extract the common build steps into a shared script and have `build` and `build:docker` both call it with environment flags.
+
+---
+
+**3b. Lint script proliferation (Medium)**
+
+`pnpm check` runs 11 separate custom lint scripts (`check-channel-agnostic-boundaries.mjs`, `check-no-random-messaging-tmp.mjs`, `check-ingress-agent-owner-context.mjs`, `check-no-register-http-handler.mjs`, `check-no-monolithic-plugin-sdk-entry-imports.ts`, `check-webhook-auth-body-order.mjs`, `check-no-pairing-store-group-auth.mjs`, `check-pairing-account-scope.mjs`, plus Swift/format/tsgo). These are shell scripts that use ad-hoc pattern matching; they're brittle when file structures change and don't integrate into editor tooling.
+
+*Recommendation*: Convert boundary rules to oxlint custom rules or TypeScript compiler plugins where possible. Rules that are `tmp:` prefixed (no-random-messaging, channel-agnostic-boundaries) should have migration tracked to removal.
+
+---
+
+**3c. Dead code / dependency hygiene (Medium)**
+
+`deadcode:report` exists and uses three tools (knip, ts-prune, ts-unused-exports). The `dup:check` (jscpd) script is also present. These are infrastructure-grade tools whose output is likely not being acted on regularly. Making them CI-blocking (with allow-lists for known exceptions) would prevent accumulation.
+
+The `minimumReleaseAge: 2880` pnpm setting (48 hours) is a very short minimum release age for a project of this security sensitivity. Consider raising it to 7 days.
+
+---
+
+### Priority 4 — Testing Coverage
+
+**4a. Auto-reply pipeline coverage gap (High)**
+
+`src/auto-reply/reply/` contains 160+ files — more than any other module — and is the most critical user-facing path (it is the path every inbound message traverses). Many files have companion test files but the command dispatch surface (commands.ts, directives.ts, 20+ `commands-*.ts` files, directive-handling sub-files) is extremely complex. This is the highest-probability source of regressions.
+
+*Recommendation*: Add integration-level tests for the full inbound → directive → agent-run → reply-delivery pipeline using the existing `test-helpers.ts` and `test-ctx.ts` fixtures. The existing E2E harness (`agent-runner.runreplyagent.e2e.test.ts`) shows the pattern; expand coverage to edge cases in directive parsing and command dispatch.
+
+---
+
+**4b. Gateway test sprawl vs. contract tests (Medium)**
+
+`src/gateway/` has 200+ files of which roughly half are test files. There are separate test-suite files (`.suite.ts`), harness files (`.test-harness.ts`), mock files (`.mocks.ts`), and helper files (`.test-helpers.ts`). The naming is inconsistent. Multiple tests at the A/B split naming level (`gateway-server-agent-a.test.ts`, `-b.test.ts`, `-chat-a.test.ts`, `-b.test.ts`) suggest files hit the 500-line limit and were split rather than architecturally refactored.
+
+*Recommendation*: Establish a test helper / fixture registry for gateway tests so common mock setup is shared rather than duplicated. Consolidate the `.mocks.ts`/`.test-mocks.ts`/`.test-helpers.ts` variants into a single `test-utils/` directory within gateway.
+
+---
+
+**4c. Extensions test coverage (Medium)**
+
+The 50-extension surface (`extensions/`) is tested via `vitest.extensions.config.ts`. Several extensions are modified on this branch (composio, dingtalk, rocketchat, feishu, gpt-oss-safeguard, grayswan-cygnal-guardrail) but the guard-rail extensions have minimal visible test coverage. These are security-critical code paths.
+
+*Recommendation*: Add integration tests for all guardrail extensions that mock the embedded agent call and verify both block and pass-through behaviour.
+
+---
+
+### Priority 5 — Observability & Performance
+
+**5a. Promote OpenTelemetry to core (Medium)**
+
+OpenTelemetry is currently an optional extension (`extensions/diagnostics-otel`). The gateway already has a structured logger and a `MetricsExporter` with Prometheus output. Distributed tracing is conspicuously absent from the production path. For an AI gateway, request tracing (model call → tool call → delivery) is essential for debugging latency issues.
+
+*Recommendation (medium-term)*: Add an optional OTEL tracer in `src/infra/` that is no-op when unconfigured but wires into agent execution, channel delivery, and MCP tool calls when configured. This should be a first-class capability, not a plugin.
+
+---
+
+**5b. Channel reliability observability (Medium)**
+
+The `channels/reliability/` module (circuit breaker, delivery retry) and `channels/health/` have good structural design but their state is only persisted to a local JSON store (`channels/persistence/channel-state-store.ts`). The `failover-status` MCP tool exposes this via the MCP protocol, but there is no HTTP probe or Prometheus metric series for external monitoring systems.
+
+*Recommendation*: Expose channel health as a Prometheus metric family (`openclaw_channel_health`, `openclaw_failover_events_total`, `openclaw_delivery_retry_total`) fed from the existing `MetricsExporter`.
+
+---
+
+### Priority 6 — Security
+
+**6a. Prompt injection defence coverage (Medium)**
+
+`src/security/external-content.ts` wraps untrusted content with randomised XML boundary markers and detects 12 suspicious patterns via regex. This is a reasonable first layer. However:
+- Detection only logs — does not block or trigger a guardrail review.
+- The pattern list covers obvious injection patterns but not adversarial Unicode homoglyphs, zero-width characters, or base64-encoded payloads.
+- There is no test verifying the random ID prevents boundary spoofing.
+
+*Recommendation*: Add a test for the boundary-spoofing attack surface. Connect `detectSuspiciousPatterns` to the guardrail pipeline so high-confidence injection attempts route to a review queue rather than proceeding silently.
+
+---
+
+**6b. Unstable production dependencies (Medium)**
+
+Production `dependencies` include:
+- `sqlite-vec@0.1.7-alpha.2` — alpha, used in vector memory
+- `@whiskeysockets/baileys@7.0.0-rc.9` — WhatsApp RC
+- `@buape/carbon@0.0.0-beta-20260216184201` — not semver-stable, Discord
+- `@mariozechner/pi-*@0.58.0` — internal packages with non-standard versioning
+
+*Recommendation*: Establish a policy that alpha/pre-release packages must be in `devDependencies` or behind a feature flag. Track upgrade paths for Baileys RC and sqlite-vec toward stable releases.
+
+---
+
+**6c. `minimumReleaseAge` policy (Low)**
+
+The pnpm `minimumReleaseAge: 2880` (48 hours) is the minimum time a published npm package must exist before pnpm installs it — a protection against package-hijacking attacks. For a project with dozens of actively-maintained dependencies, 48 hours is marginal.
+
+*Recommendation*: Raise to at least 7 days (10080 minutes). This reduces supply-chain risk while still allowing reasonably fast dependency updates.
+
+---
+
+### Priority 7 — Product Surface
+
+**7a. Career module as standalone feature (Medium)**
+
+The career intelligence module (`src/career/`) is a distinct product surface with its own agent, MCP tools, skills, and persistence. Its current coupling to the main gateway (via `src/mcp/serve/tools/career.ts`) is workable, but the skills and agent configuration live in `skills/career/` without versioning or activation documentation. The career scrapers (`scrapers/hn.ts`, `scrapers/linkedin.ts`, `scrapers/career-page.ts`) are high-maintenance and legally grey territory for automated scraping.
+
+*Recommendation*: Document the career module as opt-in (`OPENCLAW_CAREER=1` env gating). Add explicit rate-limiting and robots.txt compliance to all scrapers. Ensure the data stored in `~/.openclaw/career/` is excluded from automatic sharing or sync.
+
+---
+
+**7b. Native app protocol contract drift (Low)**
+
+`pnpm protocol:check` verifies that `dist/protocol.schema.json` and the generated Swift models in `apps/macos` and `apps/shared` are in sync. This is good. However, the protocol generation scripts (`protocol-gen.ts`, `protocol-gen-swift.ts`) run manually and not as part of `pnpm check`. If a PR modifies gateway types without running protocol generation, the native clients silently diverge.
+
+*Recommendation*: Add `pnpm protocol:check` to the `pnpm check` pipeline (not just `release:check`) so it runs on every PR.
+
+---
+
+### Priority 8 — Documentation
+
+**8a. README / source drift (Low)**
+
+`src/README.md` states:
+- `commands/` — "Reserved for future command registration. Currently empty." → `src/commands/` has actual files including `add.ts`, `agents.test.ts`.
+- `memory/` — "Reserved for future memory subsystem. Currently empty." → `src/memory/tiered/tiered-store.ts` exists.
+
+These contradictions are minor but erode trust in the documentation.
+
+---
+
+**8b. Missing docs for new subsystems (Low)**
+
+The new subsystems added on this branch — the custom MCP server, agent registry, career negotiation/pathmodel modules — have no documentation outside inline code. If this branch lands, documentation for `src/agents/registry.ts`, `src/career/negotiation/`, and `src/career/pathmodel/` should be added to `src/README.md` before merge.
+
+---
+
+## 2. Hotspot Summary
+
+| Hotspot | Signal | Risk |
+|---|---|---|
+| `src/gateway/server-http.ts` | Direct extension import, 200+ line imports section | Architecture coupling, security header bypass |
+| `src/auto-reply/reply/` | 160+ files, 20+ command dispatch variants | Regression risk, logic scatter |
+| `src/config/` | 150+ files, 3 schema layers, 3 migration files | Config drift, validation gaps |
+| `src/agents/` | 300+ files, deep subagent hierarchy | Test isolation, compaction correctness |
+| `src/mcp/` (new `??` files) | Custom protocol impl on top of official SDK | Spec drift, duplicate maintenance |
+
+---
+
+## 3. Recommended Execution Sequence
+
+### Near-Term (next 2–4 weeks)
+1. **Delete `src/mcp/__tests__ 2/`** — likely accidental duplicate directory.
+2. **Fix `server-http.ts` Slack import** — replace with registered handler abstraction.
+3. **Commit or branch the `??` files** — get them CI-gated immediately.
+4. **Add `pnpm protocol:check` to `pnpm check`** — zero-cost safety improvement.
+5. **Raise `minimumReleaseAge` to 10080** — supply-chain hygiene.
+6. **Update `src/README.md`** for commands/ and memory/ sections.
+
+### Mid-Term (1–2 months)
+7. **MCP consolidation audit** — decide which MCP path is canonical, remove the other.
+8. **HTTP framework decision** — document Hono as the chosen framework; plan migration of raw-Node surfaces.
+9. **Career persistence → SQLite** — migrate from flat JSON to tiered store.
+10. **Connect `detectSuspiciousPatterns` to guardrail pipeline** — make injection detection actionable.
+11. **Add `deadcode:ci` and `dup:check` to CI as non-blocking with artifact retention** — surface the reports without blocking.
+12. **Channel health → Prometheus metrics** — expose failover/retry counters.
+
+### Longer-Term (2–6 months)
+13. **Build system modularisation** — Turborepo or similar to replace the `&&`-chained build scripts.
+14. **Boundary lint → oxlint rules** — convert shell-script boundary checks to proper lint rules.
+15. **OTEL tracing in `src/infra/`** — core distributed tracing, not just an optional extension.
+16. **Auto-reply integration test suite** — full inbound → delivery pipeline coverage.
+17. **Career module activation gating and scraper compliance** — legal and operational safety.
+18. **Unstable dep stabilisation** — sqlite-vec stable, Baileys stable, carbon stable (or replaced).
+
+---
+
+## 4. Risks & Trade-offs
+
+| Change | Risk | Mitigation |
+|---|---|---|
+| Fix gateway/extension boundary | Slack HTTP handler may rely on request-level internals not exposed through the plugin API | Audit the handler's dependency surface first; plan a compatibility shim if needed |
+| MCP implementation consolidation | Official SDK may not support all transport scenarios needed (e.g., custom SSE backpressure) | Audit feature delta before removing custom layer; keep as thin adapter if SDK is insufficient |
+| HTTP framework consolidation | Hono has different middleware semantics than Express; security header behaviour may change | Run existing auth test suite against Hono-ported routes; add regression tests for CSP/CORS/auth headers |
+| Career SQLite migration | Existing career JSON data would need a one-time migration | Ship a migration function in `persistence.ts` that detects JSON files and imports them; run on first start |
+| OTEL as core | Adds startup overhead even when unconfigured | Use lazy initialisation; OTEL SDK is designed for no-op mode |
+| Raising `minimumReleaseAge` | Slows down consuming emergency security patches | Can be overridden per-package with `pnpm.peerDependencyRules` when needed |
+
+---
+
+## 5. Observations on Duplicate / Inconsistent Patterns
+
+- **Two separate test-helper patterns** in gateway (`test-helpers.ts`, `test-helpers.server.ts`, `test-helpers.e2e.ts`, `test-helpers.mocks.ts`, `test-helpers.openai-mock.ts`, `test-helpers.agent-results.ts`) suggest helpers were added ad-hoc. A single `test-utils/` with clear exports would reduce this.
+- **`commands-*.ts` fan-out** in `auto-reply/reply/`: there are 20+ `commands-*.ts` files implementing the bot command surface. This pattern is deliberately granular but makes cross-command shared state hard to reason about. A command registry with explicit registration would make the surface discoverable.
+- **`types.*.ts` vs `zod-schema.*.ts` vs `schema.ts`** in `src/config/`: three overlapping schema definition strategies exist. TypeScript types, Zod schemas, and a separate validation module. Zod schemas should be the single source of truth with inferred TypeScript types — the `types.*.ts` files suggest partial migration.
+- **Memory duplication**: `extensions/memory-core`, `extensions/memory-lancedb`, and `src/memory/tiered/tiered-store.ts` are three memory implementations. The relationship between them (which is used when, which is the default) is not documented.
+- **`src/agents/` test file names**: many test files embed verbose scenario descriptions in the file name (e.g. `pi-embedded-subscribe.subscribe-embedded-pi-session.does-not-call-onblockreplyflush-callback-is-not.test.ts`). While descriptive, this creates very long paths that can cause issues on Windows and make file listing hard to scan.
+
+---
+
+*All architecture inferences are drawn from static analysis of the directory structure, import patterns in read files, git status, package.json, and the CLAUDE/VISION/AGENTS documentation. No tests were run. The `src/mcp/__tests__ 2/` directory anomaly should be verified before any action is taken on it.*

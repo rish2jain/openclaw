@@ -219,4 +219,37 @@ export class ExecApprovalManager {
     const entry = this.pending.get(recordId);
     return entry?.promise ?? null;
   }
+
+  /**
+   * Look up a pending approval by exact id or prefix match.
+   * Returns { kind: "exact", id } for exact match, { kind: "ambiguous", ids } for
+   * multiple prefix matches, or { kind: "none" } if no unresolved entry matches.
+   */
+  lookupPendingId(
+    idOrPrefix: string,
+  ): { kind: "exact"; id: string } | { kind: "ambiguous"; ids: string[] } | { kind: "none" } {
+    // Exact match first
+    const exact = this.pending.get(idOrPrefix);
+    if (exact && exact.record.resolvedAtMs === undefined) {
+      return { kind: "exact", id: idOrPrefix };
+    }
+    // If exact exists but is already resolved, return none
+    if (exact) {
+      return { kind: "none" };
+    }
+    // Prefix match among unresolved entries
+    const matches: string[] = [];
+    for (const [id, entry] of this.pending.entries()) {
+      if (id.startsWith(idOrPrefix) && entry.record.resolvedAtMs === undefined) {
+        matches.push(id);
+      }
+    }
+    if (matches.length === 0) {
+      return { kind: "none" };
+    }
+    if (matches.length === 1) {
+      return { kind: "exact", id: matches[0] };
+    }
+    return { kind: "ambiguous", ids: matches };
+  }
 }

@@ -128,21 +128,24 @@ export function applySearchKey(
   key: SecretInput,
 ): OpenClawConfig {
   const search = { ...config.tools?.web?.search, provider, enabled: true };
+  // SecretInput may be a SecretRef object; cast to string since the config
+  // system resolves refs before runtime use.
+  const keyValue = key as string;
   switch (provider) {
     case "brave":
-      search.apiKey = key;
+      search.apiKey = keyValue;
       break;
     case "gemini":
-      search.gemini = { ...search.gemini, apiKey: key };
+      search.gemini = { ...search.gemini, apiKey: keyValue };
       break;
     case "grok":
-      search.grok = { ...search.grok, apiKey: key };
+      search.grok = { ...search.grok, apiKey: keyValue };
       break;
     case "kimi":
-      search.kimi = { ...search.kimi, apiKey: key };
+      search.kimi = { ...search.kimi, apiKey: keyValue };
       break;
     case "perplexity":
-      search.perplexity = { ...search.perplexity, apiKey: key };
+      search.perplexity = { ...search.perplexity, apiKey: keyValue };
       break;
   }
   return {

@@ -131,6 +131,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "a",
           match: {
             channel: "whatsapp",
@@ -139,6 +140,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "b",
           match: { channel: "whatsapp", accountId: "biz" },
         },
@@ -159,6 +161,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "chan",
           match: {
             channel: "discord",
@@ -167,6 +170,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "guild",
           match: {
             channel: "discord",
@@ -197,6 +201,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "guild",
           match: {
             channel: "discord",
@@ -205,6 +210,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "acct",
           match: { channel: "discord", accountId: "default" },
         },
@@ -219,6 +225,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "olga",
           match: {
             channel: "discord",
@@ -227,6 +234,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "main",
           match: {
             channel: "discord",
@@ -249,6 +257,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "wrongguild",
           match: {
             channel: "discord",
@@ -257,6 +266,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "rightguild",
           match: {
             channel: "discord",
@@ -279,6 +289,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "roomonly",
           match: {
             channel: "slack",
@@ -287,6 +298,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "teamwide",
           match: {
             channel: "slack",
@@ -309,6 +321,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "wrongteam",
           match: {
             channel: "slack",
@@ -317,6 +330,7 @@ describe("resolveAgentRoute", () => {
           },
         },
         {
+          type: "route" as const,
           agentId: "rightteam",
           match: {
             channel: "slack",
@@ -337,7 +351,9 @@ describe("resolveAgentRoute", () => {
 
   test("missing accountId in binding matches default account only", () => {
     const cfg: OpenClawConfig = {
-      bindings: [{ agentId: "defaultAcct", match: { channel: "whatsapp" } }],
+      bindings: [
+        { type: "route" as const, agentId: "defaultAcct", match: { channel: "whatsapp" } },
+      ],
     };
 
     const defaultRoute = resolveAgentRoute({
@@ -362,6 +378,7 @@ describe("resolveAgentRoute", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "any",
           match: { channel: "whatsapp", accountId: "*" },
         },
@@ -379,7 +396,9 @@ describe("resolveAgentRoute", () => {
 
   test("binding accountId matching is canonicalized", () => {
     const cfg: OpenClawConfig = {
-      bindings: [{ agentId: "biz", match: { channel: "discord", accountId: "BIZ" } }],
+      bindings: [
+        { type: "route" as const, agentId: "biz", match: { channel: "discord", accountId: "BIZ" } },
+      ],
     };
     const route = resolveAgentRoute({
       cfg,
@@ -441,6 +460,7 @@ describe("parentPeer binding inheritance (thread support)", () => {
 
   function makeDiscordPeerBinding(agentId: string, peerId: string) {
     return {
+      type: "route" as const,
       agentId,
       match: {
         channel: "discord" as const,
@@ -451,6 +471,7 @@ describe("parentPeer binding inheritance (thread support)", () => {
 
   function makeDiscordGuildBinding(agentId: string, guildId: string) {
     return {
+      type: "route" as const,
       agentId,
       match: {
         channel: "discord" as const,
@@ -543,6 +564,7 @@ describe("backward compatibility: peer.kind dm → direct", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "alex",
           match: {
             channel: "whatsapp",
@@ -567,6 +589,7 @@ describe("backward compatibility: peer.kind dm → direct", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "alex",
           match: {
             channel: "whatsapp",
@@ -593,6 +616,7 @@ describe("backward compatibility: peer.kind group ↔ channel", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "slack-group-agent",
           match: {
             channel: "slack",
@@ -615,6 +639,7 @@ describe("backward compatibility: peer.kind group ↔ channel", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "slack-channel-agent",
           match: {
             channel: "slack",
@@ -637,6 +662,7 @@ describe("backward compatibility: peer.kind group ↔ channel", () => {
     const cfg: OpenClawConfig = {
       bindings: [
         {
+          type: "route" as const,
           agentId: "group-only-agent",
           match: {
             channel: "slack",
@@ -668,6 +694,7 @@ describe("role-based agent routing", () => {
     } = {},
   ): DiscordBinding {
     return {
+      type: "route" as const,
       agentId,
       match: {
         channel: "discord",
@@ -818,6 +845,7 @@ describe("binding evaluation cache scalability", () => {
     const bindingCount = 2_205;
     const cfg: OpenClawConfig = {
       bindings: Array.from({ length: bindingCount }, (_, idx) => ({
+        type: "route" as const,
         agentId: `agent-${idx}`,
         match: {
           channel: "dingtalk",
