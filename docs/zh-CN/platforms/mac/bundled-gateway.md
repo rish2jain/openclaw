@@ -20,7 +20,7 @@ OpenClaw.app 不再捆绑 Node/Bun 或 Gateway 网关运行时。macOS 应用期
 
 ## 安装 CLI（本地模式必需）
 
-你需要在 Mac 上安装 Node 22+，然后全局安装 `openclaw`：
+你需要在 Mac 上安装 Node.js 24（推荐）；Node.js 22.16+（最低支持），然后全局安装 `openclaw`：
 
 ```bash
 npm install -g openclaw@<version>

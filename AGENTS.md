@@ -32,3 +32,20 @@ Recent history follows Conventional Commits such as `fix: ...`, `test: ...`, `ch
 ## Security & Architecture Notes
 
 Respect the custom boundary lints in `pnpm check`, especially around channel abstractions and plugin SDK imports. For new features, keep gateway logic in `src/gateway/`, MCP tools in `src/mcp/tools/`, and channel-specific behavior inside the appropriate extension package.
+
+## Module map (where to change what)
+
+- **Commands:** `src/commands/` (implementations); `src/cli/program/` (registry, subCLIs). Add or wire commands via the command registry.
+- **Memory:** `src/memory/` — tiered store (`tiered/`), search manager, chunking, graph. Public API in `index.ts`.
+- **MCP:** `src/mcp/` — `serve/` for server/transport; `tools/` for tool handlers (send_message, channel_status, list_sessions, query_session, manage_config, cron_manage, health_dashboard, agent_manage, memory_query, failover_status, career). Add tools in `tools/` and register in `tools/index.ts`.
+- **Testing topology:** `pnpm test:fast` = unit (narrow core); `pnpm test:gateway` = gateway; `pnpm test:channels` = channel extensions; `pnpm test:extensions` = other extensions; `pnpm test:e2e` = e2e; `pnpm test:live` = live (real creds). Default `pnpm test` runs unit only; see `docs/help/testing.md` for full topology.
+- **Control UI:** `ui/` (Lit 3, Vite 8). Use legacy decorators (`@state()`, `@property()`); see CONTRIBUTING.md.
+- **Extensions:** `extensions/*` — channel adapters (telegram, discord, slack, etc.) and other integrations. Test channel extensions with `pnpm test:channels`, others with `pnpm test:extensions`.
+
+## Learned User Preferences
+
+- Verify each finding against the current code first; apply changes only when the finding is confirmed.
+
+## Learned Workspace Facts
+
+- Use pnpm for install, build, and test; npm can fail (e.g. "Cannot read properties of null (reading 'matches')") in pnpm-managed monorepos.

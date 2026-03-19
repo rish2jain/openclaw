@@ -42,7 +42,7 @@ This index organizes all documentation by topic. Use the links below to navigate
 
 ## Design Specifications
 
-| Document                                                                                                                | Description                                                                                                 |
-| ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [Full App Enhancement Design (2026-03-12)](superpowers/specs/2026-03-12-full-app-enhancement-design.md)                 | Architecture and design specification for the stability, observability, and extensibility enhancement suite |
-| [Career Intelligence Platform Design (2026-03-13)](superpowers/specs/2026-03-13-career-intelligence-platform-design.md) | Architecture and design specification for the career intelligence platform                                  |
+| Document                                                                                                     | Description                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| [Full App Enhancement Design (2026-03-12)](design/2026-03-12-full-app-enhancement-design.md)                 | Architecture and design specification for the stability, observability, and extensibility enhancement suite |
+| [Career Intelligence Platform Design (2026-03-13)](design/2026-03-13-career-intelligence-platform-design.md) | Architecture and design specification for the career intelligence platform                                  |

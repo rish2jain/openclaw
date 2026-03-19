@@ -50,7 +50,7 @@ scripts/e2e/onboard-docker.sh
 
 ## QR 导入冒烟测试（Docker）
 
-确保 `qrcode-terminal` 在 Docker 中的 Node 22+ 下加载：
+确保 `qrcode-terminal` 在 Docker 中的 Node.js 22.16+ 下加载：
 
 ```bash
 pnpm test:docker:qr

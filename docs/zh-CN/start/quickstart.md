@@ -13,7 +13,7 @@ x-i18n:
 ---
 
 <Note>
-OpenClaw 需要 Node 22 或更新版本。
+OpenClaw 需要 Node.js 24（推荐）或 Node.js 22.16+（最低支持）。
 </Note>
 
 ## 安装

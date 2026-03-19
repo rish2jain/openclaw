@@ -91,6 +91,9 @@ USER.md
 # local tooling
 .serena/
 
+# Generated agent execution artifacts (do not commit)
+.code/
+
 # Agent credentials and memory (NEVER COMMIT)
 /memory/
 .agent/*.json

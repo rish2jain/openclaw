@@ -36,6 +36,8 @@ export type ChannelOrchestratorDeps = {
   threadRegistry: ThreadRegistry;
   /** When set, orchestrator exposes getFailoverHistory and addFailoverEvent. */
   failoverHistoryHolder?: FailoverHistoryHolder;
+  /** Called after handleInbound and prepareOutbound when state may have changed (e.g. for persistence). */
+  afterStateChange?: () => void;
 };
 
 export type InboundMessageParams = {
@@ -125,6 +127,8 @@ export function createChannelOrchestrator(deps: ChannelOrchestratorDeps): Channe
       groupId: group?.groupId,
     });
 
+    deps.afterStateChange?.();
+
     return {
       adaptedMessage,
       canonicalThreadId: thread.canonicalId,
@@ -182,6 +186,8 @@ export function createChannelOrchestrator(deps: ChannelOrchestratorDeps): Channe
       targetChannel,
       failover: failoverDecision.triggered,
     });
+
+    deps.afterStateChange?.();
 
     return {
       targetChannel,

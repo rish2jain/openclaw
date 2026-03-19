@@ -23,9 +23,11 @@ function createMockDeps(): ChannelOrchestratorDeps {
     },
     messageAdapter: {
       adaptMessage: vi.fn().mockImplementation((msg: AdaptableMessage, _channel: string) => ({
-        text: msg.text,
-        format: "plain" as const,
-        attachments: [],
+        textChunks: [msg.text],
+        formattingChanged: false,
+        supportedMedia: [],
+        unsupportedMedia: [],
+        warnings: [],
       })),
     },
     contextBridge: {

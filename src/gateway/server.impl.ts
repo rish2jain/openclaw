@@ -19,6 +19,7 @@ import {
   writeConfigFile,
 } from "../config/config.js";
 import { formatConfigIssueLines } from "../config/issue-format.js";
+import { resolveStateDir } from "../config/paths.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { clearAgentRunContext, onAgentEvent } from "../infra/agent-events.js";
@@ -825,7 +826,9 @@ export async function startGatewayServer(
   // Initialize channel orchestrator subsystems (health monitoring, failover, metrics).
   const { initChannelOrchestratorSubsystems } =
     await import("./server-startup-channels-orchestrator.js");
+  const stateDir = resolveStateDir(process.env);
   const orchestratorSubs = initChannelOrchestratorSubsystems({
+    stateDir,
     isChannelConnected: (channel, accountId) => {
       const snapshot = getRuntimeSnapshot();
       const accounts = snapshot.channelAccounts[channel];
@@ -1111,6 +1114,7 @@ export async function startGatewayServer(
       browserAuthRateLimiter.dispose();
       channelHealthMonitor?.stop();
       orchestratorSubs.deliveryHealthMonitor?.stop();
+      orchestratorSubs.flushPendingState?.();
       clearSecretsRuntimeSnapshot();
       await close(opts);
     },

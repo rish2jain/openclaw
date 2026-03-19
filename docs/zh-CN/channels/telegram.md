@@ -690,9 +690,9 @@ Telegram 反应作为**单独的 `message_reaction` 事件**到达，而不是�
 - 确保你的 Telegram 用户 ID 已授权（通过配对或 `channels.telegram.allowFrom`）
 - 即使在 `groupPolicy: "open"` 的群组中，命令也需要授权
 
-**长轮询在 Node 22+ 上立即中止（通常与代理/自定义 fetch 有关）：**
+**长轮询在 Node.js 22.16+ 上立即中止（通常与代理/自定义 fetch 有关）：**
 
-- Node 22+ 对 `AbortSignal` 实例更严格；外部信号可以立即中止 `fetch` 调用。
+- Node.js 22.16+ 对 `AbortSignal` 实例更严格；外部信号可以立即中止 `fetch` 调用。
 - 升级到规范化中止信号的 OpenClaw 构建版本，或在可以升级之前在 Node 20 上运行 Gateway 网关。
 
 **机器人启动后静默停止响应（或日志显示 `HttpError: Network request ... failed`）：**

@@ -83,15 +83,17 @@ sudo apt install -y git curl build-essential
 sudo timedatectl set-timezone America/Chicago  # 改成你的时区
 ```
 
-## 4) 安装 Node.js 22（ARM64）
+## 4) 安装 Node.js（ARM64）
+
+Node.js 24（推荐）；Node.js 22.16+（最低支持）。
 
 ```bash
 # 通过 NodeSource 安装 Node.js
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # 验证
-node --version  # 应显示 v22.x.x
+node --version  # 应显示 v22.16+ 或 v24.x.x
 npm --version
 ```
 

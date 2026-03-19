@@ -85,10 +85,21 @@ Welcome to the lobster tank! 🦞
 2. **New features / architecture** → Start a [GitHub Discussion](https://github.com/openclaw/openclaw/discussions) or ask in Discord first
 3. **Questions** → Discord [#help](https://discord.com/channels/1456350064065904867/1459642797895319552) / [#users-helping-users](https://discord.com/channels/1456350064065904867/1459007081603403828)
 
+## Where to put code
+
+- **Gateway, protocol, auth:** `src/gateway/`
+- **CLI commands:** `src/commands/` (implementations), `src/cli/program/` (registration and subCLIs)
+- **Memory (tiered store, search, chunking, graph):** `src/memory/`
+- **MCP server and tools:** `src/mcp/` — `serve/` for server/transport, `tools/` for tool handlers
+- **Channel orchestration (health, failover, continuity):** `src/channels/`; **channel adapters** (Telegram, Discord, Slack, etc.) live in `extensions/*`
+- **Control UI (web admin):** `ui/` (Lit 3, Vite 8); native apps in `apps/macos`, `apps/ios`, `apps/android`
+
+**Extensions** (`extensions/*`): Add new channel adapters or integrations as workspace packages. Channel extensions (e.g. telegram, discord, slack) are tested with `pnpm test:channels`; all other extensions with `pnpm test:extensions`. Keep channel-specific behavior inside the extension package; respect the boundary lints in `pnpm check`. See [Gateway Architecture](docs/concepts/architecture.md) for the full component map.
+
 ## Before You PR
 
 - Test locally with your OpenClaw instance
-- Run tests: `pnpm build && pnpm check && pnpm test`
+- Run tests: `pnpm build && pnpm check && pnpm test`. For the full test topology (unit vs gateway vs channels vs extensions vs e2e vs live), see [Testing](docs/help/testing.md).
 - If you have access to Codex, run `codex review --base origin/main` locally before opening or updating your PR. Treat this as the current highest standard of AI review, even if GitHub Codex review also runs.
 - Ensure CI checks pass
 - Keep PRs focused (one thing per PR; do not mix unrelated concerns)
@@ -110,7 +121,11 @@ If a review bot leaves review conversations on your PR, you are expected to hand
 
 This applies to both human-authored and AI-assisted PRs.
 
-## Control UI Decorators
+## Control UI (web admin)
+
+The Control UI lives in `ui/` (Lit 3, Vite 8). Run with `pnpm ui:dev`; tests with `pnpm test:ui`.
+
+### Control UI Decorators
 
 The Control UI uses Lit with **legacy** decorators (current Rollup parsing does not support
 `accessor` fields required for standard decorators). When adding reactive fields, keep the

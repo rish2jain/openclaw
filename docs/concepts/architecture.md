@@ -7,7 +7,23 @@ title: "Gateway Architecture"
 
 # Gateway architecture
 
-Last updated: 2026-01-22
+Last updated: 2025-03-17
+
+## Repository layout and components
+
+The codebase is a pnpm monorepo. Core logic lives in `src/`; messaging integrations live in `extensions/*`; the web control UI in `ui/`; native apps in `apps/`.
+
+| Area           | Location                    | Purpose                                                                                                                                                                                                                                                                                                                       |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gateway**    | `src/gateway/`              | WebSocket server, protocol, auth, agent runs. Single entry point for all clients and nodes.                                                                                                                                                                                                                                   |
+| **Commands**   | `src/commands/`, `src/cli/` | CLI command implementations (e.g. agent, channels, onboarding, status). The CLI program is built in `src/cli/program/` and registered via `command-registry.ts` and `register.subclis.ts`.                                                                                                                                    |
+| **Memory**     | `src/memory/`               | Tiered memory store (`tiered/`), search manager, chunking, graph. Public API: `MemoryIndexManager`, `getMemorySearchManager` (see `src/memory/index.ts`).                                                                                                                                                                     |
+| **MCP**        | `src/mcp/`                  | MCP server (stdio/SSE). `serve/` = server lifecycle and transport; `tools/` = tool handlers (send_message, channel_status, list_sessions, query_session, manage_config, cron_manage, health_dashboard, agent_manage, memory_query, failover_status, career). Resources in `resources.ts`. See [MCP Server](../mcp-server.md). |
+| **Channels**   | `src/channels/`             | Orchestration, health, failover, continuity, adaptation, reliability. Channel adapters (Telegram, Discord, Slack, etc.) live in `extensions/*`. See [Channels reliability](../channels/reliability.md).                                                                                                                       |
+| **Control UI** | `ui/`                       | Web admin (Lit 3, Vite 8). Connects to the Gateway over WebSocket. Native apps: `apps/macos`, `apps/ios`, `apps/android`.                                                                                                                                                                                                     |
+| **Extensions** | `extensions/*`              | Channel adapters (telegram, discord, slack, whatsapp, signal, etc.), auth providers, guardrails, memory backends, integrations. Use `pnpm test:channels` for channel extensions, `pnpm test:extensions` for others.                                                                                                           |
+
+Tests are colocated (`*.test.ts`). See [Testing](../help/testing.md) for the test topology (unit, gateway, channels, extensions, e2e, live).
 
 ## Overview
 

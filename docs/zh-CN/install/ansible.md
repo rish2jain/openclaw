@@ -53,7 +53,7 @@ Ansible playbook 安装并配置：
 1. **Tailscale**（用于安全远程访问的 mesh VPN）
 2. **UFW 防火墙**（仅允许 SSH + Tailscale 端口）
 3. **Docker CE + Compose V2**（用于智能体沙箱）
-4. **Node.js 22.x + pnpm**（运行时依赖）
+4. **Node.js 24（推荐）或 22.16+（最低支持）+ pnpm**（运行时依赖）
 5. **OpenClaw**（基于主机，非容器化）
 6. **Systemd 服务**（带安全加固的自动启动）
 

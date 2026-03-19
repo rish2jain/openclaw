@@ -206,13 +206,13 @@ Shared CLI utilities.
 
 ## commands/
 
-Reserved for future command registration. Currently empty.
+CLI command implementations. Each subfolder (e.g. `agent/`, `channels/`, `onboarding/`, `status-all/`) implements one or more commands that are registered via `src/cli/program/command-registry.ts` and `register.subclis.ts`. The main CLI program is built in `src/cli/program/build-program.ts`.
 
 ---
 
 ## memory/
 
-Reserved for future memory subsystem. Currently empty.
+Tiered memory, search, and graph. Entry: `index.ts` exports `MemoryIndexManager`, `getMemorySearchManager`, and related types. `tiered/` holds the tiered store and router; `manager.ts` is the main index manager; `chunking/` and `graph/` handle chunking and entity graph. Used by agents and MCP for persistence and search.
 
 ---
 

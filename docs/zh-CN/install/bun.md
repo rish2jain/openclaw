@@ -51,7 +51,7 @@ bun run vitest run
 除非明确信任（`bun pm untrusted` / `bun pm trust`），Bun 可能会阻止依赖的生命周期脚本。
 对于此仓库，通常被阻止的脚本不是必需的：
 
-- `@whiskeysockets/baileys` `preinstall`：检查 Node 主版本 >= 20（我们运行 Node 22+）。
+- `@whiskeysockets/baileys` `preinstall`：检查 Node 主版本 >= 20（我们运行 Node.js 22.16+）。
 - `protobufjs` `postinstall`：发出关于不兼容版本方案的警告（无构建产物）。
 
 如果你遇到真正需要这些脚本的运行时问题，请明确信任它们：

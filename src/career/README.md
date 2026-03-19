@@ -1,6 +1,8 @@
 # Career Intelligence Platform
 
-Provides end-to-end career management: profile ingestion, job market scoring, professional network graphing, and outreach automation. All persistent data is stored as JSON files under `~/.openclaw/career/`.
+Provides end-to-end career management: profile ingestion, job market scoring, professional network graphing, and outreach automation.
+
+**Persistence:** All persistent data is stored as JSON files under `~/.openclaw/career/`. This is a **single-user design**; the career platform is intended for one operator per OpenClaw instance. For multi-user or high-concurrency use cases, consider migrating to a structured store (e.g. SQLite) in the future.
 
 ## Key Exports
 

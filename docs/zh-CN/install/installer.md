@@ -41,7 +41,7 @@ Windows (PowerShell) 帮助：
 功能概述：
 
 - 检测操作系统（macOS / Linux / WSL）。
-- 确保 Node.js **22+**（macOS 通过 Homebrew；Linux 通过 NodeSource）。
+- 确保 Node.js **24（推荐）或 22.16+（最低支持）**（macOS 通过 Homebrew；Linux 通过 NodeSource）。
 - 选择安装方式：
   - `npm`（默认）：`npm install -g openclaw@latest`
   - `git`：克隆/构建源码检出并安装包装脚本
@@ -93,7 +93,7 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash -s -- --help
 
 功能概述：
 
-- 确保 Node.js **22+**（winget/Chocolatey/Scoop 或手动安装）。
+- 确保 Node.js **24（推荐）或 22.16+（最低支持）**（winget/Chocolatey/Scoop 或手动安装）。
 - 选择安装方式：
   - `npm`（默认）：`npm install -g openclaw@latest`
   - `git`：克隆/构建源码检出并安装包装脚本

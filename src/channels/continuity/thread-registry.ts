@@ -61,6 +61,8 @@ export type ThreadRegistry = {
   pruneStaleThreads: (maxAgeMs: number) => number;
   /** Get a snapshot of the registry state. */
   snapshot: () => ThreadRegistrySnapshot;
+  /** Restore threads from persisted state (e.g. after restart). */
+  restoreFromPersisted: (threads: ConversationThread[]) => void;
 };
 
 export type RegisterThreadParams = {
@@ -506,6 +508,25 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     };
   }
 
+  function restoreFromPersisted(threads: ConversationThread[]): void {
+    byCanonicalId.clear();
+    byChannelThread.clear();
+    byChannelPeer.clear();
+    bySessionKey.clear();
+    threadHeap = createThreadHeap();
+    pushesSinceRebuild = 0;
+    for (const thread of threads) {
+      byCanonicalId.set(thread.canonicalId, thread);
+      for (const ref of thread.references) {
+        indexReference(ref, thread.canonicalId);
+      }
+      indexSession(thread.sessionKey, thread.canonicalId);
+      threadHeap.push({ updatedAt: thread.updatedAt, canonicalId: thread.canonicalId });
+      pushesSinceRebuild += 1;
+    }
+    maybeRebuildHeap();
+  }
+
   return {
     registerThread,
     getThread,
@@ -515,5 +536,6 @@ export function createThreadRegistry(options?: ThreadRegistryOptions): ThreadReg
     linkThreads,
     pruneStaleThreads,
     snapshot,
+    restoreFromPersisted,
   };
 }

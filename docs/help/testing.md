@@ -35,6 +35,58 @@ When debugging real providers/models (requires real creds):
 
 Tip: when you only need one failing case, prefer narrowing live tests via the allowlist env vars described below.
 
+## Test scripts and Vitest configs (reference)
+
+### Test-related npm scripts (root `package.json`)
+
+| Script                      | Command                                                                                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test`                      | `node scripts/test-parallel.mjs` — unit (fast + isolated lanes), optionally gateway/extensions via `OPENCLAW_TEST_INCLUDE_GATEWAY=1` / `OPENCLAW_TEST_INCLUDE_EXTENSIONS=1` |
+| `test:fast`                 | `vitest run --config vitest.unit.config.ts`                                                                                                                                 |
+| `test:channels`             | `vitest run --config vitest.channels.config.ts`                                                                                                                             |
+| `test:gateway`              | `vitest run --config vitest.gateway.config.ts --pool=forks`                                                                                                                 |
+| `test:extensions`           | `vitest run --config vitest.extensions.config.ts`                                                                                                                           |
+| `test:e2e`                  | `vitest run --config vitest.e2e.config.ts`                                                                                                                                  |
+| `test:live`                 | `OPENCLAW_LIVE_TEST=1 CLAWDBOT_LIVE_TEST=1 vitest run --config vitest.live.config.ts`                                                                                       |
+| `test:coverage`             | `vitest run --config vitest.unit.config.ts --coverage`                                                                                                                      |
+| `test:auth:compat`          | `vitest run --config vitest.gateway.config.ts` + specific auth/compat files                                                                                                 |
+| `test:ui`                   | `pnpm lint:ui:no-raw-window-open && pnpm --dir ui test` (ui runs `vitest run --config vitest.config.ts`)                                                                    |
+| `test:watch`                | `vitest` (default config, watch mode)                                                                                                                                       |
+| `test:all`                  | `pnpm lint && pnpm build && pnpm test && pnpm test:e2e && pnpm test:live && pnpm test:docker:all`                                                                           |
+| `test:docker:*`             | Various bash scripts for live/e2e in Docker (e.g. `test:docker:live-models`, `test:docker:gateway-network`)                                                                 |
+| `test:macmini`              | `OPENCLAW_TEST_VM_FORKS=0 OPENCLAW_TEST_PROFILE=serial node scripts/test-parallel.mjs`                                                                                      |
+| `test:sectriage`            | Gateway + unit with specific excludes                                                                                                                                       |
+| `test:voicecall:closedloop` | `vitest run` specific voice-call files `--maxWorkers=1`                                                                                                                     |
+| `android:test`              | `cd apps/android && ./gradlew :app:testDebugUnitTest`                                                                                                                       |
+| `android:test:integration`  | Live test for Android node capabilities (`vitest.live.config.ts` + specific file)                                                                                           |
+
+### Vitest configs (root and `ui/`)
+
+| Config                        | Purpose                                                 | Include / pattern                                                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Root**                      |                                                         |                                                                                                                                                                        |
+| `vitest.config.ts`            | Base config (resolve aliases, timeouts, coverage shape) | `src/**/*.test.ts`, `extensions/**/*.test.ts`, `test/**/*.test.ts`, plus listed `ui/src/ui/**` files; excludes `*.live.test.ts`, `*.e2e.test.ts`                       |
+| `vitest.unit.config.ts`       | Unit tests (narrow slice of core)                       | Base include minus `extensions/`; excludes `src/gateway/**`, `extensions/**`, `src/browser/**`, `src/line/**`, `src/agents/**`, `src/auto-reply/**`, `src/commands/**` |
+| `vitest.gateway.config.ts`    | Gateway server/WS/auth tests                            | `src/gateway/**/*.test.ts`                                                                                                                                             |
+| `vitest.channels.config.ts`   | Channel integrations (Telegram, Discord, etc.)          | `extensions/{telegram,discord,whatsapp,slack,signal,imessage}/**/*.test.ts`, `src/browser/**/*.test.ts`, `src/line/**/*.test.ts`; excludes `src/gateway/**`            |
+| `vitest.extensions.config.ts` | Non-channel extension tests                             | `extensions/**/*.test.ts` excluding paths covered by channels config                                                                                                   |
+| `vitest.e2e.config.ts`        | End-to-end gateway/network tests                        | `test/**/*.e2e.test.ts`, `src/**/*.e2e.test.ts`; pool `forks`                                                                                                          |
+| `vitest.live.config.ts`       | Live provider/model tests (real creds)                  | `src/**/*.live.test.ts`; `maxWorkers: 1`                                                                                                                               |
+| **ui/**                       |                                                         |                                                                                                                                                                        |
+| `ui/vitest.config.ts`         | UI test projects                                        | Projects: unit (`src/**/*.test.ts`, jsdom, exclude `.browser`/`.node`), unit-node (`src/**/*.node.test.ts`), browser (`src/**/*.browser.test.ts`, Playwright)          |
+| `ui/vitest.node.config.ts`    | UI Node-only tests                                      | `src/**/*.node.test.ts`; environment `node`                                                                                                                            |
+
+### Testing topology (when to use which)
+
+- **Unit** (`test:fast` / `vitest.unit.config.ts`): Fast, deterministic core logic—utils, config, security, infra—excluding gateway, channels, agents, auto-reply, and commands. Use for TDD and pre-push.
+- **Gateway** (`test:gateway`): Server, WebSocket, auth, and protocol in `src/gateway/`. Always runs with `--pool=forks` for isolation. Use when changing gateway or auth.
+- **Channels** (`test:channels`): Telegram, Discord, WhatsApp, Slack, Signal, iMessage, browser, Line. Use when changing channel adapters or bot behavior.
+- **Extensions** (`test:extensions`): All other `extensions/**` tests not covered by the channels config. Use when changing non-channel extensions.
+- **E2E** (`test:e2e`): Multi-step gateway and network flows (`*.e2e.test.ts`). Use for smoke and integration; no real API keys.
+- **Live** (`test:live`): Real providers and models (`*.live.test.ts`); requires credentials and is not CI-stable. Use for provider/model debugging.
+
+The default `pnpm test` runs unit (split into fast + isolated lanes via `test-parallel.mjs`) only; add `OPENCLAW_TEST_INCLUDE_GATEWAY=1` or `OPENCLAW_TEST_INCLUDE_EXTENSIONS=1` to include those suites. Run `pnpm test:e2e` and `pnpm test:live` separately when needed.
+
 ## Test suites (what runs where)
 
 Think of the suites as “increasing realism” (and increasing flakiness/cost):

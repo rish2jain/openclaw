@@ -38,6 +38,25 @@ export type IdentityLinker = {
   loadFromConfig: (identityLinks: Record<string, string[]>) => void;
   pruneStale: (maxAgeMs: number) => number;
   exportGroups: () => LinkedIdentityGroup[];
+  /** Restore from persisted state (e.g. SQLite). Clears existing groups first. */
+  restoreFromPersisted: (
+    groups: Array<{
+      groupId: string;
+      primaryName?: string;
+      linkMethod: IdentityLinkMethod;
+      linkedAt: number;
+      lastActiveAt: number;
+    }>,
+    links: Array<{
+      groupId: string;
+      channel: ChannelId;
+      userId: string;
+      displayName?: string;
+      username?: string;
+      e164?: string;
+      lastSeenAt: number;
+    }>,
+  ) => void;
 };
 
 export type LinkIdentitiesParams = {
@@ -255,6 +274,57 @@ export function createIdentityLinker(): IdentityLinker {
     return Array.from(groups.values());
   }
 
+  function restoreFromPersisted(
+    persistedGroups: Array<{
+      groupId: string;
+      primaryName?: string;
+      linkMethod: IdentityLinkMethod;
+      linkedAt: number;
+      lastActiveAt: number;
+    }>,
+    persistedLinks: Array<{
+      groupId: string;
+      channel: ChannelId;
+      userId: string;
+      displayName?: string;
+      username?: string;
+      e164?: string;
+      lastSeenAt: number;
+    }>,
+  ): void {
+    groups.clear();
+    identityToGroup.clear();
+    const linksByGroup = new Map<string, typeof persistedLinks>();
+    for (const link of persistedLinks) {
+      const list = linksByGroup.get(link.groupId) ?? [];
+      list.push(link);
+      linksByGroup.set(link.groupId, list);
+    }
+    for (const g of persistedGroups) {
+      const linkList = linksByGroup.get(g.groupId) ?? [];
+      const identities: ChannelIdentity[] = linkList.map((l) => ({
+        channel: l.channel,
+        userId: l.userId,
+        displayName: l.displayName,
+        username: l.username,
+        e164: l.e164,
+        lastSeenAt: l.lastSeenAt,
+      }));
+      const group: LinkedIdentityGroup = {
+        groupId: g.groupId,
+        primaryName: g.primaryName,
+        identities,
+        linkedAt: g.linkedAt,
+        lastActiveAt: g.lastActiveAt,
+        linkMethod: g.linkMethod,
+      };
+      groups.set(g.groupId, group);
+      for (const ident of identities) {
+        identityToGroup.set(buildIdentityKey(ident.channel, ident.userId), g.groupId);
+      }
+    }
+  }
+
   return {
     linkIdentities,
     registerIdentity,
@@ -265,5 +335,6 @@ export function createIdentityLinker(): IdentityLinker {
     loadFromConfig,
     pruneStale,
     exportGroups,
+    restoreFromPersisted,
   };
 }

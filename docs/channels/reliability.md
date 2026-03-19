@@ -128,7 +128,7 @@ Each channel has different formatting capabilities. The adapter transforms messa
 
 **Source:** `src/channels/persistence/channel-state-store.ts`
 
-Currently in-memory only. Stores identity groups, thread registry state, failover state, and context bridge messages. State does not survive process restarts. SQLite-backed persistence is planned.
+Stores identity groups, thread registry state, failover state, and context bridge messages. When `dbPath` is provided, persists to SQLite and state survives restarts. When omitted, uses in-memory storage (state lost on restart). Pass `{ dbPath: "path/to/channel-state.sqlite" }` to enable durable persistence.
 
 ## Observability
 

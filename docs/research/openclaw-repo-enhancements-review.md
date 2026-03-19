@@ -21,9 +21,10 @@ This plan synthesizes six completed multi-model repo reviews across the OpenClaw
 
 ## Files and entry points
 
-- `src/mcp/tools/index.ts`
-- `src/mcp/protocol.ts`
-- `src/mcp/serve/protocol.ts`
+- `src/mcp/tools/index.ts` — canonical tool registry; `src/mcp/serve/tools/` has parallel implementations (consolidation target)
+- `src/mcp/protocol.ts`, `src/mcp/serve/protocol.ts` — duplicate transport layers
+- `src/mcp/server.ts`, `src/mcp/serve/server.ts` — duplicate server lifecycle
+- `src/mcp/resources.ts`, `src/mcp/serve/resources.ts` — duplicate resource providers
 - `src/plugin-sdk/index.ts`
 - `src/gateway/server-http.ts`
 - `src/gateway/server-methods/chat.ts`
@@ -33,10 +34,14 @@ This plan synthesizes six completed multi-model repo reviews across the OpenClaw
 - `src/channels/persistence/channel-state-store.ts`
 - `src/config/io.ts`
 - `src/plugins/loader.ts`
+- `src/commands/`, `src/cli/program/` — CLI commands and registration
+- `src/memory/` — tiered store, search, chunking, graph
 - `package.json`
 - `.github/workflows/ci.yml`
+- `docs/concepts/architecture.md` — repo layout, component map
 - `docs/channels/reliability.md`
-- `docs/help/testing.md`
+- `docs/help/testing.md` — test topology
+- `CONTRIBUTING.md` — module map, extension guidance
 
 ## Data model / API changes
 
@@ -68,7 +73,7 @@ This plan synthesizes six completed multi-model repo reviews across the OpenClaw
 
 [ ] Expand high-risk test coverage first in security, RBAC, channel reliability, gateway hot paths, and under-tested extension/security-adjacent packages; use the existing suite split, but add clearer contract-style coverage for core flows.
 
-[ ] Improve persistence consistency by reviewing JSON-backed stores versus SQLite-backed stores, especially for the growing career and channel-state subsystems, and standardizing where durable multi-entity state should live.
+[x] Improve persistence consistency (partial): (1) Implemented SQLite path for channel-state-store when `dbPath` is provided; added tests for save/load/reopen. (2) Documented career as single-user JSON in `src/career/README.md`. Remaining: wire `dbPath` from gateway config if desired; decide career migration to SQLite when scaling beyond single-user.
 
 [ ] Unify observability by deciding between the current logging patterns, threading correlation context through gateway, agent, MCP, and channel flows, and exposing channel/failover metrics in a first-class way.
 
@@ -76,17 +81,19 @@ This plan synthesizes six completed multi-model repo reviews across the OpenClaw
 
 [ ] Triage repository sprawl by identifying abandoned or experimental extensions, standardizing extension packaging structure, and documenting which integrations are production-ready versus provisional.
 
-[ ] Close documentation drift by updating architecture docs and contributor docs to match the current source tree, especially around commands, memory, MCP, testing topology, control UI, and extension development guidance.
+[x] Close documentation drift by updating architecture docs and contributor docs to match the current source tree, especially around commands, memory, MCP, testing topology, control UI, and extension development guidance. (Done: `docs/concepts/architecture.md`, `CONTRIBUTING.md`, `src/README.md`, `AGENTS.md`, `CLAUDE.md`)
 
 ## Recommended sequence
 
 ### Near-term
 
-- MCP consolidation audit and decision.
+- MCP consolidation audit and decision (canonical layer: `src/mcp/tools/` + `src/mcp/server.ts` vs `src/mcp/serve/*`).
 - Plugin SDK surface reduction plan.
 - Boundary leak fixes in gateway/extension integration.
 - Targeted tests for security, RBAC, circuit breaker, and gateway hot routes.
 - Documentation for custom lints, suite selection, and contributor workflow.
+
+**Done:** Architecture and contributor docs updated; module map, testing topology, and extension guidance now reflect current source tree.
 
 Rationale: these are high-leverage, lower-regret changes that reduce duplication and risk before broader refactors.
 
@@ -126,8 +133,30 @@ Rationale: these are valuable, but they are safer after the structural and test 
 - Persistence standardization can introduce migration and compatibility risk for existing local data.
 - Some findings are inference-based from code structure and docs, so they should be confirmed with a short implementation spike before large deletions.
 
+## Persistence landscape (findings)
+
+Current mix of JSON vs SQLite across subsystems:
+
+| Subsystem               | Backend                                | Location                                                | Notes                                                                                                                |
+| ----------------------- | -------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Career**              | JSON                                   | `~/.openclaw/career/*.json`                             | profile.json, jobs.json, network.json, outreach.json, intel.json, interactions.json. Atomic writes via tmp + rename. |
+| **Channel state**       | SQLite (when `dbPath` set) / in-memory | `channel-state-store.ts`                                | SQLite path implemented; pass `dbPath` to persist. In-memory when omitted. Tests in `channel-state-store.test.ts`.   |
+| **Memory (agent)**      | SQLite                                 | `~/.openclaw/memory/{agentId}.sqlite`                   | Tiered store, vector search (sqlite-vec), QMD index.                                                                 |
+| **Config / sessions**   | JSON                                   | `~/.openclaw/openclaw.json`, `sessions.json`, `*.jsonl` | Config, sessions metadata, transcripts; plugin catalogs; cron run logs.                                              |
+| **Credentials / OAuth** | JSON                                   | `auth-profiles.json`, `oauth.json`                      | Credential storage.                                                                                                  |
+
+### Recommendations for persistence consistency
+
+1. **Channel state** — Done. SQLite path implemented; when `dbPath` is provided, state persists to disk. Tests added for save/load/reopen. Remaining: wire `dbPath` from gateway config (e.g. `~/.openclaw/channels/state.sqlite`) if durable channel state is desired at runtime.
+
+2. **Career** — JSON documented as single-user-only in `src/career/README.md`. If career grows (multi-agent, sharing, or heavy querying), consider SQLite for jobs/network/outreach. No immediate change required.
+
+3. **Standardization rule** — Prefer SQLite when: (a) state is multi-entity with relationships, (b) concurrent writes or atomic updates matter, or (c) restart durability is required for correctness. Prefer JSON when: (a) single-file, human-editable config, or (b) append-only logs (JSONL).
+
+4. **Migration** — Any move from JSON to SQLite for career or channel state must preserve existing data; add a one-time migration step and document rollback.
+
 ## Open questions
 
-- Which MCP path is intended to be canonical going forward: `src/mcp/*` or `src/mcp/serve/*`?
+- Which MCP path is intended to be canonical going forward: top-level `src/mcp/*` (protocol, server, resources, tools) or `src/mcp/serve/*`? Both layers exist and serve overlapping roles.
 - Are currently low-signal extensions meant to be maintained, experimental, or deprecated?
 - Is the intended security model still strictly single-trust-boundary, or is the repo trending toward multi-tenant use cases that require stronger auth and data isolation?

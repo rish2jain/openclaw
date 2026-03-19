@@ -33,7 +33,7 @@ OpenClaw 是 **Pi** 智能体的 WhatsApp + Telegram + Discord + iMessage Gatewa
 
 ## 先决条件
 
-- Node **22+**
+- Node **24（推荐）或 22.16+（最低支持）**
 - OpenClaw 在 PATH 中可用（推荐：全局安装）
 - 助手的第二个手机号码（SIM/eSIM/预付费）
 
